@@ -1,0 +1,15 @@
+# 文件用途：统一编辑器的编码、缩进及 CRLF 行尾规则。
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+indent_style = space
+indent_size = 2
+
+[*.py]
+indent_size = 4
+
+[*.ps1]
+indent_size = 4

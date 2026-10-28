@@ -1,0 +1,11 @@
+2026-10-26T08:00:00Z ##[group]Run python -m pytest
+$ python -m pytest -q
+tests/test_service.py .F...
+__________________ test_null_labels_are_empty __________________
+    assert normalize_labels({"labels": None}) == []
+taskboard/service.py:16: ValueError
+    raise ValueError("labels must be a list or null")
+E   ValueError: labels must be a list or null
+FAILED tests/test_service.py::test_null_labels_are_empty
+1 failed, 4 passed
+##[error]Process completed with exit code 1.

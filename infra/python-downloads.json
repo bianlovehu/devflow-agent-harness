@@ -1,0 +1,19 @@
+{
+  "cpython-3.11.17-windows-x86_64-none": {
+    "name": "cpython",
+    "arch": {
+      "family": "x86_64",
+      "variant": null
+    },
+    "os": "windows",
+    "libc": "none",
+    "major": 3,
+    "minor": 11,
+    "patch": 17,
+    "prerelease": "",
+    "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261021/cpython-3.11.17%2B20261021-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
+    "sha256": "7222d3245519b9f2e786b085af65a3fac06dffa1ddfbe27821ad9b75f2d98c62",
+    "variant": null,
+    "build": "20261021"
+  }
+}

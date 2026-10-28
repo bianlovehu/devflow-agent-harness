@@ -1,0 +1,5 @@
+# 文件用途：排除不应由 Prettier 改写的依赖和生成文件。
+node_modules
+.next
+package-lock.json
+next-env.d.ts

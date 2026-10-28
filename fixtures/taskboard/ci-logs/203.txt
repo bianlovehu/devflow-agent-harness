@@ -1,0 +1,8 @@
+2026-10-26T08:10:00Z ##[group]Validate configuration
+$ python -m taskboard.config_check
+Traceback (most recent call last):
+  File "taskboard/settings.py", line 6, in load_database_url
+    raise RuntimeError("DATABASE_URL is required")
+RuntimeError: DATABASE_URL is required
+##[error]Process completed with exit code 1.
+Integration tests were not started.

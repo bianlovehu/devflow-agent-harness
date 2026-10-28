@@ -1,0 +1,13 @@
+diff --git a/taskboard/service.py b/taskboard/service.py
+index d346bcc..6dd3bb0 100644
+--- a/taskboard/service.py
++++ b/taskboard/service.py
+@@ -6,7 +6,7 @@ def list_tasks(tasks: list[dict], actor_id: str) -> list[dict]:
+ 
+ 
+ def task_title(task: dict) -> str:
+-    return str(task["title"]).strip()
++    return " ".join(str(task["title"]).split())
+ 
+ 
+ def normalize_labels(payload: dict) -> list[str]:

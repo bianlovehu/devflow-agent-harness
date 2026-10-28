@@ -1,0 +1,8 @@
+# 文件用途：固定仓库文本使用 CRLF，并标记二进制文件。
+* text=auto eol=crlf
+*.png binary
+*.jpg binary
+*.pdf binary
+*.woff2 binary
+# Preserve the required context markers in Git patch fixtures.
+*.diff -whitespace

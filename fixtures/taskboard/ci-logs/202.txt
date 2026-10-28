@@ -1,0 +1,7 @@
+2026-10-26T08:05:00Z ##[group]Install dependencies
+$ python -m pip install taskboard-driver==99.0.0
+Looking in indexes: https://pypi.org/simple
+ERROR: Could not find a version that satisfies the requirement taskboard-driver==99.0.0 (from versions: none)
+ERROR: No matching distribution found for taskboard-driver==99.0.0
+##[error]Process completed with exit code 1.
+Test step skipped because dependency installation failed.

@@ -1,0 +1,180 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-26T08:00:00Z",
+  "repositories": [
+    {
+      "id": "repo-taskboard",
+      "data_source": "fixture",
+      "full_name": "devflow-demo/taskboard",
+      "description": "人工构造的 Python 任务管理服务，用于 PR 审查、CI 排障和知识检索演示。",
+      "language": "Python",
+      "default_branch": "main",
+      "default_commit": "6725207e6cfc27084147c1624a8f2da5f1dcf491",
+      "updated_at": "2026-10-26T08:00:00Z",
+      "pull_request_count": 3,
+      "ci_run_count": 3,
+      "document_count": 4
+    }
+  ],
+  "pull_requests": [
+    {
+      "repo_id": "repo-taskboard",
+      "data_source": "fixture",
+      "number": 101,
+      "title": "规范化任务标题中的连续空格",
+      "body": "仅调整标题展示，合并连续空格并保留现有任务访问边界。",
+      "author": "demo-maintainer",
+      "state": "open",
+      "base_sha": "6725207e6cfc27084147c1624a8f2da5f1dcf491",
+      "head_sha": "e2874eff98064950c923278156a0e86e9880a635",
+      "updated_at": "2026-10-26T08:00:00Z",
+      "files": [
+        {
+          "path": "taskboard/service.py",
+          "additions": 1,
+          "deletions": 1,
+          "patch": "diff --git a/taskboard/service.py b/taskboard/service.py\nindex d346bcc..6dd3bb0 100644\n--- a/taskboard/service.py\n+++ b/taskboard/service.py\n@@ -6,7 +6,7 @@ def list_tasks(tasks: list[dict], actor_id: str) -> list[dict]:\n \n \n def task_title(task: dict) -> str:\n-    return str(task[\"title\"]).strip()\n+    return \" \".join(str(task[\"title\"]).split())\n \n \n def normalize_labels(payload: dict) -> list[str]:\n",
+          "base_content": "# 文件用途：提供任务列表、标题和标签处理的演示业务逻辑。\ndef list_tasks(tasks: list[dict], actor_id: str) -> list[dict]:\n    \"\"\"Only the owner can see a task.\"\"\"\n    # 按当前用户筛选输入任务，访问边界由这一层实现。\n    return [task for task in tasks if task[\"owner_id\"] == actor_id]\n\n\ndef task_title(task: dict) -> str:\n    return str(task[\"title\"]).strip()\n\n\ndef normalize_labels(payload: dict) -> list[str]:\n    # 显式处理允许为空的标签，并拒绝其他不符合契约的类型。\n    labels = payload.get(\"labels\")\n    if labels is None:\n        return []\n    if not isinstance(labels, list):\n        raise ValueError(\"labels must be a list or null\")\n    return [str(label).strip().lower() for label in labels if str(label).strip()]\n",
+          "head_content": "# 文件用途：提供任务列表、标题和标签处理的演示业务逻辑。\ndef list_tasks(tasks: list[dict], actor_id: str) -> list[dict]:\n    \"\"\"Only the owner can see a task.\"\"\"\n    # 按当前用户筛选输入任务，访问边界由这一层实现。\n    return [task for task in tasks if task[\"owner_id\"] == actor_id]\n\n\ndef task_title(task: dict) -> str:\n    return \" \".join(str(task[\"title\"]).split())\n\n\ndef normalize_labels(payload: dict) -> list[str]:\n    # 显式处理允许为空的标签，并拒绝其他不符合契约的类型。\n    labels = payload.get(\"labels\")\n    if labels is None:\n        return []\n    if not isinstance(labels, list):\n        raise ValueError(\"labels must be a list or null\")\n    return [str(label).strip().lower() for label in labels if str(label).strip()]\n",
+          "content_sha256": "761251ea117d04017be19d3765fe21d9de54ad7b2446211cf09e8ade989c811f"
+        }
+      ]
+    },
+    {
+      "repo_id": "repo-taskboard",
+      "data_source": "fixture",
+      "number": 102,
+      "title": "简化任务列表返回逻辑",
+      "body": "调整任务列表的集合处理方式，请核查行为是否保持一致。",
+      "author": "demo-maintainer",
+      "state": "open",
+      "base_sha": "6725207e6cfc27084147c1624a8f2da5f1dcf491",
+      "head_sha": "08e1a7f77ab3481e02b7b1b365a6db52746ccdb0",
+      "updated_at": "2026-10-26T08:00:00Z",
+      "files": [
+        {
+          "path": "taskboard/service.py",
+          "additions": 1,
+          "deletions": 1,
+          "patch": "diff --git a/taskboard/service.py b/taskboard/service.py\nindex d346bcc..cd4233d 100644\n--- a/taskboard/service.py\n+++ b/taskboard/service.py\n@@ -2,7 +2,7 @@\n def list_tasks(tasks: list[dict], actor_id: str) -> list[dict]:\n     \"\"\"Only the owner can see a task.\"\"\"\n     # 按当前用户筛选输入任务，访问边界由这一层实现。\n-    return [task for task in tasks if task[\"owner_id\"] == actor_id]\n+    return list(tasks)\n \n \n def task_title(task: dict) -> str:\n",
+          "base_content": "# 文件用途：提供任务列表、标题和标签处理的演示业务逻辑。\ndef list_tasks(tasks: list[dict], actor_id: str) -> list[dict]:\n    \"\"\"Only the owner can see a task.\"\"\"\n    # 按当前用户筛选输入任务，访问边界由这一层实现。\n    return [task for task in tasks if task[\"owner_id\"] == actor_id]\n\n\ndef task_title(task: dict) -> str:\n    return str(task[\"title\"]).strip()\n\n\ndef normalize_labels(payload: dict) -> list[str]:\n    # 显式处理允许为空的标签，并拒绝其他不符合契约的类型。\n    labels = payload.get(\"labels\")\n    if labels is None:\n        return []\n    if not isinstance(labels, list):\n        raise ValueError(\"labels must be a list or null\")\n    return [str(label).strip().lower() for label in labels if str(label).strip()]\n",
+          "head_content": "# 文件用途：提供任务列表、标题和标签处理的演示业务逻辑。\ndef list_tasks(tasks: list[dict], actor_id: str) -> list[dict]:\n    \"\"\"Only the owner can see a task.\"\"\"\n    # 按当前用户筛选输入任务，访问边界由这一层实现。\n    return list(tasks)\n\n\ndef task_title(task: dict) -> str:\n    return str(task[\"title\"]).strip()\n\n\ndef normalize_labels(payload: dict) -> list[str]:\n    # 显式处理允许为空的标签，并拒绝其他不符合契约的类型。\n    labels = payload.get(\"labels\")\n    if labels is None:\n        return []\n    if not isinstance(labels, list):\n        raise ValueError(\"labels must be a list or null\")\n    return [str(label).strip().lower() for label in labels if str(label).strip()]\n",
+          "content_sha256": "db32e6710b551ca7e9884d7172b78b4e26cd300d40e5055efd0f0cf1cff86e0c"
+        }
+      ]
+    },
+    {
+      "repo_id": "repo-taskboard",
+      "data_source": "fixture",
+      "number": 103,
+      "title": "使用默认值简化可选标签处理",
+      "body": "减少可选标签分支，请核查缺省值、null 和非法输入的行为。",
+      "author": "demo-maintainer",
+      "state": "open",
+      "base_sha": "6725207e6cfc27084147c1624a8f2da5f1dcf491",
+      "head_sha": "e06b47e7e6f566271f16f313082f37590eb885f6",
+      "updated_at": "2026-10-26T08:00:00Z",
+      "files": [
+        {
+          "path": "taskboard/service.py",
+          "additions": 1,
+          "deletions": 3,
+          "patch": "diff --git a/taskboard/service.py b/taskboard/service.py\nindex d346bcc..43fa550 100644\n--- a/taskboard/service.py\n+++ b/taskboard/service.py\n@@ -11,9 +11,7 @@ def task_title(task: dict) -> str:\n \n def normalize_labels(payload: dict) -> list[str]:\n     # 显式处理允许为空的标签，并拒绝其他不符合契约的类型。\n-    labels = payload.get(\"labels\")\n-    if labels is None:\n-        return []\n+    labels = payload.get(\"labels\", [])\n     if not isinstance(labels, list):\n         raise ValueError(\"labels must be a list or null\")\n     return [str(label).strip().lower() for label in labels if str(label).strip()]\n",
+          "base_content": "# 文件用途：提供任务列表、标题和标签处理的演示业务逻辑。\ndef list_tasks(tasks: list[dict], actor_id: str) -> list[dict]:\n    \"\"\"Only the owner can see a task.\"\"\"\n    # 按当前用户筛选输入任务，访问边界由这一层实现。\n    return [task for task in tasks if task[\"owner_id\"] == actor_id]\n\n\ndef task_title(task: dict) -> str:\n    return str(task[\"title\"]).strip()\n\n\ndef normalize_labels(payload: dict) -> list[str]:\n    # 显式处理允许为空的标签，并拒绝其他不符合契约的类型。\n    labels = payload.get(\"labels\")\n    if labels is None:\n        return []\n    if not isinstance(labels, list):\n        raise ValueError(\"labels must be a list or null\")\n    return [str(label).strip().lower() for label in labels if str(label).strip()]\n",
+          "head_content": "# 文件用途：提供任务列表、标题和标签处理的演示业务逻辑。\ndef list_tasks(tasks: list[dict], actor_id: str) -> list[dict]:\n    \"\"\"Only the owner can see a task.\"\"\"\n    # 按当前用户筛选输入任务，访问边界由这一层实现。\n    return [task for task in tasks if task[\"owner_id\"] == actor_id]\n\n\ndef task_title(task: dict) -> str:\n    return str(task[\"title\"]).strip()\n\n\ndef normalize_labels(payload: dict) -> list[str]:\n    # 显式处理允许为空的标签，并拒绝其他不符合契约的类型。\n    labels = payload.get(\"labels\", [])\n    if not isinstance(labels, list):\n        raise ValueError(\"labels must be a list or null\")\n    return [str(label).strip().lower() for label in labels if str(label).strip()]\n",
+          "content_sha256": "970f49ab8ac7de5c50d79f4da936cb96c2be541697adc57e3ffe1734e74d103b"
+        }
+      ]
+    }
+  ],
+  "ci_runs": [
+    {
+      "id": 201,
+      "repo_id": "repo-taskboard",
+      "data_source": "fixture",
+      "pull_request_number": 103,
+      "name": "unit-tests",
+      "conclusion": "failure",
+      "stage": "test",
+      "head_sha": "e06b47e7e6f566271f16f313082f37590eb885f6",
+      "started_at": "2026-10-26T08:00:00Z",
+      "duration_seconds": 12,
+      "log": "2026-10-26T08:00:00Z ##[group]Run python -m pytest\n$ python -m pytest -q\ntests/test_service.py .F...\n__________________ test_null_labels_are_empty __________________\n    assert normalize_labels({\"labels\": None}) == []\ntaskboard/service.py:16: ValueError\n    raise ValueError(\"labels must be a list or null\")\nE   ValueError: labels must be a list or null\nFAILED tests/test_service.py::test_null_labels_are_empty\n1 failed, 4 passed\n##[error]Process completed with exit code 1.\n",
+      "log_sha256": "30fbc88fabca867b005f72789618fb700d43590e57cfe0b699a2d0af7c7b2280"
+    },
+    {
+      "id": 202,
+      "repo_id": "repo-taskboard",
+      "data_source": "fixture",
+      "pull_request_number": 101,
+      "name": "install-dependencies",
+      "conclusion": "failure",
+      "stage": "install",
+      "head_sha": "e2874eff98064950c923278156a0e86e9880a635",
+      "started_at": "2026-10-26T08:00:00Z",
+      "duration_seconds": 7,
+      "log": "2026-10-26T08:05:00Z ##[group]Install dependencies\n$ python -m pip install taskboard-driver==99.0.0\nLooking in indexes: https://pypi.org/simple\nERROR: Could not find a version that satisfies the requirement taskboard-driver==99.0.0 (from versions: none)\nERROR: No matching distribution found for taskboard-driver==99.0.0\n##[error]Process completed with exit code 1.\nTest step skipped because dependency installation failed.\n",
+      "log_sha256": "20cd75d5c03e3e013cdb7775e97b6d17a865bfee2f01c586775c1a2acd1807cb"
+    },
+    {
+      "id": 203,
+      "repo_id": "repo-taskboard",
+      "data_source": "fixture",
+      "pull_request_number": 101,
+      "name": "validate-configuration",
+      "conclusion": "failure",
+      "stage": "configure",
+      "head_sha": "e2874eff98064950c923278156a0e86e9880a635",
+      "started_at": "2026-10-26T08:00:00Z",
+      "duration_seconds": 3,
+      "log": "2026-10-26T08:10:00Z ##[group]Validate configuration\n$ python -m taskboard.config_check\nTraceback (most recent call last):\n  File \"taskboard/settings.py\", line 6, in load_database_url\n    raise RuntimeError(\"DATABASE_URL is required\")\nRuntimeError: DATABASE_URL is required\n##[error]Process completed with exit code 1.\nIntegration tests were not started.\n",
+      "log_sha256": "e1ebb35dd5ea555c4e4c129a45ad8c5540c8d50aa764e9b6f7c3324fd73e2e14"
+    }
+  ],
+  "documents": [
+    {
+      "id": "architecture",
+      "repo_id": "repo-taskboard",
+      "data_source": "fixture",
+      "title": "Taskboard 架构说明",
+      "kind": "architecture",
+      "version": "7c991c3a60ae6103d34910a676abdc8285a66830b08c8da221c3a1f98ab8e435",
+      "updated_at": "2026-10-26T08:00:00Z",
+      "line_count": 18,
+      "content": "<!-- 文件用途：说明演示服务的数据边界和输入契约。 -->\n# Taskboard 架构说明\n\n这是人工构造的演示工程，不对应真实生产系统。\n\n## 数据和调用边界\n\n任务记录包含 id、owner_id、title。服务通过 actor_id 识别当前用户，存储层返回的任务集合可能包含多个用户的数据。\n\nlist_tasks 负责在返回结果前按 owner_id 过滤。上层没有额外过滤，因此移除这一条件会改变访问边界。\n\n## 可选标签契约\n\nlabels 字段允许缺省、空列表或 null；缺省与 null 均解释为空列表。非列表且非 null 的值应拒绝。\n\n## 标题格式化\n\n标题只影响展示。允许折叠连续空格，不改变任务归属或访问权限。\n"
+    },
+    {
+      "id": "access-policy",
+      "repo_id": "repo-taskboard",
+      "data_source": "fixture",
+      "title": "任务访问策略",
+      "kind": "policy",
+      "version": "0145df77c32980c1fb3ae4e0ec63037383ba58ed217bf0e2898f2240712d922e",
+      "updated_at": "2026-10-26T08:00:00Z",
+      "line_count": 14,
+      "content": "<!-- 文件用途：说明演示服务的任务访问约束与审查边界。 -->\n# 任务访问策略\n\n本文是 Taskboard 演示仓库的设计约束。\n\n## 约束 AUTH-01\n\n用户只能读取 owner_id 与当前 actor_id 相同的任务。接口调用者不保证输入列表已经过滤。\n\n权限测试至少覆盖两个不同 owner 的任务，并确认不会返回另一个用户的任务。\n\n## 审查边界\n\n移除过滤条件可据代码证明数据暴露风险；不能据此断言已经发生了真实泄漏，也不能推断写入或删除接口存在同样问题。\n"
+    },
+    {
+      "id": "ci-runbook",
+      "repo_id": "repo-taskboard",
+      "data_source": "fixture",
+      "title": "CI 故障排查手册",
+      "kind": "runbook",
+      "version": "82b8f55ba354fb92aedb4482ee795ca11af5f97ec45bad462fbe5cf32422db34",
+      "updated_at": "2026-10-26T08:00:00Z",
+      "line_count": 20,
+      "content": "<!-- 文件用途：提供演示 CI 各失败阶段的排查方法。 -->\n# CI 故障排查手册\n\n这是演示用排查资料，日志均由项目人工编写。\n\n## 安装阶段失败\n\n若 pip 提示 No matching distribution found，应先核对依赖名、版本、索引和 Python 兼容性。安装尚未成功时，不能把后续测试结果当作已执行。\n\n## 测试阶段失败\n\n保留测试名、输入和堆栈行。TypeError: 'NoneType' object is not iterable 可说明代码遍历了 null，但仅凭最后一行不能排除其他原因，需要绑定对应代码版本。\n\n## 配置阶段失败\n\nDATABASE_URL is required 表示启动前缺少配置。应检查环境变量注入，不直接更改业务逻辑，也不要求输出数据库密码。\n\n## 版本边界\n\n同一 PR 的不同 CI 运行必须以 head_sha 区分，历史日志不能证明当前提交仍然失败。\n"
+    },
+    {
+      "id": "null-labels-postmortem",
+      "repo_id": "repo-taskboard",
+      "data_source": "fixture",
+      "title": "可选标签处理回归复盘",
+      "kind": "postmortem",
+      "version": "b0484ebb487aa51021de8caf9bfbe31bb645b1ced23fa44620630391c9cd0903",
+      "updated_at": "2026-10-26T08:00:00Z",
+      "line_count": 18,
+      "content": "<!-- 文件用途：复盘演示中的空值标签处理问题与结论边界。 -->\n# 可选标签处理回归复盘（人工构造）\n\n## 现象\n\n某次重构将 payload.get(\"labels\") 的显式 null 检查，替换为 payload.get(\"labels\", [])。\n\n## 原因\n\ndict.get 的默认值只在键缺省时使用；当请求明确包含 labels: null 时，取值仍是 None。随后遍历这一值会触发 TypeError。\n\n## 验证\n\n分别覆盖字段缺省、null、空列表、合法列表和非法字符串。缺省与 null 两类输入不能互相替代。\n\n## 结论边界\n\n本文是历史样例，不能代替对当前提交代码的检查；引用时需要与本次任务的 head_sha 对照。\n"
+    }
+  ]
+}

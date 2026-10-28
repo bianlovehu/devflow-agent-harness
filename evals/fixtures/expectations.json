@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "case_id": "pr-101-clean",
+      "kind": "pr_review",
+      "repo_id": "repo-taskboard",
+      "target_id": 101,
+      "expected_findings": [],
+      "evidence": [
+        {
+          "type": "file",
+          "resource_id": "taskboard/service.py",
+          "version": "e2874eff98064950c923278156a0e86e9880a635",
+          "start_line": 9,
+          "end_line": 9,
+          "quote": "    return \" \".join(str(task[\"title\"]).split())"
+        }
+      ],
+      "must_not_conclude": [
+        "凭标题空格变更推断权限漏洞",
+        "把安装或配置失败归因于此行代码"
+      ]
+    },
+    {
+      "case_id": "pr-102-missing-owner-filter",
+      "kind": "pr_review",
+      "repo_id": "repo-taskboard",
+      "target_id": 102,
+      "expected_findings": [
+        "所有者过滤被移除，可向当前用户返回其他用户的任务。"
+      ],
+      "evidence": [
+        {
+          "type": "file",
+          "resource_id": "taskboard/service.py",
+          "version": "08e1a7f77ab3481e02b7b1b365a6db52746ccdb0",
+          "start_line": 5,
+          "end_line": 5,
+          "quote": "    return list(tasks)"
+        }
+      ],
+      "must_not_conclude": [
+        "已发生真实数据泄露",
+        "未经检查的写入与删除接口也存在漏洞"
+      ]
+    },
+    {
+      "case_id": "pr-103-null-labels",
+      "kind": "pr_review",
+      "repo_id": "repo-taskboard",
+      "target_id": 103,
+      "expected_findings": [
+        "显式 null 不会使用 dict.get 的默认值，导致允许的 null 输入被类型检查拒绝。"
+      ],
+      "evidence": [
+        {
+          "type": "file",
+          "resource_id": "taskboard/service.py",
+          "version": "e06b47e7e6f566271f16f313082f37590eb885f6",
+          "start_line": 14,
+          "end_line": 14,
+          "quote": "    labels = payload.get(\"labels\", [])"
+        }
+      ],
+      "must_not_conclude": [
+        "缺省字段也一定失败",
+        "断言此版本抛出 NoneType 不可迭代错误；此版本先抛出 ValueError"
+      ]
+    },
+    {
+      "case_id": "ci-201",
+      "kind": "ci_debug",
+      "repo_id": "repo-taskboard",
+      "target_id": 201,
+      "expected_findings": [
+        "空值标签被类型检查拒绝，测试契约回归。"
+      ],
+      "evidence": [
+        {
+          "type": "log",
+          "resource_id": "201",
+          "version": "e06b47e7e6f566271f16f313082f37590eb885f6",
+          "content_sha256": "30fbc88fabca867b005f72789618fb700d43590e57cfe0b699a2d0af7c7b2280",
+          "start_line": 8,
+          "end_line": 8,
+          "quote": "E   ValueError: labels must be a list or null"
+        }
+      ],
+      "must_not_conclude": [
+        "误报为依赖安装问题",
+        "断言此版本抛出 TypeError"
+      ]
+    },
+    {
+      "case_id": "ci-202",
+      "kind": "ci_debug",
+      "repo_id": "repo-taskboard",
+      "target_id": 202,
+      "expected_findings": [
+        "指定依赖版本无法从当前索引解析。"
+      ],
+      "evidence": [
+        {
+          "type": "log",
+          "resource_id": "202",
+          "version": "e2874eff98064950c923278156a0e86e9880a635",
+          "content_sha256": "20cd75d5c03e3e013cdb7775e97b6d17a865bfee2f01c586775c1a2acd1807cb",
+          "start_line": 5,
+          "end_line": 5,
+          "quote": "ERROR: No matching distribution found for taskboard-driver==99.0.0"
+        }
+      ],
+      "must_not_conclude": [
+        "断言应用单元测试失败",
+        "仅凭样例日志断言外部软件源永久不可用"
+      ]
+    },
+    {
+      "case_id": "ci-203",
+      "kind": "ci_debug",
+      "repo_id": "repo-taskboard",
+      "target_id": 203,
+      "expected_findings": [
+        "启动检查缺少 DATABASE_URL 配置。"
+      ],
+      "evidence": [
+        {
+          "type": "log",
+          "resource_id": "203",
+          "version": "e2874eff98064950c923278156a0e86e9880a635",
+          "content_sha256": "e1ebb35dd5ea555c4e4c129a45ad8c5540c8d50aa764e9b6f7c3324fd73e2e14",
+          "start_line": 6,
+          "end_line": 6,
+          "quote": "RuntimeError: DATABASE_URL is required"
+        }
+      ],
+      "must_not_conclude": [
+        "要求用户公开数据库密码",
+        "断言数据库已启动且服务端认证失败"
+      ]
+    }
+  ]
+}

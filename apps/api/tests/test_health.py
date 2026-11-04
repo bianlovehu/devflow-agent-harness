@@ -36,3 +36,30 @@ def test_readiness_http_status_matches_dependency_failure() -> None:
         response = client.get("/api/v1/health")
     assert response.status_code == 503
     assert response.headers["Cache-Control"] == "no-store"
+
+
+def test_health_migration_head_tracks_new_version_files(tmp_path, monkeypatch):
+    import devflow.health as health_module
+
+    versions = tmp_path / "migrations" / "versions"
+    versions.mkdir(parents=True)
+    (tmp_path / "alembic.ini").write_text(
+        "[alembic]\nscript_location = " + str(tmp_path / "migrations") + "\n",
+        encoding="utf-8",
+        newline="\r\n",
+    )
+    (versions / "0001.py").write_text(
+        "# File purpose: provide the initial test migration.\n"
+        "revision = '0001'\ndown_revision = None\n",
+        encoding="utf-8",
+        newline="\r\n",
+    )
+    monkeypatch.setattr(health_module, "PROJECT_ROOT", tmp_path)
+    assert health_module.migration_head() == "0001"
+    (versions / "0002.py").write_text(
+        "# File purpose: provide the next test migration.\n"
+        "revision = '0002'\ndown_revision = '0001'\n",
+        encoding="utf-8",
+        newline="\r\n",
+    )
+    assert health_module.migration_head() == "0002"

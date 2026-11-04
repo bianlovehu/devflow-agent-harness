@@ -37,13 +37,17 @@ def validate_contents(dataset: FixtureDataset) -> None:
         raise DomainError(422, "fixture_invalid", "样例仓库标识重复")
     for pr in dataset.pull_requests:
         for file in pr.files:
-            if digest(file.head_content) != file.content_sha256:
+            if (
+                file.head_content is None
+                or file.base_content is None
+                or digest(file.head_content) != file.content_sha256
+            ):
                 raise DomainError(422, "fixture_invalid", "样例文件哈希与内容不一致")
     for run in dataset.ci_runs:
         parent = prs.get((run.repo_id, run.pull_request_number))
         if parent is None or parent.head_sha != run.head_sha:
             raise DomainError(422, "fixture_invalid", "样例 CI 与关联 PR 的版本不一致")
-        if digest(run.log) != run.log_sha256:
+        if run.log is None or digest(run.log) != run.log_sha256:
             raise DomainError(422, "fixture_invalid", "样例日志哈希与内容不一致")
     for doc in dataset.documents:
         if digest(doc.content) != doc.version or len(doc.content.splitlines()) != doc.line_count:

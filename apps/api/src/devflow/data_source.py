@@ -26,6 +26,7 @@ class RepositoryDataSource(Protocol):
 
     mode: DataSource
 
+    def collection_metadata(self, repo_id: str, kind: str) -> dict: ...
     def list_repositories(self) -> list[Repository]: ...
     def get_repository(self, repo_id: str) -> Repository: ...
     def list_pull_requests(self, repo_id: str) -> list[PullRequestSummary]: ...
@@ -49,6 +50,9 @@ def summary(model, target):
 
 class FixtureDataSource:
     mode: DataSource = "fixture"
+
+    def collection_metadata(self, repo_id: str, kind: str) -> dict:
+        return {}
 
     def __init__(self, dataset: FixtureDataset):
         self.dataset = dataset
@@ -119,13 +123,9 @@ def get_data_source(
 ) -> RepositoryDataSource:
     # 按明确配置选择数据源，不在数据库故障时偷偷回退到文件样例。
     if settings.data_source == "github":
-        raise HTTPException(
-            status_code=503,
-            detail={
-                "code": "data_source_unavailable",
-                "message": "GitHub 适配器将在第 5 步接入，请使用 DATA_SOURCE=fixture",
-            },
-        )
+        from devflow.github_source import GitHubRepositorySource
+
+        return GitHubRepositorySource(session, settings)
     if settings.fixture_storage == "database":
         from devflow.persistent_source import DatabaseRepositorySource
 

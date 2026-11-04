@@ -21,7 +21,10 @@ from devflow.errors import (
     validation_error_handler,
 )
 from devflow.health import HealthResponse, inspect_health
+from devflow.knowledge_api import router as knowledge_router
+from devflow.memory_api import router as memory_router
 from devflow.repositories import router as repositories_router
+from devflow.security import RedactedJSONResponse
 from devflow.workflow_api import router as workflows_router
 
 
@@ -34,8 +37,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(
+    default_response_class=RedactedJSONResponse,
     title="DevFlow API",
-    description="PR 风险审查与 CI 排障；已提供工程骨架和人工构造的仓库样例。",
+    description="PR 风险审查、CI 排障与仓库知识问答；支持版本化证据和本地混合检索。",
     version=__version__,
     lifespan=lifespan,
     docs_url="/api/docs",
@@ -47,7 +51,7 @@ app.add_middleware(
     allow_origins=["http://127.0.0.1:3000", "http://localhost:3000"],
     allow_credentials=False,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "Idempotency-Key"],
+    allow_headers=["Content-Type", "Idempotency-Key", "Last-Event-ID"],
 )
 
 
@@ -73,6 +77,8 @@ def health(request: Request, response: Response) -> HealthResponse:
 app.include_router(repositories_router)
 
 app.include_router(workflows_router)
+app.include_router(knowledge_router)
+app.include_router(memory_router)
 app.add_exception_handler(DomainError, domain_error_handler)
 app.add_exception_handler(StarletteHTTPException, http_error_handler)
 app.add_exception_handler(RequestValidationError, validation_error_handler)
@@ -101,5 +107,5 @@ async def request_context(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Request-ID"] = request.state.request_id
     if request.url.path.startswith("/api/v1/"):
-        response.headers["Cache-Control"] = "no-store"
+        response.headers.setdefault("Cache-Control", "no-store")
     return response

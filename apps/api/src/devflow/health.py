@@ -1,6 +1,5 @@
 # 文件用途：检测 API、数据库、向量扩展和迁移状态。
 from datetime import UTC, datetime
-from functools import lru_cache
 from typing import Literal
 
 from alembic.config import Config
@@ -27,7 +26,6 @@ class HealthResponse(BaseModel):
     checks: dict[str, ComponentHealth]
 
 
-@lru_cache
 def migration_head() -> str | None:
     # 使用当前代码中的迁移头，防止缺少业务表时仍误报数据库已就绪。
     return ScriptDirectory.from_config(Config(str(PROJECT_ROOT / "alembic.ini"))).get_current_head()

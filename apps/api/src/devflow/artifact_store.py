@@ -10,7 +10,7 @@ from devflow.errors import DomainError
 
 
 class ArtifactStore:
-    """Immutable local text artifacts. Hashes cover the actual CRLF UTF-8 bytes."""
+    """Immutable artifacts; authored text uses CRLF and external bytes remain unchanged."""
 
     def __init__(self, root: Path | None = None):
         self.root = (root or PROJECT_ROOT / "data" / "artifacts").resolve()
@@ -18,8 +18,14 @@ class ArtifactStore:
     def put_text(self, content: str) -> tuple[str, str, int]:
         # 按实际写入的 CRLF 字节计算哈希，再通过临时文件原子替换目标。
         data = content.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "\r\n").encode()
+        return self.put_bytes(data, suffix="txt")
+
+    def put_bytes(self, data: bytes, *, suffix: str = "bin") -> tuple[str, str, int]:
+        # 外部原始文件与日志按字节保存，不改写换行、时间戳或控制字符。
+        if suffix not in {"txt", "bin"}:
+            raise ValueError("unsupported artifact suffix")
         digest = hashlib.sha256(data).hexdigest()
-        key = f"{digest[:2]}/{digest}.txt"
+        key = f"{digest[:2]}/{digest}.{suffix}"
         destination = self._resolve(key)
         destination.parent.mkdir(parents=True, exist_ok=True)
         if destination.exists():
@@ -47,11 +53,11 @@ class ArtifactStore:
             raise DomainError(409, "artifact_missing", "引用的制品文件缺失") from exc
         if hashlib.sha256(data).hexdigest() != digest:
             raise DomainError(409, "artifact_corrupt", "引用的制品校验失败")
-        return data.decode("utf-8")
+        return data.decode("utf-8", errors="replace")
 
     def _resolve(self, key: str) -> Path:
         # 只接受内容哈希路径，解析后再次确认文件仍位于制品目录内。
-        if not re.fullmatch(r"[0-9a-f]{2}/[0-9a-f]{64}\.txt", key):
+        if not re.fullmatch(r"[0-9a-f]{2}/[0-9a-f]{64}\.(?:txt|bin)", key):
             raise DomainError(409, "artifact_invalid", "制品路径不合法")
         path = (self.root / key).resolve()
         if not path.is_relative_to(self.root):

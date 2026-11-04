@@ -8,23 +8,33 @@ from sqlalchemy.exc import SQLAlchemyError
 
 
 class DomainError(Exception):
-    def __init__(self, status: int, code: str, message: str):
+    def __init__(self, status: int, code: str, message: str, retry_after: int | None = None):
         self.status = status
         self.code = code
         self.message = message
+        self.retry_after = retry_after
 
 
 def error_response(request: Request, status: int, code: str, message: str, **extra):
     request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    headers = {"X-Request-ID": request_id, "Cache-Control": "no-store"}
+    if extra.get("retry_after") is not None:
+        headers["Retry-After"] = str(extra["retry_after"])
     return JSONResponse(
         {"detail": {"code": code, "message": message, "request_id": request_id, **extra}},
         status_code=status,
-        headers={"X-Request-ID": request_id, "Cache-Control": "no-store"},
+        headers=headers,
     )
 
 
 async def domain_error_handler(request: Request, exc: DomainError):
-    return error_response(request, exc.status, exc.code, exc.message)
+    return error_response(
+        request,
+        exc.status,
+        exc.code,
+        exc.message,
+        **({"retry_after": exc.retry_after} if exc.retry_after is not None else {}),
+    )
 
 
 async def http_error_handler(request: Request, exc: HTTPException):

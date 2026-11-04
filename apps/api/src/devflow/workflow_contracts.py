@@ -22,6 +22,13 @@ RunFailureCode = Literal[
     "artifact_missing",
     "worker_lost",
     "internal_error",
+    "evidence_unavailable",
+    "model_auth_error",
+    "model_balance_error",
+    "model_rate_limited",
+    "model_network_error",
+    "model_format_error",
+    "model_configuration_error",
 ]
 
 
@@ -67,6 +74,7 @@ class RunCreate(Contract):
     task_type: TaskType
     target_id: str | None = Field(default=None, max_length=120)
     question: NonEmptyText
+    use_knowledge: bool = True
     budget: RunBudget = Field(default_factory=RunBudget)
 
     @model_validator(mode="after")
@@ -100,7 +108,20 @@ class RunResponse(RecordResponse):
     error_message: str | None
     created_at: datetime
     updated_at: datetime
-    execution_available: bool = False
+    execution_available: bool = True
+    attempt: int
+    recovery_count: int
+    retry_of: UUID | None
+    cancel_requested_at: datetime | None
+    started_at: datetime | None
+    finished_at: datetime | None
+    heartbeat_at: datetime | None
+    result: dict | None
+
+    @model_validator(mode="after")
+    def execution_capability(self):
+        self.execution_available = self.configuration.get("executor") in {"simulation", "agent"}
+        return self
 
 
 class RunEventResponse(RecordResponse):

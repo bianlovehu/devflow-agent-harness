@@ -1,5 +1,5 @@
-# 文件用途：显式触发一次 DeepSeek 最小连通检查。
+# 文件用途：显式检查当前模型供应商（支持阿里云）的最小连通性。
 . "$PSScriptRoot\env.ps1"
 
-# Explicitly performs one small, billable request to the official DeepSeek API.
+# Explicitly performs a small, billable request to the configured provider.
 Invoke-Checked { uv run --locked python -m devflow.model_probe }

@@ -1,9 +1,10 @@
 # 文件用途：定义业务数据库表、唯一约束与跨仓库关联约束。
-"""Persistent business facts; graph checkpoints and workers arrive later."""
+"""Persistent business facts, immutable evidence and fenced worker leases."""
 
 import uuid
 from datetime import datetime
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     BigInteger,
     Boolean,
@@ -20,7 +21,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
 
 from devflow.database import Base
@@ -40,6 +41,7 @@ class RepositoryRecord(Base):
     language: Mapped[str] = mapped_column(String(80))
     default_branch: Mapped[str] = mapped_column(String(255))
     default_commit: Mapped[str] = mapped_column(String(40))
+    sync_state: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     source_updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -107,6 +109,7 @@ class RunRecord(Base):
     __table_args__ = (
         UniqueConstraint("id", "repo_id"),
         UniqueConstraint("idempotency_key"),
+        Index("ix_runs_worker_queue", "status", "created_at"),
         ForeignKeyConstraint(
             ["conversation_id", "repo_id"], ["conversations.id", "conversations.repo_id"]
         ),
@@ -136,6 +139,18 @@ class RunRecord(Base):
     next_event_sequence: Mapped[int] = mapped_column(Integer, default=1)
     error_code: Mapped[str | None] = mapped_column(String(64))
     error_message: Mapped[str | None] = mapped_column(Text)
+    # 租约令牌每次领取重新生成；旧进程不能续租或提交已失去所有权的任务。
+    lease_token: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    lease_owner: Mapped[str | None] = mapped_column(String(120))
+    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancel_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    attempt: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    retry_of: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("runs.id"))
+    result: Mapped[dict | None] = mapped_column(JSONB)
+    recovery_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -207,3 +222,107 @@ class RunEvidenceRecord(Base):
     run_id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
     evidence_id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
     repo_id: Mapped[str] = mapped_column(String(80))
+
+
+class KnowledgeDocument(Base):
+    __tablename__ = "knowledge_documents"
+    __table_args__ = (UniqueConstraint("repo_id", "filename"), UniqueConstraint("id", "repo_id"))
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    repo_id: Mapped[str] = mapped_column(ForeignKey("repositories.id"), index=True)
+    filename: Mapped[str] = mapped_column(String(200))
+    source: Mapped[str] = mapped_column(String(24))
+    deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class KnowledgeVersion(Base):
+    __tablename__ = "knowledge_versions"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["document_id", "repo_id"], ["knowledge_documents.id", "knowledge_documents.repo_id"]
+        ),
+        UniqueConstraint("document_id", "number"),
+        UniqueConstraint("id", "repo_id"),
+        Index(
+            "uq_knowledge_current", "document_id", unique=True, postgresql_where=text("is_current")
+        ),
+        CheckConstraint("status IN ('indexing', 'ready', 'failed')"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    document_id: Mapped[uuid.UUID] = mapped_column(Uuid)
+    repo_id: Mapped[str] = mapped_column(String(80), index=True)
+    number: Mapped[int] = mapped_column(Integer)
+    raw_sha256: Mapped[str] = mapped_column(String(64))
+    raw_storage_key: Mapped[str] = mapped_column(String(120))
+    size_bytes: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(16))
+    error_code: Mapped[str | None] = mapped_column(String(64))
+    error_message: Mapped[str | None] = mapped_column(Text)
+    is_current: Mapped[bool] = mapped_column(Boolean, default=False)
+    content: Mapped[str | None] = mapped_column(Text)
+    page_starts: Mapped[list] = mapped_column(JSONB, default=list)
+    model_key: Mapped[str | None] = mapped_column(String(200))
+    chunk_count: Mapped[int] = mapped_column(Integer, default=0)
+    evidence_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("evidence.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class KnowledgeChunk(Base):
+    __tablename__ = "knowledge_chunks"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["version_id", "repo_id"], ["knowledge_versions.id", "knowledge_versions.repo_id"]
+        ),
+        Index("ix_knowledge_keywords", "keywords", postgresql_using="gin"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    version_id: Mapped[uuid.UUID] = mapped_column(Uuid)
+    repo_id: Mapped[str] = mapped_column(String(80), index=True)
+    ordinal: Mapped[int] = mapped_column(Integer)
+    content: Mapped[str] = mapped_column(Text)
+    start_line: Mapped[int] = mapped_column(Integer)
+    end_line: Mapped[int] = mapped_column(Integer)
+    token_count: Mapped[int] = mapped_column(Integer)
+    embedding: Mapped[list] = mapped_column(Vector(384))
+    keywords: Mapped[str] = mapped_column(TSVECTOR)
+
+
+class EmbeddingCache(Base):
+    __tablename__ = "embedding_cache"
+
+    model_key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    content_sha256: Mapped[str] = mapped_column(String(64), primary_key=True)
+    embedding: Mapped[list] = mapped_column(Vector(384))
+
+
+class RunJournal(Base):
+    __tablename__ = "run_journal"
+    run_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("runs.id"), primary_key=True)
+    key: Mapped[str] = mapped_column(String(160), primary_key=True)
+    payload: Mapped[dict] = mapped_column(JSONB)
+
+
+class MemoryRecord(Base):
+    __tablename__ = "memories"
+    __table_args__ = (
+        ForeignKeyConstraint(["source_run_id", "repo_id"], ["runs.id", "runs.repo_id"]),
+        UniqueConstraint("source_run_id", "selection"),
+        CheckConstraint("status IN ('pending', 'approved', 'revoked', 'superseded')"),
+        CheckConstraint("expires_at > created_at"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    repo_id: Mapped[str] = mapped_column(ForeignKey("repositories.id"), index=True)
+    source_run_id: Mapped[uuid.UUID] = mapped_column(Uuid)
+    selection: Mapped[str] = mapped_column(String(40))
+    summary: Mapped[str] = mapped_column(Text)
+    sources: Mapped[list] = mapped_column(JSONB)
+    applicable_version: Mapped[str | None] = mapped_column(String(40))
+    status: Mapped[str] = mapped_column(String(16), default="pending")
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    replaces_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("memories.id"))
+    extraction: Mapped[dict] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

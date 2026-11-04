@@ -43,7 +43,7 @@ export default function Home() {
             查看服务状态，进入仓库核查 PR、CI 日志与项目资料。
           </p>
         </div>
-        <span className="step-badge">第 03 / 24 步</span>
+        <span className="step-badge">第 16 / 24 步 · v0.1</span>
       </div>
       <section className="overview" aria-labelledby="overview-title">
         <div>
@@ -115,34 +115,47 @@ export default function Home() {
         <div>
           <span className="section-label">已接入只读浏览</span>
           <h2>先查看原始材料，再开始分析</h2>
-          <p>在同一仓库里浏览变更、日志与设计约束，所有材料都有固定版本。</p>
+          <p>
+            浏览仓库变更与日志，创建分析任务后回查固定版本证据，导出带引用的分析建议。
+          </p>
         </div>
         <Link className="primary-link" href="/repositories">
           浏览仓库 →
         </Link>
       </section>
       <section className="next-section">
+        <span className="section-label">项目知识已接入</span>
+        <h2>检索设计约束，核查报告依据</h2>
+        <p>
+          上传资料、预览有效版本，创建带文档引用的知识问答，也可以为 PR 和 CI
+          分析补充项目背景。
+        </p>
+        <Link className="text-link" href="/knowledge">
+          打开知识库与知识问答 →
+        </Link>
+      </section>
+      <section className="next-section">
         <span className="section-label">接下来的开发</span>
-        <h2>把可控样例串成完整的任务闭环</h2>
+        <h2>上下文、长期记忆与恢复</h2>
         <div className="roadmap">
           <article>
-            <span>04</span>
+            <span>17</span>
             <div>
-              <h3>完成分析工作台</h3>
-              <p>连接已持久化的会话、任务和证据浏览接口。</p>
+              <h3>上下文预算与压缩</h3>
+              <p>为长对话保留关键约束和来源，量化压缩效果。</p>
             </div>
           </article>
           <article>
-            <span>05</span>
+            <span>18</span>
             <div>
-              <h3>接入 GitHub 只读数据</h3>
-              <p>读取真实 PR 与 CI 数据，并保留来源和固定提交。</p>
+              <h3>可审核的长期记忆</h3>
+              <p>支持经验候选、人工批准、撤销与有效期。</p>
             </div>
           </article>
         </div>
       </section>
       <footer className="page-footer">
-        <span>DevFlow / 样例数据与工程基础</span>
+        <span>DevFlow / 带证据的分析与项目知识 · v0.1</span>
         <a
           href="http://127.0.0.1:8000/api/docs"
           target="_blank"

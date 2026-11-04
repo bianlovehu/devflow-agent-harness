@@ -88,11 +88,22 @@ def test_runtime_configuration_does_not_expose_secret(client):
     assert "api_key" not in response.text
 
 
-def test_unimplemented_github_mode_never_silently_returns_fixture(client):
-    app.dependency_overrides[get_settings] = lambda: Settings(_env_file=None, data_source="github")
-    response = client.get("/api/v1/repositories")
-    assert response.status_code == 503
-    assert response.json()["detail"]["code"] == "data_source_unavailable"
+def test_github_mode_never_silently_returns_fixture(client):
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        _env_file=None, data_source="github", github_token="private-github-test-token"
+    )
+    with (
+        patch("devflow.github_source.GitHubRepositorySource.list_repositories", return_value=[]),
+        patch("devflow.data_source.fixture_source", side_effect=AssertionError("fixture access")),
+    ):
+        response = client.get("/api/v1/repositories")
+        assert response.status_code == 200
+        assert response.json()["data_source"] == "github"
+        assert response.json()["items"] == []
+    runtime = client.get("/api/v1/runtime")
+    assert runtime.json()["repository_adapter_available"] is True
+    assert runtime.json()["github_configured"] is True
+    assert "private-github-test-token" not in runtime.text
 
 
 def test_fixture_snapshot_hashes_and_case_evidence_are_consistent():

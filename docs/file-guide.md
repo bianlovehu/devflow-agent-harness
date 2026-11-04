@@ -22,7 +22,7 @@ JSON、版本 pin、锁文件、diff 与日志保持标准原格式，避免破�
 | [apps/api/src/devflow/__init__.py](../apps/api/src/devflow/__init__.py) | 提供 DevFlow 应用版本号。 |
 | [apps/api/src/devflow/artifact_store.py](../apps/api/src/devflow/artifact_store.py) | 按内容哈希保存及校验不可变的本地文本制品。 |
 | [apps/api/src/devflow/config.py](../apps/api/src/devflow/config.py) | 读取服务端环境配置，并隐藏密钥等敏感字段。 |
-| [apps/api/src/devflow/contracts.py](../apps/api/src/devflow/contracts.py) | 定义仓库、PR、CI 和文档的接口数据结构。 |
+| [apps/api/src/devflow/contracts.py](../apps/api/src/devflow/contracts.py) | 定义样例和 GitHub 共用的仓库、资源及来源状态契约。 |
 | [apps/api/src/devflow/data_source.py](../apps/api/src/devflow/data_source.py) | 定义仓库读取协议，并选择文件或数据库数据源。 |
 | [apps/api/src/devflow/database.py](../apps/api/src/devflow/database.py) | 创建数据库连接池，并为每个请求提供独立会话。 |
 | [apps/api/src/devflow/errors.py](../apps/api/src/devflow/errors.py) | 统一业务错误响应，并避免暴露敏感输入和数据库详情。 |
@@ -64,11 +64,11 @@ JSON、版本 pin、锁文件、diff 与日志保持标准原格式，避免破�
 | [apps/web/src/components/repository-browser.tsx](../apps/web/src/components/repository-browser.tsx) | 浏览仓库、PR diff、CI 日志和项目资料原文。 |
 | [apps/web/src/components/workspace-shell.tsx](../apps/web/src/components/workspace-shell.tsx) | 显示共享导航、数据来源及模型配置状态。 |
 | [apps/web/src/lib/health.ts](../apps/web/src/lib/health.ts) | 定义前端使用的健康检查响应类型。 |
-| [apps/web/src/lib/repositories.ts](../apps/web/src/lib/repositories.ts) | 定义资源接口类型，并封装统一的只读数据请求。 |
+| [apps/web/src/lib/repositories.ts](../apps/web/src/lib/repositories.ts) | 导出由 OpenAPI 生成的仓库资源类型与统一请求函数。 |
 | [apps/web/tsconfig.json](../apps/web/tsconfig.json) | 配置 TypeScript 类型检查和模块解析规则。 |
 | [compose.yaml](../compose.yaml) | 启动带持久化数据卷的 PostgreSQL 和 pgvector。 |
 | [docs/development-plan.md](../docs/development-plan.md) | 说明六周开发计划、各步产物和验收条件。 |
-| [docs/file-guide.md](../docs/file-guide.md) | 说明项目各文件的职责。 |
+| [docs/file-guide.md](../docs/file-guide.md) | 说明项目各文件的职责及关键入口。 |
 | [docs/step-01.md](../docs/step-01.md) | 记录工程骨架和运行环境的验收结果。 |
 | [docs/step-02.md](../docs/step-02.md) | 记录演示数据、浏览界面及模型连通验证。 |
 | [docs/step-03.md](../docs/step-03.md) | 记录数据持久化、迁移、幂等及重启验证。 |
@@ -134,3 +134,109 @@ JSON、版本 pin、锁文件、diff 与日志保持标准原格式，避免破�
 | [scripts/env.ps1](../scripts/env.ps1) | 为当前终端加载项目专用工具链和缓存路径。 |
 | [scripts/setup.ps1](../scripts/setup.ps1) | 安装锁定依赖，启动数据库并执行迁移和样例导入。 |
 | [uv.lock](../uv.lock) | 由 uv 维护的 Python 依赖锁文件，不手工插入注释。 |
+| [apps/web/scripts/generate-api.mjs](../apps/web/scripts/generate-api.mjs) | 从后端 OpenAPI 生成前端类型，并检查已提交类型是否过期。 |
+| [apps/web/src/app/api/backend/[...path]/route.ts](../apps/web/src/app/api/backend/[...path]/route.ts) | 将受限的业务读取与任务创建请求交给统一后端代理。 |
+| [apps/web/src/app/repositories/[repoId]/page.tsx](../apps/web/src/app/repositories/[repoId]/page.tsx) | 解析仓库及资源 URL 参数，并展示仓库工作区。 |
+| [apps/web/src/app/runs/[runId]/page.tsx](../apps/web/src/app/runs/[runId]/page.tsx) | 解析任务直达地址并恢复工作台详情。 |
+| [apps/web/src/app/runs/page.tsx](../apps/web/src/app/runs/page.tsx) | 解析仓库与会话筛选条件并打开分析工作台。 |
+| [apps/web/src/components/analysis-form.tsx](../apps/web/src/components/analysis-form.tsx) | 从 PR 或 CI 创建会话与分析任务，并处理重试和文件模式限制。 |
+| [apps/web/src/components/query-state.tsx](../apps/web/src/components/query-state.tsx) | 统一加载与错误提示，并遵守限流响应中的最早重试时间。 |
+| [apps/web/src/components/run-workspace.tsx](../apps/web/src/components/run-workspace.tsx) | 展示可重开的会话、任务详情、已保存事件与固定版本证据。 |
+| [apps/web/src/lib/api-client.ts](../apps/web/src/lib/api-client.ts) | 统一浏览器业务请求、错误码和请求标识，保留重试所需信息。 |
+| [apps/web/src/lib/backend-proxy.ts](../apps/web/src/lib/backend-proxy.ts) | 按接口和方法限制代理范围，校验来源并保留任务请求的幂等语义。 |
+| [apps/web/src/lib/generated/api.d.ts](../apps/web/src/lib/generated/api.d.ts) | 保存从 FastAPI OpenAPI 自动生成的接口类型，请勿手工修改。 |
+| [apps/web/src/lib/run-submission.ts](../apps/web/src/lib/run-submission.ts) | 合并重复点击，并在请求结果未知时保留相同任务参数与幂等键。 |
+| [apps/web/src/lib/workflows.ts](../apps/web/src/lib/workflows.ts) | 导出任务工作流类型，并完整读取会话消息与已保存事件。 |
+| [apps/web/tests/api-client.test.mjs](../apps/web/tests/api-client.test.mjs) | 验证浏览器请求保留错误码与请求标识，并正确发送幂等键。 |
+| [apps/web/tests/backend-proxy.test.mjs](../apps/web/tests/backend-proxy.test.mjs) | 验证业务代理的白名单、来源、查询透传及幂等响应边界。 |
+| [apps/web/tests/run-submission.test.mjs](../apps/web/tests/run-submission.test.mjs) | 验证重复点击只发一次请求，未知结果重试复用幂等键。 |
+| [docs/step-04-plan.docx](../docs/step-04-plan.docx) | 保存第4步前端主框架实施顺序与验收清单。 |
+| [docs/step-04.md](../docs/step-04.md) | 记录前端主框架、任务创建和固定版本证据工作台的验收结果。 |
+| [scripts/export_openapi.py](../scripts/export_openapi.py) | 离线导出 FastAPI 的 OpenAPI 契约，不启动服务或连接数据库。 |
+| [apps/api/migrations/versions/0003_github_sync_state.py](../apps/api/migrations/versions/0003_github_sync_state.py) | 为仓库增加 GitHub 摘要同步状态，保留现有样例与历史任务。 |
+| [apps/api/src/devflow/github_client.py](../apps/api/src/devflow/github_client.py) | 封装 GitHub 只读 HTTP、有限分页、限流退避和无令牌日志下载。 |
+| [apps/api/src/devflow/github_source.py](../apps/api/src/devflow/github_source.py) | 持久化 GitHub 仓库摘要，并按登记范围读取 PR、Issue、CI 与 job 日志。 |
+| [apps/api/tests/github_samples.py](../apps/api/tests/github_samples.py) | 提供可控的 GitHub API 响应，供只读适配器和数据库集成测试使用。 |
+| [apps/api/tests/test_github_client.py](../apps/api/tests/test_github_client.py) | 验证 GitHub 只读请求、输入范围、有限分页、错误分类及令牌隔离。 |
+| [apps/web/src/app/api/backend/[...path]/route.ts](../apps/web/src/app/api/backend/[...path]/route.ts) | 将受限的业务读取与任务创建请求交给统一后端代理。 |
+| [apps/web/src/app/repositories/[repoId]/page.tsx](../apps/web/src/app/repositories/[repoId]/page.tsx) | 解析仓库及资源 URL 参数，并展示仓库工作区。 |
+| [apps/web/src/app/runs/[runId]/page.tsx](../apps/web/src/app/runs/[runId]/page.tsx) | 解析任务直达地址并恢复工作台详情。 |
+| [apps/web/src/components/github-job-logs.tsx](../apps/web/src/components/github-job-logs.tsx) | 仅在用户选择 job 后读取日志，并展示未就绪或过期错误。 |
+| [apps/web/src/components/github-repository-form.tsx](../apps/web/src/components/github-repository-form.tsx) | 登记 GitHub 仓库并手动刷新摘要，所有外部请求保持只读。 |
+| [apps/web/src/components/source-notices.tsx](../apps/web/src/components/source-notices.tsx) | 展示来源抓取时间、同步范围和不完整数据提示。 |
+| [apps/web/src/lib/ci-status.ts](../apps/web/src/lib/ci-status.ts) | 根据真实 CI 状态生成标签，避免把运行中或无结论误判为失败。 |
+| [apps/web/tests/ci-status.test.mjs](../apps/web/tests/ci-status.test.mjs) | 验证真实 CI 的运行中、成功、缺失结论和失败状态不会混淆。 |
+| [docs/step-05.md](../docs/step-05.md) | 记录 GitHub 只读适配器、同步边界及真实网络验收结果。 |
+
+
+## 第二周新增文件
+
+| 文件 | 用途 |
+|---|---|
+| `apps/api/migrations/versions/0004_worker_leases.py` | 任务租约、取消和结果字段迁移 |
+| `apps/api/src/devflow/fixed_files.py` | 固定SHA的普通文本blob读取、路径和完整性检查 |
+| `apps/api/src/devflow/evidence_capture.py` | PR/CI固定证据采集、范围缺口与数据库绑定 |
+| `apps/api/src/devflow/worker.py` | 持久化分析/模拟worker、心跳、所有权隔离、取消与超时调用留痕 |
+| `apps/api/src/devflow/event_stream.py` | 持久化事件到SSE的续传服务 |
+| `apps/api/tests/test_fixed_files.py` | 固定文件、diff和原始日志字节测试 |
+| `apps/api/tests/test_week02_integration.py` | 真实数据库的worker、证据与SSE故障测试 |
+| `apps/web/src/components/run-progress.tsx` | 任务控制、SSE连接和时间线 |
+| `apps/web/src/lib/event-sequence.ts` | 按序号去重和连续游标 |
+| `apps/web/tests/event-sequence.test.mjs` | 历史/SSE合并和补查缺口测试 |
+| `scripts/week02_smoke.py` | 可重复的样例/公开GitHub证据验收 |
+| `docs/week-02.md` | 第二周逐项验收映射与限制 |
+
+本地 `data/week02-*-proof.json` 为验收产生的任务、版本、事件和制品哈希摘要，受Git忽略，不含凭据；`.cache/week02/`为临时进程日志与故障实验脚本。外部原始制品`.bin`保留源字节，不作为作者编辑的文本进行换行转换。
+
+## 第三周新增文件
+
+| 文件 | 用途 |
+|---|---|
+| `apps/api/src/devflow/model_gateway.py` | 阿里云/DeepSeek 模型入口、错误分类、usage 与测试假模型 |
+| `apps/api/src/devflow/tool_gateway.py` | 当前任务范围内的只读工具、分页、日志错误块和重复调用检测 |
+| `apps/api/src/devflow/agent.py` | LangGraph 循环、业务预算、一次修正与引用校验 |
+| `apps/api/src/devflow/reports.py` | 报告 Pydantic schema、引用范围检查及安全 Markdown 草稿 |
+| `apps/api/src/devflow/fake_model.py` | 仅使用可见工具片段的离线演示假模型 |
+| `apps/api/tests/test_agent.py` | 模型参数、权限边界、引用、预算与图执行单元验证 |
+| `apps/api/tests/test_week03_integration.py` | 六个样例、报告持久化/导出及失败/取消集成验证 |
+| `apps/web/src/components/analysis-report.tsx` | 风险卡片、日志/代码引用展开、复制和下载草稿 |
+| `scripts/week03_model_probe.py` | 显式真实模型工具调用与 JSON 小请求验收 |
+| `scripts/week03_smoke.py` | 样例、真实 GitHub 或已采集公开快照的完整报告验收 |
+| `docs/week-03.md` | 第9—12步实现、真实验收、复现方式和边界 |
+| `docs/progress-report-2026-10-29.md` | 前3周完整性审查、修复验证、历史证据复核和当前进展 |
+
+## 第四周新增文件
+
+| 文件 | 用途 |
+|---|---|
+| `apps/api/migrations/versions/0005_knowledge_rag_add_versioned_knowledge_and_hybrid_.py` | 文档、版本、向量块、GIN 关键词索引与内容向量缓存 |
+| `apps/api/src/devflow/embeddings.py` | 固定模型/tokenizer 校验、本地 CPU ONNX 推理与归一化 |
+| `apps/api/src/devflow/knowledge.py` | 文档解析、token 分块、事务版本切换、删除与混合检索 |
+| `apps/api/src/devflow/knowledge_api.py` | 知识库上传、状态、版本、预览、删除与检索调试 API |
+| `apps/api/tests/test_knowledge.py` | PDF/文本边界、分块完整性与分词规则 |
+| `apps/api/tests/test_week04_integration.py` | 版本/去重/删除、仓库隔离、缓存、并发与问答证据 |
+| `apps/web/src/app/knowledge/page.tsx` | 知识库页面入口与仓库参数 |
+| `apps/web/src/components/knowledge-workspace.tsx` | 资料维护、索引状态、来源预览、排序调试与问答入口 |
+| `fixtures/knowledge/owner-policy.en.md` | 用于中文问题召回英文资料的人工样例策略 |
+| `scripts/prepare_rag.py` | 显式下载和校验固定版本模型 |
+| `scripts/week04_smoke.py` | 真实本地向量、离线或真实模型的 PR/CI/问答演示验证 |
+| `docs/week-04.md` | 第13—16步验收、三分钟演示与当前限制 |
+
+## 第五周新增文件
+
+| 文件 | 用途 |
+|---|---|
+| `apps/api/migrations/versions/0006_context_memory_add_reviewed_memories_and_recovery_.py` | 记忆、恢复 journal、恢复次数和 checkpoint schema |
+| `apps/api/src/devflow/context_budget.py` | 分层输入预算、按次序压缩与来源/约束保留 |
+| `apps/api/src/devflow/memory.py` | 模型候选提取、人工审核、版本/有效期过滤与替代事务 |
+| `apps/api/src/devflow/memory_api.py` | 长期记忆本地提取、列表、编辑、批准和撤销接口 |
+| `apps/api/src/devflow/checkpoint.py` | PostgreSQL checkpointer 与持有租约的写入校验 |
+| `apps/api/src/devflow/security.py` | 已知令牌脱敏与统一 API JSON 展示边界 |
+| `apps/api/tests/test_context_budget.py` | 压缩顺序、工具配对、约束与来源、权限和脱敏验证 |
+| `apps/api/tests/test_week05_integration.py` | 记忆、长对话、恢复、版本变化和原始制品验证 |
+| `apps/api/tests/crash_worker.py` | 三个持久化边界强制退出的独立验收进程 |
+| `apps/web/src/app/memories/page.tsx` | 长期记忆工作台入口 |
+| `apps/web/src/components/memory-workspace.tsx` | 报告提取经验、审核、编辑、撤销与替代 |
+| `apps/web/src/components/context-history.tsx` | 压缩估算、usage、恢复次数与原始材料查看 |
+| `scripts/week05_smoke.py` | 临时数据库中的离线/真实模型记忆完整流程验收 |
+| `docs/week-05.md` | 第17—20步实现、验收记录与边界 |

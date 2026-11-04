@@ -58,7 +58,31 @@ def probe_deepseek(settings: Settings) -> dict[str, object]:
 
 
 def main() -> None:
-    result = probe_deepseek(get_settings())
+    settings = get_settings()
+    if settings.model_provider == "aliyun":
+        from devflow.model_gateway import DeepSeekModel, ModelError
+
+        model = DeepSeekModel(settings)
+        try:
+            reply = model.complete(
+                [{"role": "system", "content": 'Reply with json: {"ok":true}.'}],
+                [],
+                max_tokens=16,
+            )
+            result = {
+                "status": "ok"
+                if json.loads(reply.message["content"]) == {"ok": True}
+                else "unexpected_response",
+                "model": model.name,
+                "provider": model.provider,
+                **reply.usage.model_dump(),
+            }
+        except ModelError as error:
+            result = {"status": "error", "code": error.code, "message": error.message}
+    elif settings.model_provider == "fake":
+        result = {"status": "ok", "provider": "fake", "message": "离线假模型，不发送请求"}
+    else:
+        result = probe_deepseek(settings)
     print(json.dumps(result, ensure_ascii=False))
     raise SystemExit(0 if result["status"] == "ok" else 1)
 

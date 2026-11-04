@@ -48,6 +48,8 @@ def context(tmp_path):
             "postgres_db": database_name,
             "data_source": "fixture",
             "fixture_storage": "database",
+            "model_provider": "fake",
+            "analysis_executor": "simulation",
         }
     )
     admin = create_database_engine(get_settings()).execution_options(isolation_level="AUTOCOMMIT")
@@ -146,9 +148,9 @@ def test_create_run_commits_message_event_versions_and_artifacts(context):
     assert response.status_code == 201, response.text
     run = response.json()
     assert run["status"] == "queued"
-    assert run["execution_available"] is False
+    assert run["execution_available"] is True
     assert len(run["configuration_version"]) == 64
-    assert run["configuration"]["executor"] == "not_implemented"
+    assert run["configuration"]["executor"] == "simulation"
     assert run["input_version"]["resources"][0]["head_sha"] == (
         fixture_source().get_pull_request("repo-taskboard", 102).head_sha
     )
@@ -235,7 +237,10 @@ def test_other_task_types_pin_their_own_sources(context, task_type, target):
     response = context.client.post("/api/v1/runs", json=body)
     assert response.status_code == 201, response.text
     resources = response.json()["input_version"]["resources"]
-    assert len(resources) == (4 if task_type == "knowledge_qa" else 1)
+    # 知识问答只固定已成功索引的知识版本，不再把未索引的旧 fixture 文档注入上下文。
+    assert len(resources) == (0 if task_type == "knowledge_qa" else 1)
+    if task_type == "knowledge_qa":
+        assert response.json()["input_version"]["knowledge_versions"] == []
     assert all(item["kind"] == ("document" if target is None else "ci_run") for item in resources)
 
 
@@ -399,3 +404,82 @@ def test_invalid_fixture_metadata_is_rejected_without_writes(context, invalid):
         import_dataset(session, dataset, context.store)
     assert failure.value.code == "fixture_invalid"
     assert database_ids(context.engine) == before
+
+
+def test_github_registration_is_persistent_idempotent_and_separate_from_fixtures(context):
+    from devflow.github_source import GitHubRepositorySource
+    from github_samples import FakeGitHub
+
+    settings = context.settings.model_copy(update={"data_source": "github"})
+    fake = FakeGitHub()
+    with Session(context.engine, expire_on_commit=False) as session:
+        source = GitHubRepositorySource(session, settings, client=fake)
+        first = source.add_repository("https://github.com/Owner/Project.git")
+        second = source.add_repository("owner/project")
+        assert first.id == second.id == "github-123"
+        assert first.pull_request_count == first.ci_run_count == 1
+        assert first.fetched_at is not None
+        assert source.collection_metadata(first.id, "pull_request")["limited"] is True
+        assert session.scalar(select(func.count()).select_from(RepositoryRecord)) == 2
+    with Session(context.engine) as session:
+        source = GitHubRepositorySource(session, settings, client=fake)
+        assert [repo.id for repo in source.list_repositories()] == ["github-123"]
+        assert source.list_pull_requests("github-123")[0].number == 7
+        assert source.list_ci_runs("github-123")[0].conclusion is None
+        calls = list(fake.calls)
+        with pytest.raises(DomainError) as error:
+            source.get_pull_request("repo-taskboard", 7)
+        assert error.value.code == "not_found" and fake.calls == calls
+    fixture_repos = context.client.get("/api/v1/repositories").json()["items"]
+    assert [item["id"] for item in fixture_repos] == ["repo-taskboard"]
+
+
+def test_github_refresh_permission_failure_keeps_old_summary_and_fetch_time(context):
+    from devflow.github_source import GitHubRepositorySource
+    from github_samples import FakeGitHub
+
+    fake = FakeGitHub()
+    settings = context.settings.model_copy(update={"data_source": "github"})
+    with Session(context.engine, expire_on_commit=False) as session:
+        source = GitHubRepositorySource(session, settings, client=fake)
+        repo = source.add_repository("owner/project")
+        original = source.collection_metadata(repo.id, "pull_request")["fetched_at"]
+        fake.pr_error = DomainError(403, "github_forbidden", "PR权限不足")
+        updated = source.refresh(repo.id)
+        assert updated.pull_request_count == 1
+        assert updated.sync_warnings[0].code == "github_forbidden"
+        assert source.collection_metadata(repo.id, "pull_request")["fetched_at"] == original
+        fake.pr_error = DomainError(429, "github_rate_limited", "限流", 60)
+        before = len(fake.calls)
+        updated = source.refresh(repo.id)
+        assert all(notice.code == "github_rate_limited" for notice in updated.sync_warnings)
+        assert not any(path.endswith("/actions/runs") for path in fake.calls[before:])
+
+
+def test_github_http_routes_read_real_shapes_and_return_log_errors(context):
+    from github_samples import FakeGitHub
+
+    fake = FakeGitHub()
+    settings = context.settings.model_copy(update={"data_source": "github"})
+    app.dependency_overrides[get_settings] = lambda: settings
+    with patch("devflow.github_source.GitHubClient", return_value=fake):
+        response = context.client.post("/api/v1/repositories", json={"url": "owner/project"})
+        assert response.status_code == 201, response.text
+        pr = context.client.get("/api/v1/repositories/github-123/pull-requests/7")
+        assert pr.status_code == 200
+        data = pr.json()
+        assert data["files"][0]["head_content"] is None
+        assert data["files"][1]["patch_available"] is False
+        assert data["linked_issues"][0]["number"] == 9
+        assert data["linked_issues"][0]["relation"] == "body_reference"
+        run = context.client.get("/api/v1/repositories/github-123/ci-runs/10")
+        assert run.status_code == 200, run.text
+        assert run.json()["conclusion"] is None and run.json()["status"] == "in_progress"
+        assert run.json()["pull_request_number"] is None
+        assert run.json()["stage"] is None and run.json()["log"] is None
+        assert run.json()["jobs"][0]["steps"][0]["conclusion"] == "success"
+        log = context.client.get("/api/v1/repositories/github-123/ci-runs/10/jobs/20/logs")
+        assert log.status_code == 410 and log.json()["detail"]["code"] == "github_logs_unavailable"
+        assert log.headers["X-Request-ID"] == log.json()["detail"]["request_id"]
+        refreshed = context.client.post("/api/v1/repositories/github-123/refresh", json={})
+        assert refreshed.status_code == 200

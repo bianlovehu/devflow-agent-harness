@@ -8,6 +8,7 @@ $env:UV_PYTHON_DOWNLOADS_JSON_URL = Join-Path $ProjectRoot 'infra\python-downloa
 $env:npm_config_cache = Join-Path $ProjectRoot '.cache\npm'
 $env:npm_config_registry = 'https://registry.npmjs.org/'
 $env:NEXT_TELEMETRY_DISABLED = '1'
+$env:PYTHONUTF8 = '1'
 $NodeVersion = (Get-Content -LiteralPath (Join-Path $ProjectRoot '.node-version') -Raw).Trim()
 $LocalNodeDirectory = Join-Path $ProjectRoot ".tools\node-$NodeVersion-win-x64"
 if (Test-Path -LiteralPath (Join-Path $LocalNodeDirectory 'node.exe')) {

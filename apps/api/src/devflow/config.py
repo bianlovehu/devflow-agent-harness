@@ -21,6 +21,20 @@ class Settings(BaseSettings):
     fixture_storage: Literal["database", "files"] = "database"
     deepseek_api_key: SecretStr = SecretStr("")
     deepseek_model: str = "deepseek-flash"
+    model_provider: Literal["fake", "deepseek", "aliyun"] = "fake"
+    analysis_executor: Literal["simulation", "agent"] = "agent"
+    model_timeout_seconds: int = Field(default=90, ge=5, le=180)
+    model_max_output_tokens: int = Field(default=2000, ge=256, le=8000)
+    context_input_tokens: int = Field(default=12000, ge=2000, le=64000)
+    dashscope_api_key: SecretStr = SecretStr("")
+    dashscope_base_url: str = ""
+    dashscope_model: str = "deepseek-v4.1-flash"
+    github_token: SecretStr = SecretStr("")
+    github_timeout_seconds: int = Field(default=30, ge=1, le=60)
+
+    worker_lease_seconds: int = Field(default=30, ge=10, le=300)
+    worker_poll_seconds: float = Field(default=1, ge=0.1, le=30)
+    simulation_step_seconds: float = Field(default=3, ge=0, le=30)
 
     postgres_host: str = "127.0.0.1"
     postgres_port: int = Field(default=5432, ge=1, le=65535)

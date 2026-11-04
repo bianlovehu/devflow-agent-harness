@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from devflow import __version__
+from devflow.agent import model_configuration
 from devflow.artifact_store import ArtifactStore
 from devflow.config import Settings
 from devflow.errors import DomainError
@@ -22,6 +23,7 @@ from devflow.models import (
     RunEvidenceRecord,
     RunRecord,
 )
+from devflow.security import redact
 from devflow.workflow_contracts import ConversationCreate, MessageCreate, RunCreate
 
 
@@ -55,7 +57,9 @@ def create_conversation(session: Session, data: ConversationCreate, settings: Se
     return record
 
 
-def append_message(session: Session, conversation_id: uuid.UUID, content: str) -> MessageRecord:
+def append_message(
+    session: Session, conversation_id: uuid.UUID, content: str, *, role="user"
+) -> MessageRecord:
     # 锁定会话后分配消息序号，避免并发请求使用相同序号。
     conversation = session.scalar(
         select(ConversationRecord).where(ConversationRecord.id == conversation_id).with_for_update()
@@ -65,7 +69,7 @@ def append_message(session: Session, conversation_id: uuid.UUID, content: str) -
     message = MessageRecord(
         conversation_id=conversation.id,
         sequence=conversation.next_message_sequence,
-        role="user",
+        role=role,
         content=content,
     )
     conversation.next_message_sequence += 1
@@ -87,7 +91,10 @@ def append_run_event(session: Session, run_id: uuid.UUID, event_type: str, paylo
     if run is None:
         raise DomainError(404, "run_not_found", "任务不存在")
     event = RunEventRecord(
-        run_id=run.id, sequence=run.next_event_sequence, event_type=event_type, payload=payload
+        run_id=run.id,
+        sequence=run.next_event_sequence,
+        event_type=event_type,
+        payload=redact(payload),
     )
     run.next_event_sequence += 1
     run.updated_at = datetime.now(UTC)
@@ -114,8 +121,8 @@ def create_run(
     idempotency_key: str | None = None,
 ) -> tuple[RunRecord, bool]:
     # 把版本校验、消息、任务及初始事件放进同一事务，失败时一起回滚。
-    if settings.data_source != "fixture" or settings.fixture_storage != "database":
-        raise DomainError(503, "persistent_storage_required", "当前任务入口需要数据库样例模式")
+    if settings.data_source == "fixture" and settings.fixture_storage != "database":
+        raise DomainError(503, "persistent_storage_required", "当前任务入口需要数据库存储模式")
     digest = json_digest(data.model_dump(mode="json"))
     try:
         with session.begin():
@@ -141,14 +148,31 @@ def create_run(
                 ResourceSnapshot.repo_id == repo.id, ResourceSnapshot.is_current.is_(True)
             )
             if data.task_type == "knowledge_qa":
-                query = query.where(ResourceSnapshot.kind == "document")
+                # 知识正文仅由检索工具提供，不把旧 fixture 资料绕过有效版本过滤注入。
+                query = query.where(False)
             else:
                 kind = "pull_request" if data.task_type == "pr_review" else "ci_run"
                 query = query.where(
                     ResourceSnapshot.kind == kind, ResourceSnapshot.external_id == data.target_id
                 )
-            snapshots = session.scalars(query.order_by(ResourceSnapshot.external_id)).all()
-            if not snapshots:
+            snapshots = (
+                session.scalars(query.order_by(ResourceSnapshot.external_id)).all()
+                if repo.data_source == "fixture"
+                else []
+            )
+            if repo.data_source == "fixture" and data.task_type == "pr_review" and snapshots:
+                # PR 可以检查相同 head 的 CI；创建时一并固定，之后不查询最新版本替换。
+                head = snapshots[0].payload["head_sha"]
+                related = session.scalars(
+                    select(ResourceSnapshot).where(
+                        ResourceSnapshot.repo_id == repo.id,
+                        ResourceSnapshot.kind == "ci_run",
+                        ResourceSnapshot.is_current.is_(True),
+                        ResourceSnapshot.payload["head_sha"].astext == head,
+                    )
+                ).all()
+                snapshots = [*snapshots, *related]
+            if not snapshots and repo.data_source == "fixture" and data.task_type != "knowledge_qa":
                 raise DomainError(404, "target_not_found", "任务目标或资料未导入")
             evidence = session.scalars(
                 select(EvidenceRecord)
@@ -157,7 +181,7 @@ def create_run(
                 )
                 .order_by(EvidenceRecord.source_type, EvidenceRecord.path, EvidenceRecord.version)
             ).all()
-            if not evidence:
+            if not evidence and repo.data_source == "fixture" and data.task_type != "knowledge_qa":
                 raise DomainError(409, "evidence_missing", "目标尚无可引用的证据")
             # 写入任务前先确认制品存在且内容完整，防止保存不可回查的引用。
             for item in evidence:
@@ -182,12 +206,38 @@ def create_run(
                     for snapshot in snapshots
                 ],
             }
+            from devflow.knowledge import active_versions
+
+            input_version["knowledge_versions"] = (
+                [str(v) for v in active_versions(session, repo.id)] if data.use_knowledge else []
+            )
+            input_version["use_knowledge"] = data.use_knowledge
+            if repo.data_source == "github" and data.task_type != "knowledge_qa":
+                kind = "pull_request" if data.task_type == "pr_review" else "ci_run"
+                items = (repo.sync_state or {}).get(kind, {}).get("items", [])
+                field = "number" if kind == "pull_request" else "id"
+                target = next((item for item in items if str(item[field]) == data.target_id), None)
+                if target is None:
+                    raise DomainError(404, "target_not_found", "请先同步仓库，目标须在已同步列表中")
+                # 创建接口只读本地摘要即可返回；worker 按此提交与 attempt 采集固定证据。
+                input_version["resources"] = [
+                    {
+                        "kind": kind,
+                        "external_id": data.target_id,
+                        "pending_evidence": True,
+                        "head_sha": target["head_sha"],
+                        **(
+                            {"base_sha": target["base_sha"]}
+                            if kind == "pull_request"
+                            else {"run_attempt": target["run_attempt"]}
+                        ),
+                    }
+                ]
+                evidence = []
             configuration = {
                 "schema_version": 1,
                 "application_version": __version__,
-                "model": settings.deepseek_model,
-                "executor": "not_implemented",
-                "prompt_version": "not_configured",
+                **model_configuration(settings),
                 "budget": data.budget.model_dump(),
             }
             message = append_message(session, conversation.id, data.question)
@@ -217,7 +267,12 @@ def create_run(
                 session,
                 record.id,
                 "run.queued",
-                {"status": "queued", "task_type": data.task_type, "execution_available": False},
+                {
+                    "status": "queued",
+                    "task_type": data.task_type,
+                    "execution_available": True,
+                    "executor": configuration["executor"],
+                },
             )
         return record, False
     except IntegrityError:
@@ -250,3 +305,92 @@ def run_artifacts(session: Session, run_id: uuid.UUID):
         .distinct()
         .order_by(ArtifactRecord.sha256)
     ).all()
+
+
+TERMINAL = {"succeeded", "failed", "cancelled", "needs_attention"}
+
+
+def cancel_run(session: Session, run_id: uuid.UUID):
+    with session.begin():
+        run = session.scalar(select(RunRecord).where(RunRecord.id == run_id).with_for_update())
+        if run is None:
+            raise DomainError(404, "run_not_found", "任务不存在")
+        if run.status in TERMINAL or run.cancel_requested_at is not None:
+            return run
+        run.cancel_requested_at = datetime.now(UTC)
+        append_run_event(session, run.id, "run.cancel_requested", {"status": run.status})
+        if run.status == "queued":
+            run.status = "cancelled"
+            run.finished_at = datetime.now(UTC)
+            append_run_event(session, run.id, "run.cancelled", {"status": "cancelled"})
+    return run
+
+
+def retry_run(
+    session: Session,
+    run_id: uuid.UUID,
+    settings: Settings,
+    store: ArtifactStore,
+    idempotency_key: str,
+):
+    digest = json_digest({"retry_of": str(run_id)})
+    try:
+        with session.begin():
+            existing = _existing_request(session, idempotency_key, digest)
+            if existing is not None:
+                return existing, True
+            original = session.scalar(
+                select(RunRecord).where(RunRecord.id == run_id).with_for_update()
+            )
+            if original is None:
+                raise DomainError(404, "run_not_found", "任务不存在")
+            require_repository(session, original.repo_id, settings.data_source)
+            if original.status not in TERMINAL:
+                raise DomainError(409, "run_not_terminal", "任务结束后才能手动重试")
+            evidence = run_evidence(session, original.id)
+            for item in evidence:
+                artifact = session.get(ArtifactRecord, item.artifact_id)
+                store.read_text(artifact.storage_key, artifact.sha256)
+            original_message = session.get(MessageRecord, original.message_id)
+            message = append_message(session, original.conversation_id, original_message.content)
+            configuration = {**original.configuration, **model_configuration(settings)}
+            run = RunRecord(
+                repo_id=original.repo_id,
+                conversation_id=original.conversation_id,
+                message_id=message.id,
+                task_type=original.task_type,
+                target_id=original.target_id,
+                status="queued",
+                input_version=original.input_version,
+                configuration=configuration,
+                configuration_version=json_digest(configuration),
+                idempotency_key=idempotency_key,
+                request_sha256=digest,
+                retry_of=original.id,
+            )
+            session.add(run)
+            session.flush()
+            session.add_all(
+                [
+                    RunEvidenceRecord(run_id=run.id, evidence_id=item.id, repo_id=run.repo_id)
+                    for item in evidence
+                ]
+            )
+            append_run_event(
+                session,
+                run.id,
+                "run.queued",
+                {
+                    "status": "queued",
+                    "executor": configuration["executor"],
+                    "retry_of": str(original.id),
+                    "execution_available": True,
+                },
+            )
+        return run, False
+    except IntegrityError:
+        session.rollback()
+        existing = _existing_request(session, idempotency_key, digest)
+        if existing is not None:
+            return existing, True
+        raise DomainError(409, "write_conflict", "任务重试发生写入冲突") from None

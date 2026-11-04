@@ -21,6 +21,9 @@ class DatabaseRepositorySource:
         self.session = session
         self.mode = mode
 
+    def collection_metadata(self, repo_id: str, kind: str) -> dict:
+        return {}
+
     def _record(self, repo_id: str) -> RepositoryRecord:
         record = self.session.get(RepositoryRecord, repo_id)
         if record is None or record.data_source != self.mode:
@@ -31,7 +34,11 @@ class DatabaseRepositorySource:
         counts = dict(
             self.session.execute(
                 select(ResourceSnapshot.kind, func.count())
-                .where(ResourceSnapshot.repo_id == record.id, ResourceSnapshot.is_current.is_(True))
+                .where(
+                    ResourceSnapshot.repo_id == record.id,
+                    ResourceSnapshot.is_current.is_(True),
+                    ResourceSnapshot.external_id.not_like("kb-%"),
+                )
                 .group_by(ResourceSnapshot.kind)
             ).all()
         )
@@ -68,6 +75,7 @@ class DatabaseRepositorySource:
                 ResourceSnapshot.repo_id == repo_id,
                 ResourceSnapshot.kind == kind,
                 ResourceSnapshot.is_current.is_(True),
+                ResourceSnapshot.external_id.not_like("kb-%"),
             )
             .order_by(ResourceSnapshot.external_id)
         ).all()
@@ -79,6 +87,7 @@ class DatabaseRepositorySource:
                 ResourceSnapshot.repo_id == repo_id,
                 ResourceSnapshot.kind == kind,
                 ResourceSnapshot.external_id == external_id,
+                ResourceSnapshot.external_id.not_like("kb-%"),
                 ResourceSnapshot.is_current.is_(True),
             )
         )

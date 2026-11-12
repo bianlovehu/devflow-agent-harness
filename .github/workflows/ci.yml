@@ -22,6 +22,7 @@ jobs:
       DASHSCOPE_API_KEY: ""
       DEEPSEEK_API_KEY: ""
       NEXT_TELEMETRY_DISABLED: "1"
+      UV_PYTHON_DOWNLOADS: never
     services:
       postgres:
         image: pgvector/pgvector:0.8.2-pg17@sha256:feb68f4f15446397d8cac7f4fe48fe4586de83160d1fc48b46283312d1a33966
@@ -35,6 +36,10 @@ jobs:
           --health-interval 5s --health-timeout 3s --health-retries 20
     steps:
       - uses: actions/checkout@v4
+      - name: 安装项目指定的 Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: .python-version
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.11.3"

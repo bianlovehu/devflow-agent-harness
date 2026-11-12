@@ -2,6 +2,9 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { useWorkspace } from "@/components/workspace-context";
+import { Icon } from "@/components/icon";
 import {
   GitHubRepositoryForm,
   RepositoryRefresh,
@@ -26,72 +29,132 @@ import {
 } from "@/lib/repositories";
 
 export function RepositoryList() {
-  const query = useQuery({
-    queryKey: ["repositories"],
-    queryFn: () => fetchData<Collection<Repository>>("repositories"),
-  });
+  const { repositories: query, runtime } = useWorkspace();
+  const [search, setSearch] = useState("");
+  const [source, setSource] = useState("");
+  const items =
+    query.data?.items.filter(
+      (repo) =>
+        repo.full_name.toLowerCase().includes(search.toLowerCase()) &&
+        (!source || repo.data_source === source),
+    ) ?? [];
   return (
-    <div className="main-content">
+    <div className="management-page repository-library">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">REPOSITORIES</p>
-          <h1>从仓库开始，查看每一份证据</h1>
-          <p className="intro">浏览仓库的 PR 变更、CI 运行和项目资料。</p>
+          <h1>我的仓库</h1>
+          <p className="intro">浏览 PR、CI 运行和项目资料</p>
         </div>
-        <span className="step-badge">第 08 / 24 步</span>
+        <button
+          className="icon-button"
+          aria-label="刷新仓库列表"
+          disabled={query.isFetching}
+          onClick={() => void query.refetch()}
+        >
+          <Icon name="refresh" />
+        </button>
       </div>
-      <GitHubRepositoryForm />
+      {runtime.data?.data_source === "github" && (
+        <details className="repository-connect">
+          <summary>＋ 添加仓库</summary>
+          <GitHubRepositoryForm />
+        </details>
+      )}
+      <div className="library-toolbar">
+        <label className="search-input">
+          <Icon name="search" size={18} />
+          <input
+            aria-label="搜索仓库"
+            placeholder="搜索仓库名称…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </label>
+        <select
+          aria-label="仓库来源"
+          value={source}
+          onChange={(e) => setSource(e.target.value)}
+        >
+          <option value="">全部来源</option>
+          <option value="fixture">人工样例</option>
+          <option value="github">GitHub</option>
+        </select>
+      </div>
       <QueryMessage
         pending={query.isPending}
         error={query.error}
         retry={() => void query.refetch()}
       />
-      {query.data?.items.length === 0 && (
-        <div className="empty-panel">暂无仓库。请检查当前数据源配置。</div>
+      {query.data && (
+        <>
+          <div className="repository-table-scroll">
+            <table className="repository-table">
+              <thead>
+                <tr>
+                  <th>仓库名称</th>
+                  <th>来源</th>
+                  <th>PR / CI</th>
+                  <th>更新时间</th>
+                  <th>
+                    <span className="sr-only">操作</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((repo) => (
+                  <tr key={repo.id}>
+                    <td>
+                      <Link
+                        className="repository-name"
+                        href={`/repositories/${encodeURIComponent(repo.id)}`}
+                      >
+                        <Icon name="repo" size={24} />
+                        <span>
+                          <strong>{repo.full_name}</strong>
+                          <small>{repo.description}</small>
+                          <small>
+                            {repo.language} · {repo.default_branch}
+                          </small>
+                        </span>
+                      </Link>
+                    </td>
+                    <td>
+                      <span className="source-badge">
+                        {repo.data_source === "fixture" ? "人工样例" : "GitHub"}
+                      </span>
+                    </td>
+                    <td>
+                      {repo.pull_request_count} PR · {repo.ci_run_count} CI
+                    </td>
+                    <td>
+                      {new Date(repo.updated_at).toLocaleDateString("zh-CN")}
+                    </td>
+                    <td>
+                      <Link
+                        className="secondary-link"
+                        href={`/repositories/${encodeURIComponent(repo.id)}`}
+                      >
+                        打开仓库 <Icon name="arrow" size={16} />
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {!items.length && (
+            <p className="empty-panel">
+              {query.data.items.length
+                ? "没有匹配的仓库，请调整搜索或筛选。"
+                : "暂无仓库。添加一个 GitHub 仓库后开始分析。"}
+            </p>
+          )}
+          <p className="collection-count">
+            共 {items.length} 个仓库
+            {search || source ? ` · 全部 ${query.data.items.length} 个` : ""}
+          </p>
+        </>
       )}
-      <div className="repository-grid">
-        {query.data?.items.map((repo) => (
-          <Link
-            className="repository-card"
-            key={repo.id}
-            href={`/repositories/${repo.id}`}
-          >
-            <div className="repository-card-top">
-              <span className="service-symbol">⌘</span>
-              <span className="source-badge">
-                {repo.data_source === "fixture" ? "人工构造样例" : "GitHub"}
-              </span>
-            </div>
-            <h2>{repo.full_name}</h2>
-            <p>{repo.description}</p>
-            <div className="repo-counts">
-              <span>
-                <strong>{repo.pull_request_count}</strong>{" "}
-                {repo.data_source === "github" ? "已同步 PR" : "Pull requests"}
-              </span>
-              <span>
-                <strong>{repo.ci_run_count}</strong>{" "}
-                {repo.data_source === "github" ? "已同步 CI" : "CI 运行"}
-              </span>
-              <span>
-                <strong>{repo.document_count}</strong> 项目资料
-              </span>
-            </div>
-            <div className="repo-card-footer">
-              <span>
-                <i className="language-dot" />
-                {repo.language} · {repo.default_branch}
-              </span>
-              <span>打开仓库 →</span>
-            </div>
-          </Link>
-        ))}
-      </div>
-      <p className="page-note">
-        {query.data?.data_source === "github"
-          ? "选择仓库中的 PR 或 CI 读取详情。当前 GitHub 模式仅提供只读浏览。"
-          : "选择仓库中的 PR 或 CI，即可创建分析任务并核查保存的证据。"}
-      </p>
     </div>
   );
 }
@@ -301,6 +364,7 @@ export function RepositoryWorkspace({
   tab: RepositoryTab;
   selected?: string;
 }) {
+  const [search, setSearch] = useState("");
   const base = `repositories/${encodeURIComponent(repoId)}`;
   const repo = useQuery({
     queryKey: ["repository", repoId],
@@ -322,27 +386,34 @@ export function RepositoryWorkspace({
     queryFn: () => fetchData<Collection<DocumentSummary>>(`${base}/documents`),
     enabled: repo.isSuccess && tab === "docs",
   });
+  const activeList = tab === "prs" ? prs : tab === "ci" ? runs : docs;
+  const firstId =
+    tab === "prs"
+      ? prs.data?.items[0]?.number
+      : tab === "ci"
+        ? runs.data?.items[0]?.id
+        : docs.data?.items[0]?.id;
+  const activeId = selected ?? (firstId == null ? undefined : String(firstId));
   const resourcePath = {
     prs: "pull-requests",
     ci: "ci-runs",
     docs: "documents",
   }[tab];
-  // 缓存键包含仓库、分类和资源 ID，切换资源时不会复用上一项的详情。
   const detail = useQuery({
-    queryKey: ["resource-detail", repoId, tab, selected],
+    queryKey: ["resource-detail", repoId, tab, activeId],
     queryFn: () =>
       fetchData<PullRequestDetail | CIRunDetail | DocumentDetail>(
-        `${base}/${resourcePath}/${encodeURIComponent(selected!)}`,
+        `${base}/${resourcePath}/${encodeURIComponent(activeId!)}`,
       ),
-    enabled: repo.isSuccess && Boolean(selected),
+    enabled: repo.isSuccess && Boolean(activeId),
   });
-  const activeList = tab === "prs" ? prs : tab === "ci" ? runs : docs;
   const itemLink = (id: string | number) =>
-    `/repositories/${encodeURIComponent(repoId)}?tab=${tab}&item=${encodeURIComponent(String(id))}#resource-detail`;
-
+    `/repositories/${encodeURIComponent(repoId)}?tab=${tab}&item=${encodeURIComponent(String(id))}`;
+  const matches = (text: string) =>
+    text.toLowerCase().includes(search.toLowerCase());
   if (repo.isPending || repo.error)
     return (
-      <div className="main-content">
+      <div className="management-page">
         <Link className="back-link" href="/repositories">
           ← 返回仓库列表
         </Link>
@@ -354,188 +425,217 @@ export function RepositoryWorkspace({
       </div>
     );
   return (
-    <div className="main-content">
+    <div className="management-page repository-workspace">
       <Link className="back-link" href="/repositories">
-        ← 返回仓库列表
+        ← 所有仓库
       </Link>
-      <div className="page-heading repo-heading">
+      <div className="page-heading">
         <div>
-          <p className="eyebrow">REPOSITORY WORKSPACE</p>
-          <h1>{repo.data.full_name}</h1>
-          <p className="intro">{repo.data.description}</p>
+          <h1>
+            {repo.data.full_name}
+            <span className="source-badge">
+              {repo.data.data_source === "fixture" ? "人工样例" : "GitHub"}
+            </span>
+          </h1>
+          <p className="intro">
+            {repo.data.description} · {repo.data.language} ·{" "}
+            {repo.data.default_branch}
+          </p>
         </div>
-        <span className="source-badge">
-          {repo.data.data_source === "fixture" ? "人工构造样例" : "GitHub"}
-        </span>
+        <div className="heading-actions">
+          <Link
+            className="secondary-link"
+            href={`/runs?repo=${encodeURIComponent(repoId)}`}
+          >
+            打开分析工作台 <Icon name="external" size={16} />
+          </Link>
+          <RepositoryRefresh repo={repo.data} />
+        </div>
       </div>
-      <Link
-        className="text-link"
-        href={`/runs?repo=${encodeURIComponent(repoId)}`}
-      >
-        打开会话与任务 →
-      </Link>
-      <RepositoryRefresh repo={repo.data} />
-      <p>
-        <Link
-          className="text-link"
-          href={`/knowledge?repo=${encodeURIComponent(repoId)}`}
-        >
-          管理此仓库知识库与知识问答 →
-        </Link>
-      </p>
       <SourceNotices notices={repo.data.sync_warnings} />
-      <FetchInfo at={repo.data.fetched_at} />
-      <div className="repository-meta">
-        <span>
-          <i className="language-dot" />
-          {repo.data.language}
-        </span>
-        <span>分支 {repo.data.default_branch}</span>
-        <span>
-          数据时间{" "}
-          {new Date(repo.data.updated_at).toLocaleString("zh-CN", {
-            hour12: false,
-          })}
-        </span>
-      </div>
       <div className="resource-tabs" role="navigation" aria-label="仓库资源">
         <Link
           className={tab === "prs" ? "tab-active" : ""}
           href={`/repositories/${repoId}?tab=prs`}
+          scroll={false}
         >
           Pull requests <span>{repo.data.pull_request_count}</span>
         </Link>
         <Link
           className={tab === "ci" ? "tab-active" : ""}
           href={`/repositories/${repoId}?tab=ci`}
+          scroll={false}
         >
           CI 运行 <span>{repo.data.ci_run_count}</span>
         </Link>
         <Link
           className={tab === "docs" ? "tab-active" : ""}
           href={`/repositories/${repoId}?tab=docs`}
+          scroll={false}
         >
           项目资料 <span>{repo.data.document_count}</span>
         </Link>
       </div>
-      <QueryMessage
-        pending={activeList.isPending}
-        error={activeList.error}
-        retry={() => void activeList.refetch()}
-      />
+      <SourceNotices notices={activeList.data?.warnings} />
       <FetchInfo
         at={activeList.data?.fetched_at}
         limited={activeList.data?.limited}
       />
-      <SourceNotices notices={activeList.data?.warnings} />
-      {activeList.data?.items.length === 0 && (
-        <div className="empty-panel">当前分类暂无资源。</div>
-      )}
-      <div className="resource-list">
-        {tab === "prs" &&
-          prs.data?.items.map((pr) => (
-            <Link
-              className={`resource-row ${selected === String(pr.number) ? "row-active" : ""}`}
-              key={pr.number}
-              href={itemLink(pr.number)}
-            >
-              <span className="row-icon pr-icon">⑂</span>
-              <div>
-                <h3>{pr.title}</h3>
-                <p>
-                  #{pr.number} · {pr.author} ·{" "}
-                  <code>{pr.head_sha.slice(0, 10)}</code>
-                </p>
-              </div>
-              <span className="row-state">
-                {{ open: "Open", closed: "Closed", merged: "Merged" }[pr.state]}{" "}
-                ↗
-              </span>
-            </Link>
-          ))}
-        {tab === "ci" &&
-          runs.data?.items.map((run) => (
-            <Link
-              className={`resource-row ${selected === String(run.id) ? "row-active" : ""}`}
-              key={run.id}
-              href={itemLink(run.id)}
-            >
-              <span className="row-icon ci-icon">
-                {ciStatus(run).tone === "success"
-                  ? "✓"
-                  : ciStatus(run).tone === "failure"
-                    ? "×"
-                    : "◷"}
-              </span>
-              <div>
-                <h3>{run.name}</h3>
-                <p>
-                  #{run.id} · {stageName(run.stage)}{" "}
-                  {run.pull_request_number
-                    ? `· PR #${run.pull_request_number}`
-                    : ""}
-                </p>
-              </div>
-              <span className={`ci-state ${ciStatus(run).tone}`}>
-                {ciStatus(run).label}
-              </span>
-            </Link>
-          ))}
-        {tab === "docs" &&
-          docs.data?.items.map((doc) => (
-            <Link
-              className={`resource-row ${selected === doc.id ? "row-active" : ""}`}
-              key={doc.id}
-              href={itemLink(doc.id)}
-            >
-              <span className="row-icon doc-icon">▤</span>
-              <div>
-                <h3>{doc.title}</h3>
-                <p>
-                  {doc.kind} · {doc.line_count} 行 ·{" "}
-                  <code>{doc.version.slice(0, 10)}</code>
-                </p>
-              </div>
-              <span className="row-state">预览 ↗</span>
-            </Link>
-          ))}
-      </div>
-      {selected ? (
-        <div id="resource-detail">
-          {detail.data && tab !== "docs" && (
-            <AnalysisForm
-              key={`${repoId}:${tab}:${selected}`}
-              repoId={repoId}
-              taskType={tab === "prs" ? "pr_review" : "ci_debug"}
-              targetId={selected}
+      <div className="resource-master-detail">
+        <aside className="resource-catalog" aria-label="仓库资源列表">
+          <label className="search-input">
+            <Icon name="search" size={18} />
+            <input
+              aria-label="搜索仓库资源"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={
+                tab === "prs"
+                  ? "搜索 PR…"
+                  : tab === "ci"
+                    ? "搜索 CI…"
+                    : "搜索资料…"
+              }
             />
-          )}
+          </label>
           <QueryMessage
-            pending={detail.isPending}
-            error={detail.error}
-            retry={() => void detail.refetch()}
+            pending={activeList.isPending}
+            error={activeList.error}
+            retry={() => void activeList.refetch()}
           />
-          {detail.data && tab === "prs" && (
-            <PullRequestView pr={detail.data as PullRequestDetail} />
-          )}
-          {detail.data && tab === "ci" && (
-            <CIRunView run={detail.data as CIRunDetail} />
-          )}
-          {detail.data && tab === "docs" && (
-            <DocumentView doc={detail.data as DocumentDetail} />
-          )}
-        </div>
-      ) : (
-        <div className="selection-hint">
-          <span>↖</span>
-          <div>
-            <h3>选择一项资源，核查它的原始内容</h3>
-            <p>
-              PR 展示 diff 与代码版本，CI 展示带行号日志，项目资料展示完整原文。
-            </p>
+          <div className="resource-list">
+            {tab === "prs" &&
+              prs.data?.items
+                .filter((pr) => matches(`#${pr.number} ${pr.title}`))
+                .map((pr) => (
+                  <Link
+                    className={`resource-row ${activeId === String(pr.number) ? "row-active" : ""}`}
+                    aria-current={
+                      activeId === String(pr.number) ? "true" : undefined
+                    }
+                    href={itemLink(pr.number)}
+                    key={pr.number}
+                    scroll={false}
+                  >
+                    <div>
+                      <h3>
+                        #{pr.number} {pr.title}
+                      </h3>
+                      <p>
+                        {pr.author} · {pr.head_sha.slice(0, 8)}
+                      </p>
+                      <span className="source-badge">
+                        {
+                          { open: "Open", closed: "Closed", merged: "Merged" }[
+                            pr.state
+                          ]
+                        }
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+            {tab === "ci" &&
+              runs.data?.items
+                .filter((run) => matches(`#${run.id} ${run.name}`))
+                .map((run) => (
+                  <Link
+                    className={`resource-row ${activeId === String(run.id) ? "row-active" : ""}`}
+                    aria-current={
+                      activeId === String(run.id) ? "true" : undefined
+                    }
+                    href={itemLink(run.id)}
+                    key={run.id}
+                    scroll={false}
+                  >
+                    <div>
+                      <h3>
+                        #{run.id} {run.name}
+                      </h3>
+                      <p>
+                        {stageName(run.stage)}
+                        {run.pull_request_number
+                          ? ` · PR #${run.pull_request_number}`
+                          : ""}
+                      </p>
+                      <span className={`ci-state ${ciStatus(run).tone}`}>
+                        {ciStatus(run).label}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+            {tab === "docs" &&
+              docs.data?.items
+                .filter((doc) => matches(doc.title))
+                .map((doc) => (
+                  <Link
+                    className={`resource-row ${activeId === doc.id ? "row-active" : ""}`}
+                    aria-current={activeId === doc.id ? "true" : undefined}
+                    href={itemLink(doc.id)}
+                    key={doc.id}
+                    scroll={false}
+                  >
+                    <div>
+                      <h3>
+                        <Icon name="file" size={18} />
+                        {doc.title}
+                      </h3>
+                      <p>
+                        {doc.kind} · {doc.line_count} 行
+                      </p>
+                    </div>
+                  </Link>
+                ))}
           </div>
+          {activeList.data?.items.length === 0 && (
+            <p className="empty-panel">当前分类暂无资源。</p>
+          )}
+          {search && activeList.data?.items.length !== 0 && (
+            <p className="column-intro">仅筛选当前已载入的资源。</p>
+          )}
+          {tab === "docs" && (
+            <Link
+              className="text-link"
+              href={`/knowledge?repo=${encodeURIComponent(repoId)}`}
+            >
+              管理项目知识库 ↗
+            </Link>
+          )}
+        </aside>
+        <div id="resource-detail" className="resource-reader">
+          {activeId ? (
+            <>
+              <QueryMessage
+                pending={detail.isPending}
+                error={detail.error}
+                retry={() => void detail.refetch()}
+              />
+              {detail.data && tab === "prs" && (
+                <PullRequestView pr={detail.data as PullRequestDetail} />
+              )}
+              {detail.data && tab === "ci" && (
+                <CIRunView run={detail.data as CIRunDetail} />
+              )}
+              {detail.data && tab === "docs" && (
+                <DocumentView doc={detail.data as DocumentDetail} />
+              )}
+              {detail.data && tab !== "docs" && (
+                <AnalysisForm
+                  key={`${repoId}:${tab}:${activeId}`}
+                  repoId={repoId}
+                  taskType={tab === "prs" ? "pr_review" : "ci_debug"}
+                  targetId={activeId}
+                />
+              )}
+            </>
+          ) : (
+            <div className="selection-hint">
+              <Icon name="file" size={32} />
+              <h3>选择资源，查看原始内容</h3>
+              <p>PR 展示代码变更，CI 展示运行日志，项目资料展示原文。</p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

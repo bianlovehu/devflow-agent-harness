@@ -1,6 +1,7 @@
 // 文件用途：展示可定位风险、日志引用、检查范围与 Markdown 评论草稿导出。
 "use client";
-import { useState } from "react";
+import { useContext, useState } from "react";
+import { EvidenceNavigation } from "@/components/evidence-navigation";
 import { useQuery } from "@tanstack/react-query";
 import { fetchData } from "@/lib/api-client";
 import {
@@ -28,12 +29,15 @@ function CitationView({
   citation,
   evidence,
   repoId,
+  runId,
 }: {
   citation: Citation;
   evidence?: Evidence;
   repoId: string;
+  runId: string;
 }) {
   const [open, setOpen] = useState(false);
+  const navigate = useContext(EvidenceNavigation);
   const artifact = useQuery({
     queryKey: ["artifact", repoId, evidence?.artifact_id],
     queryFn: ({ signal }) =>
@@ -50,8 +54,21 @@ function CitationView({
   const start = Math.max(1, citation.start_line - 3);
   return (
     <div className="report-citation">
-      <button type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
-        {open ? "收起" : "展开"}{" "}
+      <button
+        type="button"
+        aria-expanded={navigate ? undefined : open}
+        onClick={() =>
+          navigate
+            ? navigate({
+                runId,
+                evidenceId: citation.evidence_id,
+                start: citation.start_line,
+                end: citation.end_line,
+              })
+            : setOpen(!open)
+        }
+      >
+        {navigate ? "↗" : open ? "收起" : "展开"}{" "}
         {evidence?.source_type === "log" ? "日志" : "证据"} ·{" "}
         {evidence?.path ?? citation.evidence_id} · L{citation.start_line}–
         {citation.end_line}
@@ -156,6 +173,9 @@ export function AnalysisReport({ run }: { run: Run }) {
         {String(run.result?.model_calls)} 次 · 工具{" "}
         {String(run.result?.tool_calls)} 次
       </p>
+      {freshness.data?.stale && (
+        <p className="source-warning">{freshness.data.note}</p>
+      )}
       {run.result?.provider === "fake" && (
         <p className="source-warning">
           离线假模型演示；规则输出，未调用真实模型。
@@ -168,69 +188,14 @@ export function AnalysisReport({ run }: { run: Run }) {
       />
       {value && (
         <>
-          <div className="report-actions">
-            <button type="button" onClick={download}>
-              下载 Markdown 草稿
-            </button>
-            <button type="button" onClick={() => void copy()}>
-              {copied ? "已复制" : "复制草稿"}
-            </button>
-          </div>
-          <p className="hash-note">
-            依据代码版本：
-            {String(
-              fixedHead ?? run.input_version.repository_commit ?? "见固定输入",
-            )}
-          </p>
-          {run.task_type === "pr_review" && (
-            <div
-              className={
-                freshness.data?.stale ? "source-warning" : "column-intro"
-              }
-            >
-              <p>
-                {freshness.data?.note ??
-                  (freshness.isPending
-                    ? "正在检查 PR 提交…"
-                    : "PR 版本未能检查")}
-              </p>
-              <button
-                disabled={freshness.isFetching}
-                onClick={() => void freshness.refetch()}
-              >
-                重新检查 PR 版本
-              </button>
-              <QueryState
-                pending={false}
-                error={freshness.error}
-                retry={() => void freshness.refetch()}
-              />
-            </div>
-          )}
-          <details className="draft-editor">
-            <summary>编辑评论草稿</summary>
-            <p>修改保存在当前页面，复制和下载均使用编辑后的内容。</p>
-            <textarea
-              aria-label="评论草稿"
-              value={draft ?? report.data?.markdown ?? ""}
-              onChange={(event) => {
-                setDraft(event.target.value);
-                setCopied(false);
-              }}
-              rows={18}
-            />
-            <button onClick={() => setDraft(null)}>恢复生成的草稿</button>
-          </details>
-          {exportError && (
-            <p role="alert" className="error-message">
-              {exportError}
-            </p>
-          )}
           <h3>摘要</h3>
           <p className="report-summary">{value.summary}</p>
           {"report_version" in value ? (
-            <section className="report-section" aria-label="证据检查与范围">
-              <h3>检查状态 · 第2版报告</h3>
+            <details
+              className="report-section report-scope"
+              aria-label="证据检查与范围"
+            >
+              <summary>证据检查与范围</summary>
               <p>引用检查：通过。来源、行号和读取范围有效。</p>
               <p>
                 结论是否被证据支持：
@@ -272,7 +237,7 @@ export function AnalysisReport({ run }: { run: Run }) {
                   ))}
                 </ul>
               </details>
-            </section>
+            </details>
           ) : (
             <p className="source-warning">
               旧版报告未记录结论分类、成立前提、严重程度依据和复核状态，这些信息均为未知。
@@ -290,6 +255,7 @@ export function AnalysisReport({ run }: { run: Run }) {
                     (item) => item.id === citation.evidence_id,
                   )}
                   repoId={run.repo_id}
+                  runId={run.id}
                 />
               ))}
               {Boolean(value.answer_evidence?.length) && (
@@ -393,6 +359,7 @@ export function AnalysisReport({ run }: { run: Run }) {
                                 (item) => item.id === citation.evidence_id,
                               )}
                               repoId={run.repo_id}
+                              runId={run.id}
                             />
                           ))}
                         </details>
@@ -415,6 +382,7 @@ export function AnalysisReport({ run }: { run: Run }) {
                         (item) => item.id === citation.evidence_id,
                       )}
                       repoId={run.repo_id}
+                      runId={run.id}
                     />
                   ))}
                   {(!("nature" in finding) ||
@@ -449,6 +417,69 @@ export function AnalysisReport({ run }: { run: Run }) {
               )}
             </section>
           ))}
+          <details className="report-tools">
+            <summary>草稿、版本与复核</summary>
+            <div className="report-actions">
+              <button type="button" onClick={download}>
+                下载 Markdown 草稿
+              </button>
+              <button type="button" onClick={() => void copy()}>
+                {copied ? "已复制" : "复制草稿"}
+              </button>
+            </div>
+            <p className="hash-note">
+              依据代码版本：
+              {String(
+                fixedHead ??
+                  run.input_version.repository_commit ??
+                  "见固定输入",
+              )}
+            </p>
+            {run.task_type === "pr_review" && (
+              <div
+                className={
+                  freshness.data?.stale ? "source-warning" : "column-intro"
+                }
+              >
+                <p>
+                  {freshness.data?.note ??
+                    (freshness.isPending
+                      ? "正在检查 PR 提交…"
+                      : "PR 版本未能检查")}
+                </p>
+                <button
+                  disabled={freshness.isFetching}
+                  onClick={() => void freshness.refetch()}
+                >
+                  重新检查 PR 版本
+                </button>
+                <QueryState
+                  pending={false}
+                  error={freshness.error}
+                  retry={() => void freshness.refetch()}
+                />
+              </div>
+            )}
+            <details className="draft-editor">
+              <summary>编辑评论草稿</summary>
+              <p>修改保存在当前页面，复制和下载均使用编辑后的内容。</p>
+              <textarea
+                aria-label="评论草稿"
+                value={draft ?? report.data?.markdown ?? ""}
+                onChange={(event) => {
+                  setDraft(event.target.value);
+                  setCopied(false);
+                }}
+                rows={18}
+              />
+              <button onClick={() => setDraft(null)}>恢复生成的草稿</button>
+            </details>
+            {exportError && (
+              <p role="alert" className="error-message">
+                {exportError}
+              </p>
+            )}
+          </details>
           <details>
             <summary>模型用量</summary>
             <pre>{JSON.stringify(run.result?.usage, null, 2)}</pre>

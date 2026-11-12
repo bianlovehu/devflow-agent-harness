@@ -1,16 +1,15 @@
 // 文件用途：维护仓库文档、查看索引/版本/原文、调试混合检索并创建知识问答。
 "use client";
 
-import Link from "next/link";
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   useInfiniteQuery,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { fetchData, postData } from "@/lib/api-client";
-import type { Collection, Repository, RuntimeInfo } from "@/lib/repositories";
+import { useWorkspace } from "@/components/workspace-context";
+import { Icon } from "@/components/icon";
 import type { Page } from "@/lib/workflows";
 import type { components } from "@/lib/generated/api";
 import { QueryState } from "@/components/query-state";
@@ -47,7 +46,10 @@ function DocumentRow({
       onClick={choose}
       type="button"
     >
-      <strong>{document.filename}</strong>
+      <strong>
+        <Icon name="file" size={19} />
+        {document.filename}
+      </strong>
       <span>
         {document.source === "fixture" ? "人工样例" : "用户上传"} ·{" "}
         {version
@@ -132,11 +134,14 @@ function DocumentPreview({
       </label>
       {version && (
         <>
-          <p className="hash-note">
-            版本 {version.id} · {version.chunk_count} 块 · {version.size_bytes}{" "}
-            bytes
-          </p>
-          <p className="hash-note">原文件 SHA256 {version.raw_sha256}</p>
+          <details className="document-version-details">
+            <summary>索引与版本信息</summary>
+            <p className="hash-note">
+              版本 {version.id} · {version.chunk_count} 块 ·{" "}
+              {version.size_bytes} bytes
+            </p>
+            <p className="hash-note">原文件 SHA256 {version.raw_sha256}</p>
+          </details>
           {version.error_message && (
             <p className="error-message">
               {version.error_code} · {version.error_message}
@@ -195,6 +200,9 @@ function RepositoryKnowledge({
   available: boolean;
 }) {
   const cache = useQueryClient();
+  const [tab, setTab] = useState<"library" | "search" | "qa">("library");
+  const [showUpload, setShowUpload] = useState(false);
+  const [documentSearch, setDocumentSearch] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -311,31 +319,59 @@ function RepositoryKnowledge({
     );
   return (
     <>
-      <section className="knowledge-panel">
-        <h2>导入项目资料</h2>
-        <p className="column-intro">
-          支持 UTF-8 Markdown、TXT 和可提取文本的 PDF（最多 50 页）。单文件 5
-          MiB，扫描件暂不支持。同名上传更新版本，相同内容自动去重。
-        </p>
-        <form
-          onSubmit={(event) => void upload(event)}
-          className="knowledge-upload"
-        >
-          <label>
-            选择资料
-            <input
-              ref={fileInput}
-              type="file"
-              accept=".md,.txt,.pdf"
-              required
-              disabled={busy}
-            />
-          </label>
-          <button className="primary-button" type="submit" disabled={busy}>
-            {busy ? "正在处理…" : "上传并建立索引"}
+      <div className="page-heading">
+        <div>
+          <h1>项目知识库</h1>
+          <p className="intro">管理仓库资料，为分析提供可核查的依据</p>
+        </div>
+        <div className="heading-actions">
+          <button onClick={() => setTab("qa")}>开始知识问答 ↗</button>
+          <button
+            className="primary-button"
+            aria-expanded={showUpload}
+            onClick={() => setShowUpload(!showUpload)}
+          >
+            <Icon name="plus" size={17} />
+            上传资料
           </button>
-        </form>
-      </section>
+          <button
+            className="icon-button"
+            aria-label="刷新知识库"
+            onClick={() => void refresh()}
+          >
+            <Icon name="refresh" size={18} />
+          </button>
+        </div>
+      </div>
+      <p className="upload-support">
+        支持 Markdown、TXT 和文本 PDF · 单文件 5 MiB · 同名上传更新版本
+      </p>
+      {showUpload && (
+        <section className="knowledge-upload-panel">
+          <h2>上传项目资料</h2>
+          <form
+            onSubmit={(event) => void upload(event)}
+            className="knowledge-upload"
+          >
+            <label>
+              选择资料
+              <input
+                ref={fileInput}
+                type="file"
+                accept=".md,.txt,.pdf"
+                required
+                disabled={busy}
+              />
+            </label>
+            <button type="submit" className="primary-button" disabled={busy}>
+              {busy ? "正在处理…" : "上传并建立索引"}
+            </button>
+          </form>
+          <p className="column-intro">
+            PDF 最多 50 页，支持可提取文本的文档，扫描件暂不支持。
+          </p>
+        </section>
+      )}
       {message && (
         <p role="status" className="source-notice">
           {message}
@@ -346,211 +382,218 @@ function RepositoryKnowledge({
           {error.message}
         </p>
       )}
-      <div className="knowledge-grid">
-        <section className="knowledge-panel">
-          <div className="knowledge-heading">
-            <h2>仓库资料</h2>
-            <button type="button" onClick={() => void refresh()}>
-              刷新状态
-            </button>
-          </div>
-          <QueryState
-            pending={documents.isPending}
-            error={documents.error}
-            retry={() => void documents.refetch()}
-          />
-          {items.length === 0 && documents.data && (
-            <p className="empty-panel">
-              还没有文档。上传设计约束、故障手册或历史复盘后即可检索。
-            </p>
-          )}
-          {items.map((doc) => (
-            <DocumentRow
-              key={doc.id}
-              document={doc}
-              selected={doc.id === active}
-              choose={() => setSelected({ document: doc.id })}
-            />
-          ))}
-          {documents.hasNextPage && (
-            <button
-              disabled={documents.isFetchingNextPage}
-              type="button"
-              onClick={() => void documents.fetchNextPage()}
-            >
-              加载更多资料
-            </button>
-          )}
-        </section>
-        {active ? (
-          <DocumentPreview
-            key={`${active}:${selected?.version ?? ""}`}
-            repoId={repoId}
-            documentId={active}
-            initialVersion={selected?.version}
-            remove={(id) => void remove(id)}
-            busy={busy}
-          />
-        ) : (
-          <section className="knowledge-panel">
-            <h2>来源预览</h2>
-            <p className="empty-panel">
-              选择文档查看索引状态、版本和带行号原文。
-            </p>
-          </section>
-        )}
-      </div>
-      <section className="knowledge-panel">
-        <p className="eyebrow">检索调试</p>
-        <h2>查看问题命中了哪些资料</h2>
-        <form
-          onSubmit={(event) => void search(event)}
-          className="knowledge-search"
+      <div className="knowledge-tabs" aria-label="知识库内容">
+        <button
+          className={tab === "library" ? "tab-active" : ""}
+          aria-pressed={tab === "library"}
+          onClick={() => setTab("library")}
         >
-          <label>
-            检索问题
-            <input
-              value={question}
-              onChange={(event) => setQuestion(event.target.value)}
-              required
-              maxLength={500}
+          资料库{" "}
+          <span>
+            {items.length}
+            {documents.hasNextPage ? "+" : ""}
+          </span>
+        </button>
+        <button
+          className={tab === "search" ? "tab-active" : ""}
+          aria-pressed={tab === "search"}
+          onClick={() => setTab("search")}
+        >
+          检索调试
+        </button>
+        <button
+          className={tab === "qa" ? "tab-active" : ""}
+          aria-pressed={tab === "qa"}
+          onClick={() => setTab("qa")}
+        >
+          知识问答
+        </button>
+      </div>
+      {tab === "library" && (
+        <div className="knowledge-grid">
+          <section className="knowledge-catalog" aria-label="文档列表">
+            <label className="search-input">
+              <Icon name="search" size={18} />
+              <input
+                aria-label="搜索文档"
+                value={documentSearch}
+                onChange={(e) => setDocumentSearch(e.target.value)}
+                placeholder="搜索文档名称…"
+              />
+            </label>
+            <QueryState
+              pending={documents.isPending}
+              error={documents.error}
+              retry={() => void documents.refetch()}
             />
-          </label>
-          <label>
-            检索方式
-            <select
-              value={mode}
-              onChange={(event) =>
-                setMode(event.target.value as "hybrid" | "keyword")
-              }
-            >
-              <option value="hybrid">混合检索 · 向量 + 关键词</option>
-              <option value="keyword">仅关键词 · 对照</option>
-            </select>
-          </label>
-          <button
-            type="submit"
-            className="primary-button"
-            disabled={searching || busy}
-          >
-            {searching ? "检索中…" : "检索资料"}
-          </button>
-        </form>
-        {result && (
-          <>
-            <p className="column-intro">{result.note}</p>
-            {result.items.length === 0 && (
+            {items
+              .filter((doc) =>
+                doc.filename
+                  .toLowerCase()
+                  .includes(documentSearch.toLowerCase()),
+              )
+              .map((doc) => (
+                <DocumentRow
+                  key={doc.id}
+                  document={doc}
+                  selected={doc.id === active}
+                  choose={() => setSelected({ document: doc.id })}
+                />
+              ))}
+            {documents.isSuccess && !items.length && (
               <p className="empty-panel">
-                未命中有效资料，证据不足。请补充文档或调整问题。
+                还没有文档。上传项目规范或故障手册后即可检索。
               </p>
             )}
-            {result.items.map((hit, index) => (
-              <article key={hit.chunk_id} className="knowledge-hit">
-                <div className="knowledge-heading">
-                  <h3>
-                    {index + 1}. {hit.filename} · v{hit.version_number}
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelected({
-                        document: hit.document_id,
-                        version: hit.version_id,
-                      });
-                      document
-                        .getElementById("knowledge-top")
-                        ?.scrollIntoView({ behavior: "smooth" });
-                    }}
-                  >
-                    预览来源
-                  </button>
-                </div>
-                <p className="hash-note">
-                  {hit.source === "fixture" ? "人工样例" : "用户上传"} · L
-                  {hit.start_line}–{hit.end_line}
-                  {hit.page ? ` · PDF 第 ${hit.page} 页` : ""} · RRF{" "}
-                  {hit.rrf_score.toFixed(5)} · 向量排名{" "}
-                  {hit.ranks.vector_rank ?? "—"} / 关键词排名{" "}
-                  {hit.ranks.keyword_rank ?? "—"} · 相似度{" "}
-                  {hit.vector_similarity?.toFixed(4) ?? "—"}
+            {documentSearch && (
+              <p className="column-intro">搜索仅覆盖已加载的文档。</p>
+            )}
+            {documents.hasNextPage && (
+              <button
+                className="text-button"
+                disabled={documents.isFetchingNextPage}
+                onClick={() => void documents.fetchNextPage()}
+              >
+                加载更多资料
+              </button>
+            )}
+            <p className="collection-count">
+              共 {items.length}
+              {documents.hasNextPage ? "+" : ""} 份资料
+            </p>
+          </section>
+          {active ? (
+            <div className="knowledge-reader">
+              <DocumentPreview
+                key={`${active}:${selected?.version ?? ""}`}
+                repoId={repoId}
+                documentId={active}
+                initialVersion={selected?.version}
+                remove={(id) => void remove(id)}
+                busy={busy}
+              />
+              <button className="text-button" onClick={() => setTab("qa")}>
+                基于项目资料提问 ↗
+              </button>
+            </div>
+          ) : (
+            <section className="knowledge-reader selection-hint">
+              <Icon name="book" size={36} />
+              <h2>选择一份资料</h2>
+              <p>查看索引状态、历史版本和带行号原文。</p>
+            </section>
+          )}
+        </div>
+      )}
+      {tab === "search" && (
+        <section className="knowledge-panel">
+          <p className="eyebrow">检索调试</p>
+          <h2>查看问题命中了哪些资料</h2>
+          <form
+            onSubmit={(event) => void search(event)}
+            className="knowledge-search"
+          >
+            <label>
+              检索问题
+              <input
+                value={question}
+                onChange={(event) => setQuestion(event.target.value)}
+                required
+                maxLength={500}
+              />
+            </label>
+            <label>
+              检索方式
+              <select
+                value={mode}
+                onChange={(event) =>
+                  setMode(event.target.value as "hybrid" | "keyword")
+                }
+              >
+                <option value="hybrid">混合检索 · 向量 + 关键词</option>
+                <option value="keyword">仅关键词 · 对照</option>
+              </select>
+            </label>
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={searching || busy}
+            >
+              {searching ? "检索中…" : "检索资料"}
+            </button>
+          </form>
+          {result && (
+            <>
+              <p className="column-intro">{result.note}</p>
+              {result.items.length === 0 && (
+                <p className="empty-panel">
+                  未命中有效资料，证据不足。请补充文档或调整问题。
                 </p>
-                <pre>{hit.content}</pre>
-                <small className="hash-note">
-                  证据 {hit.evidence_id} · 版本 {hit.version_id}
-                </small>
-              </article>
-            ))}
-          </>
-        )}
-      </section>
-      <AnalysisForm key={repoId} repoId={repoId} taskType="knowledge_qa" />
+              )}
+              {result.items.map((hit, index) => (
+                <article key={hit.chunk_id} className="knowledge-hit">
+                  <div className="knowledge-heading">
+                    <h3>
+                      {index + 1}. {hit.filename} · v{hit.version_number}
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTab("library");
+                        setSelected({
+                          document: hit.document_id,
+                          version: hit.version_id,
+                        });
+                        document
+                          .getElementById("knowledge-top")
+                          ?.scrollIntoView({ behavior: "smooth" });
+                      }}
+                    >
+                      预览来源
+                    </button>
+                  </div>
+                  <p className="hash-note">
+                    {hit.source === "fixture" ? "人工样例" : "用户上传"} · L
+                    {hit.start_line}–{hit.end_line}
+                    {hit.page ? ` · PDF 第 ${hit.page} 页` : ""} · RRF{" "}
+                    {hit.rrf_score.toFixed(5)} · 向量排名{" "}
+                    {hit.ranks.vector_rank ?? "—"} / 关键词排名{" "}
+                    {hit.ranks.keyword_rank ?? "—"} · 相似度{" "}
+                    {hit.vector_similarity?.toFixed(4) ?? "—"}
+                  </p>
+                  <pre>{hit.content}</pre>
+                  <small className="hash-note">
+                    证据 {hit.evidence_id} · 版本 {hit.version_id}
+                  </small>
+                </article>
+              ))}
+            </>
+          )}
+        </section>
+      )}
+      {tab === "qa" && (
+        <div className="knowledge-qa">
+          <AnalysisForm key={repoId} repoId={repoId} taskType="knowledge_qa" />
+        </div>
+      )}
     </>
   );
 }
 
-export function KnowledgeWorkspace({ repoId }: { repoId?: string }) {
-  const router = useRouter();
-  const repositories = useQuery({
-    queryKey: ["repositories"],
-    queryFn: () => fetchData<Collection<Repository>>("repositories"),
-  });
-  const runtime = useQuery({
-    queryKey: ["runtime"],
-    queryFn: () => fetchData<RuntimeInfo>("runtime"),
-  });
+export function KnowledgeWorkspace({
+  repoId: initialRepo,
+}: {
+  repoId?: string;
+}) {
+  const { repoId, repositories, runtime, available } = useWorkspace();
+  const chosen = initialRepo ?? repoId;
   const model = useQuery({
     queryKey: ["knowledge-status"],
     queryFn: () =>
       fetchData<{ model_files_ready: boolean }>("knowledge/status"),
   });
-  const chosen = repoId ?? repositories.data?.items[0]?.id;
-  const available =
-    runtime.data?.data_source === "github" ||
-    runtime.data?.fixture_storage === "database";
   return (
-    <div className="knowledge-page" id="knowledge-top">
-      <p className="eyebrow">项目知识 · RAG</p>
-      <div className="knowledge-heading">
-        <div>
-          <h1>把项目背景带入分析</h1>
-          <p className="column-intro">
-            资料按仓库和版本隔离，回答与报告中的引用可以逐行核查。
-          </p>
-        </div>
-        <Link className="text-link" href="/repositories">
-          回到仓库 →
-        </Link>
-      </div>
-      <div className="knowledge-toolbar">
-        <label>
-          所属仓库
-          <select
-            value={chosen ?? ""}
-            onChange={(event) =>
-              router.push(
-                `/knowledge?repo=${encodeURIComponent(event.target.value)}`,
-              )
-            }
-          >
-            <option value="" disabled>
-              选择仓库
-            </option>
-            {repositories.data?.items.map((repo) => (
-              <option key={repo.id} value={repo.id}>
-                {repo.full_name} ·{" "}
-                {repo.data_source === "fixture" ? "人工样例" : "GitHub"}
-              </option>
-            ))}
-          </select>
-        </label>
-        <span className="source-badge">
-          {model.data
-            ? model.data.model_files_ready
-              ? "本地向量模型已下载 · CPU"
-              : "本地模型待准备 · 参照 README 初始化"
-            : "正在检测本地模型…"}
-        </span>
-      </div>
+    <div className="management-page knowledge-page" id="knowledge-top">
       <QueryState
         pending={repositories.isPending || runtime.isPending}
         error={repositories.error ?? runtime.error ?? model.error}
@@ -560,16 +603,26 @@ export function KnowledgeWorkspace({ repoId }: { repoId?: string }) {
           void model.refetch();
         }}
       />
-      {chosen && runtime.data && (
-        <RepositoryKnowledge
-          key={chosen}
-          repoId={chosen}
-          available={available}
-        />
+      {model.data && !model.data.model_files_ready && (
+        <p className="source-warning">
+          本地检索模型尚未准备，请参照 README 初始化后使用向量检索。
+        </p>
       )}
-      {repositories.data?.items.length === 0 && (
-        <p className="empty-panel">请先添加仓库，再导入项目资料。</p>
-      )}
+      {chosen &&
+        runtime.data &&
+        repositories.data?.items.some((r) => r.id === chosen) && (
+          <RepositoryKnowledge
+            key={chosen}
+            repoId={chosen}
+            available={available}
+          />
+        )}
+      {repositories.data &&
+        (!chosen || !repositories.data.items.some((r) => r.id === chosen)) && (
+          <p className="empty-panel">
+            请先添加或选择有效仓库，再导入项目资料。
+          </p>
+        )}
     </div>
   );
 }

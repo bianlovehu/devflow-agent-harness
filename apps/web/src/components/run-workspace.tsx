@@ -1,19 +1,20 @@
-// 文件用途：展示可重开的会话、任务详情、已保存事件与固定版本证据。
+// 文件用途：按会话展示指令与分析时间线，支持指令目录跳转和固定版本证据抽屉。
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
-  useInfiniteQuery,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchData } from "@/lib/api-client";
-import type { Collection, Repository, RuntimeInfo } from "@/lib/repositories";
 import type {
   ArtifactContent,
   Conversation,
   Evidence,
+  Message,
   Page,
   Run,
 } from "@/lib/workflows";
@@ -21,42 +22,37 @@ import { readMessages, runStatus, taskName } from "@/lib/workflows";
 import { activeRun, RunControls, RunProgress } from "@/components/run-progress";
 import { QueryState } from "@/components/query-state";
 import { AnalysisReport } from "@/components/analysis-report";
+import { AnalysisForm } from "@/components/analysis-form";
 import { RunCost } from "@/components/budget-summary";
+import { useWorkspace } from "@/components/workspace-context";
+import { DevFlowMark, Icon } from "@/components/icon";
+import {
+  EvidenceNavigation,
+  type EvidenceLocation,
+} from "@/components/evidence-navigation";
+
+function subscribeNarrow(listener: () => void) {
+  const query = window.matchMedia("(max-width: 1100px)");
+  query.addEventListener("change", listener);
+  return () => query.removeEventListener("change", listener);
+}
+const narrowSnapshot = () => window.matchMedia("(max-width: 1100px)").matches;
 
 function date(value: string) {
   return new Date(value).toLocaleString("zh-CN", { hour12: false });
 }
-
-function useRevealSelection(selectedId: string | undefined, itemCount: number) {
-  const scrollArea = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const area = scrollArea.current;
-    const selected = area?.querySelector('[aria-current="true"]');
-    if (!area || !selected) return;
-    const bounds = area.getBoundingClientRect();
-    const item = selected.getBoundingClientRect();
-    // 只移动列表自身，避免切换历史任务时把整页滚到侧栏。
-    if (item.top < bounds.top) area.scrollTop += item.top - bounds.top;
-    else if (item.bottom > bounds.bottom)
-      area.scrollTop += item.bottom - bounds.bottom;
-  }, [selectedId, itemCount]);
-  return scrollArea;
-}
 function versionOf(run: Run) {
   const resources = run.input_version.resources;
   if (!Array.isArray(resources)) return "未记录版本";
-  const fixed = resources
-    .map((item) =>
-      String(item.head_sha ?? item.version ?? item.content_sha256 ?? ""),
-    )
-    .join(" · ");
-  const versions = run.input_version.knowledge_versions;
-  const knowledge = Array.isArray(versions)
-    ? versions.map((id) => `文档 ${String(id).slice(0, 8)}`).join(" · ")
-    : "";
-  return [fixed, knowledge].filter(Boolean).join(" · ") || "未绑定可用资料版本";
+  return (
+    resources
+      .map((item) =>
+        String(item.head_sha ?? item.version ?? item.content_sha256 ?? ""),
+      )
+      .filter(Boolean)
+      .join(" · ") || "见输入版本记录"
+  );
 }
-
 function SourceLines({
   content,
   start,
@@ -92,17 +88,25 @@ function SourceLines({
   );
 }
 
-function EvidencePanel({ run }: { run: Run }) {
-  const [selectedId, setSelectedId] = useState("");
+function EvidencePanel({
+  run,
+  location,
+  onClose,
+}: {
+  run: Run;
+  location: EvidenceLocation;
+  onClose: () => void;
+}) {
+  const [selectedId, setSelectedId] = useState(location.evidenceId ?? "");
   const evidence = useQuery({
     queryKey: ["run-evidence", run.id],
     refetchInterval: activeRun(run) ? 3000 : false,
     queryFn: ({ signal }) =>
       fetchData<Page<Evidence>>(`runs/${run.id}/evidence`, { signal }),
   });
-  const selected =
-    evidence.data?.items.find((item) => item.id === selectedId) ??
-    evidence.data?.items[0];
+  const selected = selectedId
+    ? evidence.data?.items.find((item) => item.id === selectedId)
+    : evidence.data?.items[0];
   const artifact = useQuery({
     queryKey: ["artifact", run.repo_id, selected?.artifact_id],
     queryFn: ({ signal }) =>
@@ -112,11 +116,28 @@ function EvidencePanel({ run }: { run: Run }) {
       ),
     enabled: Boolean(selected),
   });
+  const selectedRange =
+    selected && selected.id === location.evidenceId
+      ? {
+          start: location.start ?? selected.start_line,
+          end: location.end ?? selected.end_line,
+        }
+      : { start: selected?.start_line ?? 1, end: selected?.end_line ?? 1 };
   return (
     <aside className="evidence-panel" aria-label="固定版本证据">
       <div className="column-heading">
         <h2>证据</h2>
+        <button className="text-button" onClick={onClose}>
+          指令目录
+        </button>
         <span>{evidence.data?.items.length ?? 0} 条</span>
+        <button
+          className="icon-button"
+          aria-label="关闭证据面板"
+          onClick={onClose}
+        >
+          <Icon name="close" size={18} />
+        </button>
       </div>
       <p className="column-intro">任务固定的原始版本；采集完成后可查</p>
       <QueryState
@@ -124,53 +145,68 @@ function EvidencePanel({ run }: { run: Run }) {
         error={evidence.error}
         retry={() => void evidence.refetch()}
       />
+      {selectedId && evidence.isSuccess && !selected && (
+        <p className="error-message" role="alert">
+          引用的证据暂不可用，请刷新或切换证据来源。
+        </p>
+      )}
       {evidence.data?.items.length === 0 && (
         <div className="empty-panel">此任务尚无证据。</div>
       )}
-      <div className="evidence-list">
-        {evidence.data?.items.map((item) => (
-          <button
-            type="button"
-            key={item.id}
-            className={
-              item.id === selected?.id
-                ? "evidence-choice selected"
-                : "evidence-choice"
-            }
-            onClick={() => setSelectedId(item.id)}
-            aria-pressed={item.id === selected?.id}
-          >
-            <strong>{item.path}</strong>
-            <span>
-              {item.source_type === "log"
-                ? "日志"
-                : item.source_type === "file"
-                  ? "文件"
-                  : item.source_type === "diff"
-                    ? "变更"
-                    : "资料"}{" "}
-              · L{item.start_line}–{item.end_line} · {item.version.slice(0, 8)}
-            </span>
-          </button>
-        ))}
-      </div>
+      <details className="evidence-sources">
+        <summary>切换证据来源</summary>
+        <div className="evidence-list">
+          {evidence.data?.items.map((item) => (
+            <button
+              type="button"
+              key={item.id}
+              className={
+                item.id === selected?.id
+                  ? "evidence-choice selected"
+                  : "evidence-choice"
+              }
+              onClick={() => setSelectedId(item.id)}
+              aria-pressed={item.id === selected?.id}
+            >
+              <strong>{item.path}</strong>
+              <span>
+                {item.source_type === "log"
+                  ? "日志"
+                  : item.source_type === "file"
+                    ? "文件"
+                    : item.source_type === "diff"
+                      ? "变更"
+                      : "资料"}{" "}
+                · L{item.start_line}–{item.end_line} ·{" "}
+                {item.version.slice(0, 8)}
+              </span>
+            </button>
+          ))}
+        </div>
+      </details>
       {selected && (
         <section className="evidence-preview" key={selected.id}>
           <h3>{selected.path}</h3>
-          <p className="hash-note">
-            证据 ID <code>{selected.id}</code>
-          </p>
           <p className="evidence-location">
-            第 {selected.start_line}–{selected.end_line} 行
+            第 {selectedRange.start}–{selectedRange.end} 行
           </p>
-          <dl className="version-facts">
-            <dt>固定版本</dt>
-            <dd>
-              <code>{selected.version}</code>
-            </dd>
-            <dt>保存时间</dt>
-            <dd>{date(selected.retrieved_at)}</dd>
-          </dl>
+          <details className="evidence-version-details">
+            <summary>版本与保存信息 · {selected.version.slice(0, 8)}</summary>
+            <p className="hash-note">
+              证据 ID <code>{selected.id}</code>
+            </p>
+            <p className="evidence-location">
+              保存范围：第 {selected.start_line}–{selected.end_line} 行
+            </p>
+            <dl className="version-facts">
+              <dt>固定版本</dt>
+              <dd>
+                <code>{selected.version}</code>
+              </dd>
+              <dt>保存时间</dt>
+              <dd>{date(selected.retrieved_at)}</dd>
+            </dl>
+          </details>
           <QueryState
             pending={artifact.isPending}
             error={artifact.error}
@@ -180,15 +216,15 @@ function EvidencePanel({ run }: { run: Run }) {
             <>
               <SourceLines
                 content={artifact.data.content}
-                start={selected.start_line}
-                end={selected.end_line}
+                start={selectedRange.start}
+                end={selectedRange.end}
               />
               <details className="artifact-full">
                 <summary>查看完整原文</summary>
                 <SourceLines
                   content={artifact.data.content}
-                  start={selected.start_line}
-                  end={selected.end_line}
+                  start={selectedRange.start}
+                  end={selectedRange.end}
                   full
                 />
               </details>
@@ -204,65 +240,49 @@ function EvidencePanel({ run }: { run: Run }) {
 }
 
 function TaskContent({ run }: { run: Run }) {
-  const messages = useQuery({
-    queryKey: ["messages", run.conversation_id],
-    queryFn: ({ signal }) => readMessages(run.conversation_id, signal),
-  });
-  const question = messages.data?.find((item) => item.id === run.message_id);
+  const openEvidence = useContext(EvidenceNavigation);
   return (
-    <section className="task-content" aria-label="任务详情与报告">
-      <div className="column-heading">
-        <h2>
-          {taskName[run.task_type]} {run.target_id && `#${run.target_id}`}
-        </h2>
+    <article
+      className="run-response"
+      aria-label={`${taskName[run.task_type]}分析结果`}
+    >
+      <div className="response-heading">
+        <span className="assistant-avatar">
+          <DevFlowMark size={22} />
+        </span>
+        <strong>DevFlow</strong>
         <span className={`run-status status-${run.status}`}>
           {runStatus[run.status]}
         </span>
+        <span className="response-target">
+          {taskName[run.task_type]} {run.target_id && `#${run.target_id}`}
+        </span>
       </div>
-      <p className="task-id">任务 {run.id}</p>
-      <RunControls run={run} />
-      <div className="task-version">
-        <span>分析依据的版本</span>
-        <code>{versionOf(run)}</code>
-        <details>
-          <summary>查看输入版本记录</summary>
-          <pre>{JSON.stringify(run.input_version, null, 2)}</pre>
-        </details>
-      </div>
-      <h3>本次问题</h3>
-      <QueryState
-        pending={messages.isPending || (messages.isFetching && !question)}
-        error={messages.error}
-        retry={() => void messages.refetch()}
-      />
-      {question && <p className="user-question">{question.content}</p>}
-      {messages.data && !messages.isFetching && !question && (
-        <p className="empty-panel">任务输入消息暂不可用，请重新加载会话。</p>
-      )}
       {run.result?.kind === "analysis_report" ? (
         <AnalysisReport key={run.id} run={run} />
       ) : (
-        <section className="report-placeholder" aria-labelledby="report-title">
-          <p className="eyebrow">分析报告</p>
-          <h3 id="report-title">
+        <section className="report-placeholder">
+          <h3>
             {run.result?.kind === "simulation_summary"
               ? "模拟执行结果"
               : run.status === "queued"
                 ? "任务已保存并排队"
-                : "尚无分析报告"}
+                : activeRun(run)
+                  ? "正在分析…"
+                  : "尚无分析报告"}
           </h3>
           <p>
             {run.result?.kind === "simulation_summary"
-              ? `后台流程已验证，保存 ${String(run.result.evidence_count)} 条证据。模型调用 0 次，尚未生成分析报告。`
+              ? `后台流程已验证，保存 ${String(run.result.evidence_count)} 条证据，未调用模型。`
               : !run.execution_available
-                ? "此任务来自早期版本，可停止后按原证据重试，以验证当前后台通道。"
+                ? "这是早期版本任务，可按原证据重试。"
                 : activeRun(run)
-                  ? "后台正在固定证据并分析。关闭或刷新页面不影响任务；停止按钮可请求取消。"
-                  : "可核查输入、时间线、原始证据及错误原因，并按原证据重试。"}
+                  ? "正在固定证据并分析，关闭页面不影响任务执行。"
+                  : "可查看执行详情、原始证据及错误原因，并按原证据重试。"}
           </p>
           {run.result?.coverage_complete === false && (
-            <p className="error-message" role="status">
-              证据范围不完整。请在输入版本记录和元数据证据中核查缺失文件、日志及采集上限。
+            <p className="error-message">
+              证据范围不完整，请查看输入版本及采集范围。
             </p>
           )}
           {run.error_message && (
@@ -270,495 +290,407 @@ function TaskContent({ run }: { run: Run }) {
           )}
         </section>
       )}
-      <RunCost runId={run.id} />
-      <RunProgress run={run} />
-      {messages.data && messages.data.length > 1 && (
-        <details className="conversation-history">
-          <summary>会话消息 · {messages.data.length} 条</summary>
-          {messages.data.map((item) => (
-            <article
-              key={item.id}
-              className={item.id === run.message_id ? "current-message" : ""}
-            >
-              <span>
-                {item.role === "user" ? "用户" : item.role} · #{item.sequence}
-              </span>
-              <p>{item.content}</p>
-            </article>
-          ))}
+      <div className="response-actions">
+        <button type="button" onClick={() => openEvidence?.({ runId: run.id })}>
+          <Icon name="file" size={16} />
+          查看证据
+        </button>
+        <RunControls run={run} />
+        <time dateTime={run.created_at}>{date(run.created_at)}</time>
+      </div>
+      <details className="run-metadata">
+        <summary>版本与执行详情</summary>
+        <p className="task-id">任务 {run.id}</p>
+        <p className="hash-note">分析依据：{versionOf(run)}</p>
+        <details>
+          <summary>输入版本记录</summary>
+          <pre>{JSON.stringify(run.input_version, null, 2)}</pre>
         </details>
-      )}
-    </section>
+        <RunCost runId={run.id} />
+        <RunProgress run={run} />
+      </details>
+    </article>
   );
 }
 
-function WorkspaceColumns({
+async function readRuns(
+  repoId: string,
+  conversationId: string,
+  signal?: AbortSignal,
+) {
+  const items: Run[] = [];
+  let offset: number | null = 0;
+  while (offset !== null) {
+    const page: Page<Run> = await fetchData(
+      `runs?repo_id=${encodeURIComponent(repoId)}&conversation_id=${encodeURIComponent(conversationId)}&limit=100&offset=${offset}`,
+      { signal },
+    );
+    items.push(...page.items);
+    offset = page.next_offset ?? null;
+  }
+  return items;
+}
+
+function ConversationWorkspace({
   repoId,
-  run,
   conversationId,
+  focusedRun,
 }: {
   repoId: string;
-  run?: Run;
   conversationId?: string;
+  focusedRun?: Run;
 }) {
+  const { available, runtime, repository } = useWorkspace();
   const cache = useQueryClient();
-  const [panelView, setPanelView] = useState<{
-    conversationId?: string;
-    view: "task" | "evidence";
-  }>({ view: "task" });
-  const runtime = useQuery({
-    queryKey: ["runtime"],
-    queryFn: () => fetchData<RuntimeInfo>("runtime"),
-  });
-  const canRead =
-    runtime.data?.data_source === "github" ||
-    (runtime.data?.data_source === "fixture" &&
-      runtime.data.fixture_storage === "database");
-  const conversations = useInfiniteQuery({
-    queryKey: ["conversations", repoId],
-    queryFn: ({ pageParam, signal }) =>
-      fetchData<Page<Conversation>>(
-        `conversations?repo_id=${encodeURIComponent(repoId)}&limit=50&offset=${pageParam}`,
-        { signal },
-      ),
-    initialPageParam: 0,
-    getNextPageParam: (last) => last.next_offset ?? undefined,
-    enabled: canRead,
-  });
-  const conversationItems =
-    conversations.data?.pages.flatMap((page) => page.items) ?? [];
-  const activeId =
-    run?.conversation_id ?? conversationId ?? conversationItems[0]?.id;
+  const viewport = useRef<HTMLDivElement>(null);
+  const [activeMessage, setActiveMessage] = useState(
+    focusedRun?.message_id ?? "",
+  );
+  const narrow = useSyncExternalStore(
+    subscribeNarrow,
+    narrowSnapshot,
+    () => false,
+  );
+  const [panelChoice, setPanel] = useState<"outline" | "evidence" | null>();
+  const panel =
+    panelChoice === undefined ? (narrow ? null : "outline") : panelChoice;
+  const [location, setLocation] = useState<EvidenceLocation | null>(null);
   const conversation = useQuery({
-    queryKey: ["conversation", activeId],
+    queryKey: ["conversation", conversationId],
     queryFn: ({ signal }) =>
-      fetchData<Conversation>(`conversations/${activeId}`, { signal }),
-    enabled: canRead && Boolean(activeId),
+      fetchData<Conversation>(`conversations/${conversationId}`, { signal }),
+    enabled: available && Boolean(conversationId),
   });
-  const scopedConversation =
+  const scoped =
     conversation.data?.repo_id === repoId ? conversation.data : undefined;
-  const runs = useInfiniteQuery({
-    queryKey: ["runs", repoId, activeId],
-    queryFn: ({ pageParam, signal }) =>
-      fetchData<Page<Run>>(
-        `runs?repo_id=${encodeURIComponent(repoId)}&conversation_id=${activeId}&limit=50&offset=${pageParam}`,
-        { signal },
-      ),
-    initialPageParam: 0,
-    getNextPageParam: (last) => last.next_offset ?? undefined,
-    enabled: canRead && Boolean(scopedConversation),
-  });
-  const runItems = runs.data?.pages.flatMap((page) => page.items) ?? [];
-  const activeRuns = [
-    ...new Map(
-      [...runItems, ...(run ? [run] : [])]
-        .filter(
-          (item) =>
-            item.repo_id === repoId && item.conversation_id === activeId,
-        )
-        .map((item) => [item.id, item]),
-    ).values(),
-  ].sort(
-    (left, right) =>
-      Date.parse(right.created_at) - Date.parse(left.created_at) ||
-      right.id.localeCompare(left.id),
-  );
-  const latest = scopedConversation ? runs.data?.pages[0]?.items[0] : undefined;
-  const latestRun = useQuery<Run>({
-    queryKey: ["run", latest?.id],
-    queryFn: ({ signal }) => fetchData<Run>(`runs/${latest!.id}`, { signal }),
-    initialData: latest,
-    initialDataUpdatedAt: 0,
-    enabled: canRead && !run && Boolean(latest),
+  const runs = useQuery({
+    queryKey: ["runs", repoId, conversationId, "timeline"],
+    queryFn: ({ signal }) => readRuns(repoId, conversationId!, signal),
+    enabled: available && Boolean(scoped),
     refetchInterval: (query) =>
-      query.state.data && activeRun(query.state.data) ? 3000 : false,
+      query.state.data?.some(activeRun) ? 3000 : false,
   });
-  const selectedRun =
-    run ??
-    (latestRun.data?.repo_id === repoId &&
-    latestRun.data.conversation_id === activeId
-      ? latestRun.data
-      : undefined);
-  const view = panelView.conversationId === activeId ? panelView.view : "task";
-  const conversationScroll = useRevealSelection(
-    activeId,
-    conversationItems.length,
-  );
-  const historyScroll = useRevealSelection(selectedRun?.id, activeRuns.length);
-  const historyError = conversation.error ?? runs.error ?? latestRun.error;
-  const historyPending =
-    conversations.isPending ||
-    (Boolean(activeId) &&
-      (conversation.isPending ||
-        (Boolean(scopedConversation) && runs.isPending)));
+  const messages = useQuery({
+    queryKey: ["messages", conversationId],
+    queryFn: ({ signal }) => readMessages(conversationId!, signal),
+    enabled: available && Boolean(scoped),
+  });
+  const runItems = [
+    ...new Map(
+      [...(runs.data ?? []), ...(focusedRun ? [focusedRun] : [])]
+        .filter(
+          (r) => r.repo_id === repoId && r.conversation_id === conversationId,
+        )
+        .map((r) => [r.id, r]),
+    ).values(),
+  ].sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const instructions = (messages.data ?? [])
+    .filter((m) => m.role === "user")
+    .sort((a, b) => a.sequence - b.sequence);
+  const lastRun = runItems.at(-1);
+  const evidenceRun = runItems.find((r) => r.id === location?.runId);
+  const loading =
+    Boolean(conversationId) &&
+    (conversation.isPending ||
+      (Boolean(scoped) && (runs.isPending || messages.isPending)));
+  const error = conversation.error ?? runs.error ?? messages.error;
+  const wrongRepository = conversation.data && !scoped;
+
+  useEffect(() => {
+    if (!focusedRun?.message_id || !messages.data?.length) return;
+    const frame = requestAnimationFrame(() =>
+      document
+        .getElementById(`instruction-${focusedRun.message_id}`)
+        ?.scrollIntoView({ block: "start" }),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [focusedRun?.message_id, messages.data?.length]);
+  useEffect(() => {
+    const area = viewport.current;
+    if (!area || !instructions.length) return;
+    let frame = 0;
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const top = area.getBoundingClientRect().top + 140;
+        const turns = [
+          ...area.querySelectorAll<HTMLElement>(".conversation-turn"),
+        ];
+        const current =
+          area.scrollTop + area.clientHeight >= area.scrollHeight - 8
+            ? turns.at(-1)
+            : (turns
+                .filter((item) => item.getBoundingClientRect().top <= top)
+                .at(-1) ?? turns[0]);
+        if (current) setActiveMessage(current.dataset.messageId ?? "");
+      });
+    };
+    area.addEventListener("scroll", update, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      area.removeEventListener("scroll", update);
+    };
+  }, [instructions.length]);
+  useEffect(() => {
+    if (panel !== "evidence") return;
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPanel(narrow ? null : "outline");
+    };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [panel, narrow]);
+  function jump(message: Message) {
+    setActiveMessage(message.id);
+    document.getElementById(`instruction-${message.id}`)?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
+      block: "start",
+    });
+  }
   async function refresh() {
     await Promise.all(
       [
-        ["run", selectedRun?.id],
         ["runs", repoId],
-        ["conversations", repoId],
-        ["conversation", activeId],
-        ["messages", activeId],
-        ["run-evidence", selectedRun?.id],
-        ["run-events", selectedRun?.id],
-        ["report", selectedRun?.id],
-        ["artifact", repoId],
+        ["conversation", conversationId],
+        ["messages", conversationId],
+        ["run-evidence"],
+        ["report"],
       ].map((queryKey) => cache.invalidateQueries({ queryKey })),
     );
   }
+  const composer = (
+    <AnalysisForm
+      key={`${repoId}:${conversationId ?? "new"}`}
+      repoId={repoId}
+      composer
+      initialConversationId={scoped?.id}
+      initialTaskType={lastRun?.task_type}
+      initialTargetId={lastRun?.target_id ?? undefined}
+    />
+  );
   return (
-    <>
-      <div className="workspace-actions">
-        <Link
-          className="back-link"
-          href={`/repositories/${encodeURIComponent(repoId)}`}
-        >
-          ← 返回仓库并选择新的分析目标
-        </Link>
-        <button type="button" onClick={() => void refresh()}>
-          刷新任务记录
-        </button>
-      </div>
-      <QueryState
-        pending={runtime.isPending}
-        error={runtime.error}
-        retry={() => void runtime.refetch()}
-      />
-      {runtime.data && !canRead && (
-        <div className="empty-panel">
-          当前为文件浏览模式，创建会话与任务需要数据库存储。
-        </div>
-      )}
-      {canRead && selectedRun && (
-        <div className="workspace-view-tabs" aria-label="工作台内容切换">
-          <button
-            type="button"
-            aria-pressed={view === "task"}
-            onClick={() =>
-              setPanelView({ conversationId: activeId, view: "task" })
-            }
-          >
-            任务与报告
-          </button>
-          <button
-            type="button"
-            aria-pressed={view === "evidence"}
-            onClick={() =>
-              setPanelView({ conversationId: activeId, view: "evidence" })
-            }
-          >
-            证据
-          </button>
-        </div>
-      )}
-      {canRead && (
-        <div
-          className={`analysis-columns ${selectedRun ? `show-${view}` : ""}`}
-        >
-          <aside className="conversation-panel" aria-label="会话与任务列表">
-            <section
-              className="sidebar-section"
-              aria-labelledby="conversation-heading"
-            >
-              <div className="sidebar-section-heading">
-                <div className="column-heading">
-                  <h2 id="conversation-heading">会话</h2>
-                  <span>
-                    {conversationItems.length}
-                    {conversations.hasNextPage ? "+" : ""}
-                  </span>
-                </div>
-                <p className="history-conversation">选择会话查看历史分析</p>
-              </div>
-              <div
-                className="sidebar-scroll"
-                role="region"
-                aria-label="会话列表"
-                tabIndex={0}
-                ref={conversationScroll}
+    <EvidenceNavigation.Provider
+      value={(next) => {
+        setLocation(next);
+        setPanel("evidence");
+      }}
+    >
+      <div
+        className={`chat-workspace ${panel && instructions.length ? `with-${panel}` : ""}`}
+      >
+        <section className="chat-pane" aria-label="会话内容">
+          {conversationId && (
+            <div className="chat-toolbar">
+              <span>{instructions.length} 条指令</span>
+              <button
+                className="icon-button"
+                aria-label="刷新会话"
+                disabled={runs.isFetching}
+                onClick={() => void refresh()}
               >
-                <QueryState
-                  pending={conversations.isPending}
-                  error={conversations.error}
-                  retry={() => void conversations.refetch()}
-                />
-                {conversationItems.length === 0 && conversations.isSuccess && (
-                  <p className="empty-panel">
-                    还没有会话。从仓库的 PR 或 CI 创建第一个任务。
-                  </p>
-                )}
-                <div className="conversation-list">
-                  {conversationItems.map((item) => (
-                    <Link
-                      key={item.id}
-                      className={
-                        item.id === activeId
-                          ? "conversation-item selected"
-                          : "conversation-item"
-                      }
-                      href={`/runs?repo=${encodeURIComponent(repoId)}&conversation=${item.id}`}
-                      scroll={false}
-                      aria-current={item.id === activeId ? "true" : undefined}
-                    >
-                      <strong>{item.title}</strong>
-                      <span>{date(item.created_at)}</span>
-                    </Link>
-                  ))}
-                </div>
-                {conversations.hasNextPage && (
-                  <button
-                    type="button"
-                    className="sidebar-load-more"
-                    disabled={conversations.isFetchingNextPage}
-                    onClick={() => void conversations.fetchNextPage()}
-                  >
-                    {conversations.isFetchingNextPage
-                      ? "正在加载…"
-                      : "加载更多会话"}
-                  </button>
-                )}
-              </div>
-            </section>
-            <section
-              className="sidebar-section history-section"
-              aria-labelledby="history-heading"
-            >
-              <div className="sidebar-section-heading">
-                <div className="column-heading">
-                  <h2 id="history-heading">历史任务</h2>
-                  <span>
-                    {activeRuns.length}
-                    {runs.hasNextPage ? "+" : ""}
-                  </span>
-                </div>
-                <p
-                  className="history-conversation"
-                  title={scopedConversation?.title}
-                >
-                  {scopedConversation?.title ?? "选择会话后查看历史任务"}
-                </p>
-              </div>
-              <div
-                className="sidebar-scroll"
-                role="region"
-                aria-label="历史任务列表"
-                tabIndex={0}
-                ref={historyScroll}
+                <Icon name="refresh" size={18} />
+              </button>
+              <button
+                className="icon-button"
+                aria-label={
+                  panel === "outline" ? "收起指令目录" : "展开指令目录"
+                }
+                aria-pressed={panel === "outline"}
+                onClick={() => setPanel(panel === "outline" ? null : "outline")}
               >
-                <QueryState
-                  pending={Boolean(activeId) && conversation.isPending}
-                  error={conversation.error}
-                  retry={() => void conversation.refetch()}
-                />
-                {conversation.data && !scopedConversation && (
-                  <p className="error-message" role="alert">
-                    所选会话不属于当前仓库。
-                  </p>
-                )}
-                <QueryState
-                  pending={Boolean(scopedConversation) && runs.isPending}
-                  error={runs.error}
-                  retry={() => void runs.refetch()}
-                />
-                <QueryState
-                  pending={false}
-                  error={run ? null : latestRun.error}
-                  retry={() => void latestRun.refetch()}
-                />
-                <div className="run-list">
-                  {activeRuns.map((item) => (
-                    <Link
-                      key={item.id}
-                      href={`/runs/${item.id}`}
-                      scroll={false}
-                      className={
-                        item.id === selectedRun?.id
-                          ? "run-item selected"
-                          : "run-item"
-                      }
-                      aria-current={
-                        item.id === selectedRun?.id ? "true" : undefined
-                      }
-                    >
-                      <span>
-                        {taskName[item.task_type]}{" "}
-                        {item.target_id && `#${item.target_id}`}
-                      </span>
-                      <small>
-                        {runStatus[item.status]} · {date(item.created_at)} ·{" "}
-                        {item.id.slice(0, 8)}
-                      </small>
-                    </Link>
-                  ))}
-                </div>
-                {runs.isSuccess && !runs.error && activeRuns.length === 0 && (
-                  <p className="column-intro">该会话暂无分析任务。</p>
-                )}
-                {runs.hasNextPage && (
-                  <button
-                    type="button"
-                    className="sidebar-load-more"
-                    disabled={runs.isFetchingNextPage}
-                    onClick={() => void runs.fetchNextPage()}
-                  >
-                    {runs.isFetchingNextPage ? "正在加载…" : "加载更多任务记录"}
-                  </button>
-                )}
-              </div>
-            </section>
-          </aside>
-          {selectedRun ? (
-            <TaskContent key={`content-${selectedRun.id}`} run={selectedRun} />
-          ) : (
-            <section className="task-content workspace-empty">
-              <span className="empty-symbol">⑂</span>
-              <h2>
-                {historyError
-                  ? "历史记录暂不可用"
-                  : historyPending
-                    ? "正在加载会话记录"
-                    : scopedConversation
-                      ? "该会话暂无分析任务"
-                      : "选择会话，回看历史分析"}
-              </h2>
-              <QueryState
-                pending={historyPending}
-                error={historyError}
-                retry={() => void refresh()}
-              />
-              {!historyPending && !historyError && (
-                <p>
-                  选择会话会自动展示最近一次分析，也可以从左侧打开历史任务。
-                </p>
-              )}
-              <Link
-                className="primary-link"
-                href={`/repositories/${encodeURIComponent(repoId)}`}
-              >
-                选择 PR 或 CI →
-              </Link>
-            </section>
+                <Icon name="list" size={19} />
+              </button>
+            </div>
           )}
-          {selectedRun ? (
-            <EvidencePanel
-              key={`evidence-${selectedRun.id}`}
-              run={selectedRun}
+          <div className="conversation-scroll" ref={viewport}>
+            <QueryState
+              pending={loading || runtime.isPending}
+              error={error ?? runtime.error}
+              retry={() => void refresh()}
             />
-          ) : (
-            <aside className="evidence-panel">
-              <div className="column-heading">
-                <h2>证据</h2>
-              </div>
-              <p className="column-intro">
-                选择任务后显示它保存的代码、日志和版本。
+            {wrongRepository && (
+              <p className="empty-panel">
+                该会话不属于当前仓库，请从左侧重新选择。
               </p>
-            </aside>
+            )}
+            {!conversationId ? (
+              <div className="chat-welcome">
+                <DevFlowMark size={48} />
+                <h1>今天想分析什么？</h1>
+                <p>在当前仓库中审查 PR、排查 CI，或查询项目资料</p>
+                {composer}
+                <p className="welcome-repository">
+                  当前仓库：{repository?.full_name ?? repoId}
+                </p>
+                <div className="welcome-suggestions">
+                  <Link
+                    href={`/repositories/${encodeURIComponent(repoId)}?tab=prs`}
+                  >
+                    <Icon name="repo" size={18} />
+                    审查 PR 风险
+                  </Link>
+                  <Link
+                    href={`/repositories/${encodeURIComponent(repoId)}?tab=ci`}
+                  >
+                    <Icon name="refresh" size={18} />
+                    排查 CI 失败
+                  </Link>
+                  <Link href={`/knowledge?repo=${encodeURIComponent(repoId)}`}>
+                    <Icon name="book" size={18} />
+                    查询项目规范
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="conversation-reading">
+                {!loading && scoped && !instructions.length && (
+                  <div className="conversation-empty">
+                    <DevFlowMark size={32} />
+                    <h2>开始这个会话的第一次分析</h2>
+                    <p>选择分析目标，输入你的问题。</p>
+                  </div>
+                )}
+                {instructions.map((message) => (
+                  <section
+                    className="conversation-turn"
+                    id={`instruction-${message.id}`}
+                    data-message-id={message.id}
+                    key={message.id}
+                  >
+                    <div className="user-message">
+                      <p>{message.content}</p>
+                      <time dateTime={message.created_at}>
+                        {date(message.created_at)}
+                      </time>
+                    </div>
+                    {runItems
+                      .filter((r) => r.message_id === message.id)
+                      .map((run) => (
+                        <TaskContent run={run} key={run.id} />
+                      ))}
+                    {!loading &&
+                      !runItems.some((r) => r.message_id === message.id) && (
+                        <p className="column-intro">
+                          此条指令尚无关联分析结果。
+                        </p>
+                      )}
+                  </section>
+                ))}
+              </div>
+            )}
+          </div>
+          {conversationId && scoped && !loading && (
+            <div className="chat-composer-footer">{composer}</div>
           )}
-        </div>
-      )}
-    </>
+        </section>
+        {panel === "outline" && instructions.length > 0 && (
+          <aside className="instruction-directory" aria-label="指令目录">
+            <div className="directory-heading">
+              <h2>指令目录</h2>
+              <span>{instructions.length} 条指令</span>
+              <button
+                className="icon-button"
+                aria-label="收起指令目录"
+                onClick={() => setPanel(null)}
+              >
+                <Icon name="close" size={16} />
+              </button>
+            </div>
+            <nav>
+              {instructions.map((message) => (
+                <button
+                  type="button"
+                  key={message.id}
+                  className={
+                    message.id === (activeMessage || instructions[0]?.id)
+                      ? "active"
+                      : ""
+                  }
+                  aria-current={
+                    message.id === (activeMessage || instructions[0]?.id)
+                      ? "location"
+                      : undefined
+                  }
+                  onClick={() => jump(message)}
+                  title={message.content}
+                >
+                  {message.content}
+                </button>
+              ))}
+            </nav>
+          </aside>
+        )}
+        {panel === "evidence" && evidenceRun && location && (
+          <EvidencePanel
+            key={`${location.runId}:${location.evidenceId ?? ""}:${location.start ?? ""}`}
+            run={evidenceRun}
+            location={location}
+            onClose={() => setPanel(narrow ? null : "outline")}
+          />
+        )}
+      </div>
+    </EvidenceNavigation.Provider>
   );
 }
 
 export function RunDetail({ runId }: { runId: string }) {
   const run = useQuery<Run>({
     queryKey: ["run", runId],
+    queryFn: ({ signal }) => fetchData<Run>(`runs/${runId}`, { signal }),
     refetchInterval: (query) =>
       query.state.data && activeRun(query.state.data) ? 3000 : false,
-    queryFn: ({ signal }) => fetchData<Run>(`runs/${runId}`, { signal }),
   });
   return (
-    <div className="main-content analysis-main">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">分析工作台</p>
-          <h1>任务与证据</h1>
-          <p className="intro">按创建时保存的版本回看每一次分析。</p>
-        </div>
-        <span className="step-badge">第 16 / 24 步 · v0.1</span>
-      </div>
+    <>
       <QueryState
         pending={run.isPending}
         error={run.error}
         retry={() => void run.refetch()}
       />
       {run.data && (
-        <WorkspaceColumns
-          key={run.data.repo_id}
+        <ConversationWorkspace
+          key={run.data.conversation_id}
           repoId={run.data.repo_id}
-          run={run.data}
+          conversationId={run.data.conversation_id}
+          focusedRun={run.data}
         />
       )}
-      <Link className="text-link" href="/runs">
-        查看其他仓库的会话 →
-      </Link>
-    </div>
+    </>
   );
 }
-
 export function RunIndex({
-  repoId,
+  repoId: initialRepo,
   conversationId,
 }: {
   repoId?: string;
   conversationId?: string;
 }) {
-  const router = useRouter();
-  const repositories = useQuery({
-    queryKey: ["repositories"],
-    queryFn: ({ signal }) =>
-      fetchData<Collection<Repository>>("repositories", { signal }),
-  });
-  const selected = repoId ?? repositories.data?.items[0]?.id;
-  const exists = repositories.data?.items.some((item) => item.id === selected);
+  const { repoId, repositories } = useWorkspace();
+  const selected = initialRepo ?? repoId;
+  const exists = repositories.data?.items.some((repo) => repo.id === selected);
   return (
-    <div className="main-content analysis-main">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">分析工作台</p>
-          <h1>会话与任务</h1>
-          <p className="intro">打开历史任务，核查保存的输入和证据。</p>
-        </div>
-        <span className="step-badge">第 16 / 24 步 · v0.1</span>
-      </div>
+    <>
       <QueryState
         pending={repositories.isPending}
         error={repositories.error}
         retry={() => void repositories.refetch()}
       />
-      {repositories.data && repositories.data.items.length === 0 && (
-        <p className="empty-panel">暂无可用仓库。</p>
-      )}
-      {repositories.data && (
-        <label className="repository-picker">
-          当前仓库
-          <select
-            value={selected ?? ""}
-            onChange={(event) =>
-              router.push(
-                `/runs?repo=${encodeURIComponent(event.target.value)}`,
-              )
-            }
-          >
-            {repoId && !exists && <option value={repoId}>仓库不存在</option>}
-            {repositories.data.items.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.full_name}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
       {selected && exists && (
-        <WorkspaceColumns
-          key={selected}
+        <ConversationWorkspace
+          key={conversationId ?? selected}
           repoId={selected}
           conversationId={conversationId}
         />
       )}
-      {repositories.data && selected && !exists && (
-        <p className="empty-panel">该仓库不存在或尚未导入。</p>
+      {repositories.data && !exists && (
+        <div className="management-page">
+          <p className="empty-panel">暂无可用仓库，请先添加仓库。</p>
+          <Link className="primary-link" href="/repositories">
+            打开仓库 →
+          </Link>
+        </div>
       )}
-    </div>
+    </>
   );
 }

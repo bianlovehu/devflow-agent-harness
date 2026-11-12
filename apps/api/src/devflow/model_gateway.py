@@ -1,6 +1,9 @@
 # 文件用途：统一 DeepSeek 消息、工具调用、超时、响应校验及用量；不自动重试模型请求。
 import json
+import queue
+import socket
 import sys
+import threading
 import time
 from dataclasses import dataclass, field
 from urllib.error import HTTPError, URLError
@@ -39,6 +42,59 @@ class ModelError(DomainError):
 class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
+
+
+def bounded_exchange(opener, request, timeout, guard):
+    """网络线程不记账；主线程按总时限返回，迟到响应不能改写任务或释放预留。"""
+    results = queue.Queue(maxsize=1)
+    stopped = threading.Event()
+    active = {}
+    deadline = time.monotonic() + timeout
+
+    def exchange():
+        try:
+            with opener.open(request, timeout=timeout) as response:
+                active["response"] = response
+                if stopped.is_set():
+                    return
+                raw = response.read(1024 * 1024 + 1)
+            if not stopped.is_set():
+                results.put((True, raw))
+        except Exception as error:
+            if isinstance(error, HTTPError):
+                error.close()
+            if not stopped.is_set():
+                results.put((False, error))
+
+    threading.Thread(target=exchange, daemon=True, name="model-http").start()
+    try:
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError("model request exceeded total deadline")
+            guard()
+            try:
+                ok, value = results.get(timeout=min(1.0, remaining))
+            except queue.Empty:
+                continue
+            if ok:
+                return value
+            raise value
+    finally:
+        stopped.set()
+        # close()可能等待正在读取的缓冲区锁，主线程只中断底层socket，不等待网络线程。
+        response = active.get("response")
+        for _ in range(5):
+            if response is None:
+                break
+            transport = getattr(response, "_sock", None)
+            if transport is not None:
+                try:
+                    transport.shutdown(socket.SHUT_RDWR)
+                except OSError:
+                    pass
+                break
+            response = getattr(response, "fp", None) or getattr(response, "raw", None)
 
 
 class DeepSeekModel:
@@ -157,8 +213,7 @@ class DeepSeekModel:
             ledger.dispatch(receipt["request_id"])
             self.guard()
             sent = True
-            with self.opener.open(request, timeout=timeout) as response:
-                raw = response.read(1024 * 1024 + 1)
+            raw = bounded_exchange(self.opener, request, timeout, self.guard)
             if len(raw) > 1024 * 1024:
                 raise ModelError("model_format_error", "模型响应超过 1 MiB 限制")
             data = json.loads(raw)

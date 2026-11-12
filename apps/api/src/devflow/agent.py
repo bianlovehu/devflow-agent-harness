@@ -12,6 +12,7 @@ from pydantic import ValidationError
 from devflow.context_budget import compress_context, estimate_tokens
 from devflow.errors import DomainError
 from devflow.model_gateway import ModelError, measured_call
+from devflow.report_review import BoundedReportReview, review_configuration
 from devflow.report_v2 import ReportDraftV2, evidence_facts, finalize_report, parse_report
 from devflow.reports import AnalysisReport, validate_citations
 from devflow.runtime_policy import (
@@ -98,6 +99,7 @@ def model_configuration(settings):
         "prompt_version": PROMPT_VERSION,
         "system_prompt": SYSTEM_PROMPT,
         "report_version": "2",
+        "report_review": review_configuration(),
         "report_schema": ReportDraftV2.model_json_schema(),
         "code_sha256": digest.hexdigest(),
         "thinking": False,
@@ -150,6 +152,7 @@ class AnalysisRunner:
         self.model_calls = self.tool_calls = self.total_tokens = 0
         self.prompt_tokens = self.completion_tokens = self.repairs = 0
         self.report = None
+        self.review_state = {}
         self.trace = {"calls": [], "tools": definitions(), "configuration": configuration}
         self.history, self.memories = history or [], memories or []
         self.journal_read, self.journal_write = journal_read, journal_write
@@ -179,6 +182,7 @@ class AnalysisRunner:
                 },
                 "trace": self.trace,
                 "report": self.report.model_dump(mode="json") if self.report else None,
+                "review_state": self.review_state,
                 "observed": self.gateway.observed,
                 "cache": [[list(key), value] for key, value in self.gateway.cache.items()],
             }
@@ -190,6 +194,7 @@ class AnalysisRunner:
         for key, count in value["counters"].items():
             setattr(self, key, count)
         self.trace = value["trace"]
+        self.review_state = value.get("review_state", {})
         self.report = parse_report(value["report"]) if value.get("report") else None
         self.gateway.observed = value.get("observed", {})
         self.gateway.cache = {tuple(key): item for key, item in value.get("cache", [])}
@@ -216,14 +221,13 @@ class AnalysisRunner:
         if self.total_tokens > self.budget["max_total_tokens"]:
             raise DomainError(422, "budget_exceeded", "模型 token 用量达到任务限制")
 
-    def decide(self, state):
+    def _request_model(self, original, tools, *, phase="analysis", request_key=None):
         self.check()
         if self.model_calls >= self.budget["max_model_calls"]:
             raise DomainError(422, "budget_exceeded", "已达到模型调用次数限制")
         self.before_model()
-        tools = definitions() if not self.repairs else []
-        original = redact(state["messages"])
-        if hasattr(self, "active_memories"):
+        original = redact(original)
+        if phase == "analysis" and hasattr(self, "active_memories"):
             original = [
                 message
                 for message in original
@@ -286,6 +290,8 @@ class AnalysisRunner:
             "context": metrics,
             "call": self.model_calls,
             "tools_enabled": bool(tools),
+            "phase": phase,
+            "request_key": request_key,
             "recovery": self.configuration.get("recovering", False),
             "max_output_tokens": maximum,
         }
@@ -301,6 +307,9 @@ class AnalysisRunner:
                     self.configuration.get("model_timeout_seconds", 90),
                     MAX_MODEL_SECONDS,
                     self.timeout_seconds - (time.monotonic() - self.started),
+                    self.timeout_seconds - (time.monotonic() - self.started) - 2
+                    if phase != "analysis"
+                    else MAX_MODEL_SECONDS,
                 ),
             )
         except ModelError as error:
@@ -320,20 +329,6 @@ class AnalysisRunner:
             )
             self._save()
             self.check()
-            if error.code == "model_format_error" and self.repairs == 0:
-                self.repairs += 1
-                return {
-                    "messages": state["messages"]
-                    + [
-                        {
-                            "role": "user",
-                            "content": "输出格式有误，请输出符合 schema 的完整 json。"
-                            "仅此一次修正机会。",
-                        }
-                    ],
-                    "calls": [],
-                    "done": False,
-                }
             raise
         except DomainError as error:
             if error.code in {
@@ -382,6 +377,28 @@ class AnalysisRunner:
             {"call": self.model_calls, "usage": reply.usage.model_dump(), "duration_ms": elapsed},
         )
         self.check()
+        return reply, original
+
+    def decide(self, state):
+        tools = definitions() if not self.repairs else []
+        try:
+            reply, original = self._request_model(state["messages"], tools)
+        except ModelError as error:
+            if error.code == "model_format_error" and self.repairs == 0:
+                self.repairs += 1
+                return {
+                    "messages": state["messages"]
+                    + [
+                        {
+                            "role": "user",
+                            "content": "输出格式有误，请输出符合 schema 的完整 json。"
+                            "仅此一次修正机会。",
+                        }
+                    ],
+                    "calls": [],
+                    "done": False,
+                }
+            raise
         messages = original + [redact(reply.message)]
         calls = redact(reply.message).get("tool_calls") or []
         if calls:
@@ -557,7 +574,14 @@ class AnalysisRunner:
             **({"durability": "sync"} if self.checkpointer else {}),
         )
         self.check()
+        review = None
+        if (
+            self.configuration.get("report_review", {}).get("enabled")
+            and self.configuration.get("report_version") == "2"
+        ):
+            review = BoundedReportReview(self).run()
         return {
+            **({"report_review": review} if review is not None else {}),
             "kind": "analysis_report",
             "label": "分析建议",
             "analysis_report_available": True,

@@ -54,6 +54,8 @@ uv run --locked python -m devflow.eval_cli run --split all --output data/evals/a
 
 指定题可重复使用 `--case`，例如 `--case pr-owner-fixed --case pr-null-unchanged`。基线与候选必须使用相同数据内容、评分器、模型/供应商、检索适配器和整组题目；不兼容的基线会在请求模型前拒绝。工作树代码、提示词、上下文配置可以变化，并分别记录。输出目录必须为空或尚不存在。
 
+2026-11-12新增[限次报告复核与补查](report-review.md)及[20题真实前后对照](report-review-baseline.md)。它使用同一次初稿作对照，GPT逐题核对；模型意见不改变报告的语义复核状态。
+
 ## 人工语义复核
 
 本项目也可按用户指定由 GPT 承担复核角色，reviewer 必须如实记录为 GPT，不把模型复核写成真人评审。2026-11-09 已完成固定30题的 GPT 复核，并另审查9份历史 DeepSeek 真实报告；来源、逐题判断、失败原因与原始证据缺口见 [GPT语义复核记录](gpt-semantic-review-2026-11-09.md)。两批结果分别统计。

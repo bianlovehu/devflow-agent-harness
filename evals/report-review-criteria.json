@@ -1,0 +1,18 @@
+{
+  "version": "report-review-comparison-v1-20261112",
+  "comparison": "以同一次真实分析的初稿为对照，比较复核前后；不混用不同生成结果，不称作盲测。",
+  "reviewer": "GPT",
+  "verdicts": {
+    "pass": "未发现实质问题",
+    "pass_with_notes": "主要判断正确，仅有不改变判断的说明或措辞问题",
+    "fail": "存在实质的无依据断言、错误建议、误报或漏报",
+    "no_report": "未生成可用报告，单独统计执行失败，不当作语义漏报"
+  },
+  "target_categories": ["metadata_conflict", "truncation", "unsupported_cause", "historical_only", "duplicate", "overstated_impact", "unsupported_advice", "calculation"],
+  "counting": "每题每个错误类别最多计一次，保留不同证据与后果，不把同一错误在摘要和正文重复计数。",
+  "evidence": "GPT逐题对照原始代码、日志或文档以及实际读取记录；记录报告位置、证据位置和判断理由。",
+  "abstention": "由GPT区分明确回答、带条件回答与因证据不足拒绝结论；不能只按是否包含“证据不足”计数。",
+  "hard_gates": ["目标错误类别数量减少，出错题目数不增加", "已通过题目若退步，逐项解释原因", "不能靠未生成报告来减少错误", "复核记录与前后输出的校验值均一致"],
+  "limits": {"model_review_calls": 1, "supplement_rounds": 1, "supplement_reads": 3, "revision_calls": 1, "total_model_calls_per_task": 6, "total_tool_calls_per_task": 12, "shared_budget_cny": 200, "stop_cny": 180, "batch_cap_cny": 5},
+  "human_boundary": "模型复核只给辅助意见，不作为认证正确；GPT抽查记录单独保存，修改后的输出不能沿用旧输出的通过状态。"
+}

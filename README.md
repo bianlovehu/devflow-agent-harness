@@ -5,7 +5,7 @@
 
 当前已完成**第 1—21 步，包含前五周功能与固定评测闭环**：GitHub 只读数据、固定版本证据、持久化 worker、SSE 进度、PR 审查、CI 排障，以及仓库内的文档知识库和 RAG 知识问答。支持本地 CPU 多语言向量、关键词混合检索、文档版本/删除和可点击引用。模型入口支持阿里云百炼的 DeepSeek 4.1、DeepSeek 官方 API 与离线假模型；报告包含经校验的证据引用、检查范围和 Markdown 草稿。新增上下文预算与压缩、人工审核的长期记忆、PostgreSQL checkpoint 恢复、可编辑草稿和 PR 版本变化检查，详见 [第五周验收记录](docs/week-05.md)。系统不执行被分析仓库的代码。实现与三分钟演示见 [第四周验收记录](docs/week-04.md)，前三周记录见 [第三周验收记录](docs/week-03.md) 和 [完整性审查报告](docs/progress-report-2026-10-29.md)。
 
-当前范围（2026-11-11）：完善本地运行及真实评测闭环；发布封装和跨机器部署验收已取消。启动/排障见[本地运行手册](docs/local-runbook.md)，第22—24步状态见[核对表](docs/release-checklist.md)。 第22步两组真实对照、开发/新留出及GPT复核结果见[真实基线报告](docs/real-baseline-report.md)，其中保留未通过结果与限制。
+当前范围（2026-11-11）：完善本地运行及真实评测闭环；发布封装和跨机器部署验收已取消。启动/排障见[本地运行手册](docs/local-runbook.md)，第22—24步状态见[核对表](docs/release-checklist.md)。 第22步两组真实对照、开发/新留出及GPT复核结果见[真实基线报告](docs/real-baseline-report.md)，其中保留未通过结果与限制。任务4的[报告复核与补查](docs/report-review.md)沿用原任务和费用限制，模型意见不等于认证正确。[20题对照结果](docs/report-review-baseline.md)保留目标错误9份→7份、1处新退步以及费用和耗时增加。
 
 ## 环境
 

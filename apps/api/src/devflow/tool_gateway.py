@@ -115,6 +115,16 @@ def original_lines(content):
     return content.replace("\r\n", "\n").replace("\r", "\n").removesuffix("\n").split("\n")
 
 
+def evidence_signature(item):
+    return {
+        **{
+            key: item[key]
+            for key in ("artifact_id", "source_type", "path", "version", "start_line", "end_line")
+        },
+        "content_sha256": hashlib.sha256(item["content"].encode()).hexdigest(),
+    }
+
+
 class ToolGateway:
     def __init__(
         self,
@@ -128,6 +138,7 @@ class ToolGateway:
     ):
         self.repo_id = repo_id
         self.evidence = {item["id"]: item for item in evidence}
+        self.bindings = {key: evidence_signature(item) for key, item in self.evidence.items()}
         self.metadata = metadata
         self.guard, self.emit = guard, emit
         self.observed = {}
@@ -188,7 +199,14 @@ class ToolGateway:
                 return {"available": False, "code": "knowledge_not_ready", "items": []}
             result = self.knowledge_search(args.query)
             for item in result.pop("_evidence", []):
+                if item["id"] in self.bindings and self.bindings[item["id"]] != evidence_signature(
+                    item
+                ):
+                    raise DomainError(
+                        409, "evidence_binding_changed", "同一证据不能被重新绑定到其他版本或内容"
+                    )
                 self.evidence[item["id"]] = item
+                self.bindings[item["id"]] = evidence_signature(item)
             # 控制工具输出长度，未返回的片段不会被标记为已读。
             while (
                 result.get("items")

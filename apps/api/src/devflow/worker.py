@@ -594,6 +594,10 @@ class Worker:
             result["report"]["unconfirmed"].append(
                 "采集范围不完整，请核查固定输入中的 warnings 和元数据制品。"
             )
+        if result.get("report_review") is not None:
+            from devflow.report_review import digest
+
+            result["report_review"]["output_report_sha256"] = digest(result["report"])
         result.update(
             {
                 "trace_artifact_id": trace_id,

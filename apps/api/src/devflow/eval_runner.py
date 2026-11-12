@@ -155,6 +155,11 @@ def execute_case(
     )
     return redact(
         {
+            **(
+                {"report_review_state": runner.review_state}
+                if error and runner.review_state.get("initial_report")
+                else {}
+            ),
             "result": result,
             "error": error,
             "duration_ms": round((time.monotonic() - started) * 1000),

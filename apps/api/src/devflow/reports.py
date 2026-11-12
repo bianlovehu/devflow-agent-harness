@@ -181,6 +181,40 @@ def report_markdown(report: AnalysisReport, result: dict, run_id: str) -> str:
         ("检查范围", report.scope),
     ):
         lines += ["", "## " + title, *["- " + markdown_text(item) for item in items]]
+    review = result.get("report_review")
+    if review:
+        labels = {
+            "keep": "可保留",
+            "need_evidence": "需补证据",
+            "downgrade": "应降为假设",
+            "remove": "应删除",
+        }
+        lines += ["", "## 模型复核意见（辅助）", "重要结论仍需另行核对。"]
+        for item in review.get("decisions", []):
+            lines += [
+                "- "
+                + markdown_text(item["target"])
+                + "："
+                + labels[item["action"]]
+                + "；"
+                + markdown_text(item["reason"])
+            ]
+        lines += [
+            "- 复核请求："
+            + str(review["review_calls"])
+            + "次；补查："
+            + str(review["supplement_rounds"])
+            + "轮；修改："
+            + str(review["revision_calls"])
+            + "次。"
+        ]
+        lines += [
+            "- 修改前报告编号：" + review["input_report_sha256"],
+            "- 修改后报告编号：" + review["output_report_sha256"],
+        ]
+        if review["input_report_sha256"] != review["output_report_sha256"]:
+            lines += ["- 报告内容已改变，修改后内容没有再次复核。"]
+        lines += ["- " + markdown_text(note) for note in review["notes"]]
     return "\r\n".join(lines) + "\r\n"
 
 

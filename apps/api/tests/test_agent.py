@@ -63,6 +63,7 @@ def config(**budget):
         **model_configuration(Settings(_env_file=None, model_provider="fake")),
         # 此文件保留旧版报告与旧任务恢复的回归，新版分类另见 test_report_v2.py。
         "report_version": "1",
+        "report_review": {"enabled": False},
         "report_schema": AnalysisReport.model_json_schema(),
         "budget": {
             "max_model_calls": 6,

@@ -21,6 +21,7 @@ from devflow.models import (
     RunJournal,
     RunRecord,
 )
+from devflow.report_review import ReportReviewRecord
 from devflow.report_v2 import PublicReport
 from devflow.reports import report_markdown, require_report
 from devflow.workflow_contracts import (
@@ -68,6 +69,7 @@ class EventPage(Contract):
 class ReportResponse(Contract):
     report: PublicReport
     markdown: str
+    review: ReportReviewRecord | None = None
 
 
 class ContextResponse(Contract):
@@ -289,6 +291,7 @@ def report(run_id: UUID, session: Database):
     return {
         "report": document.model_dump(mode="json"),
         "markdown": report_markdown(document, run.result, str(run.id)),
+        "review": run.result.get("report_review"),
     }
 
 

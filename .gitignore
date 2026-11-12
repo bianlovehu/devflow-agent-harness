@@ -26,3 +26,8 @@ data/
 *.log
 .DS_Store
 Thumbs.db
+# 本地评测生成记录；固定题目、判断标准和已提交的历史文件保留
+/evals/baselines/
+/evals/freezes/
+/evals/reviews/
+/evals/regressions/report-review-*.json

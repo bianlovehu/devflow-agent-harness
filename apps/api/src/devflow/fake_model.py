@@ -105,6 +105,30 @@ class FixtureModel:
 
     def complete(self, messages, tools, **kwargs):
         request = json.loads(messages[1]["content"])
+        if request.get("phase") == "review":
+            # 只演示复核记录格式；不增加新的规则来替代真实模型复核。
+            return ModelReply(
+                {
+                    "role": "assistant",
+                    "content": json.dumps(
+                        {
+                            "decisions": [
+                                {
+                                    "target": target,
+                                    "action": "keep",
+                                    "category": "none",
+                                    "reason": "离线演示保留原文，未进行真实语义复核。",
+                                    "evidence": [],
+                                    "metadata_evidence": ["reads"],
+                                }
+                                for target in request["targets"]
+                            ],
+                            "reads": [],
+                        },
+                        ensure_ascii=False,
+                    ),
+                }
+            )
         tool_messages = [message for message in messages if message["role"] == "tool"]
         if not tool_messages:
             calls = []

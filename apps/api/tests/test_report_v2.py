@@ -231,6 +231,7 @@ def test_v2_agent_repairs_a_boundary_violation_and_restores_versioned_report():
         ]
     )
     config = model_configuration(Settings(_env_file=None, model_provider="fake"))
+    config["report_review"]["enabled"] = False  # 本例只验证原有格式修正与恢复。
     config["budget"] = {
         "max_model_calls": 6,
         "max_tool_calls": 12,

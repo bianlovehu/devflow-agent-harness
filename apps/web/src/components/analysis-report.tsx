@@ -14,6 +14,7 @@ import type { ArtifactContent, Evidence, Page, Run } from "@/lib/workflows";
 import { QueryState } from "@/components/query-state";
 import { ExtractMemory } from "@/components/memory-workspace";
 import { ContextHistory } from "@/components/context-history";
+import { ReportReview } from "@/components/report-review";
 
 type ReportOutput = components["schemas"]["ReportResponse"];
 type Citation = components["schemas"]["Citation"];
@@ -243,6 +244,7 @@ export function AnalysisReport({ run }: { run: Run }) {
               旧版报告未记录结论分类、成立前提、严重程度依据和复核状态，这些信息均为未知。
             </p>
           )}
+          <ReportReview review={report.data?.review} />
           {value.answer && (
             <section className="report-section">
               <h3>回答</h3>

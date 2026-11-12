@@ -1850,6 +1850,55 @@ export interface components {
       report:
         | components["schemas"]["AnalysisReport"]
         | components["schemas"]["ReportV2"];
+      review?: components["schemas"]["ReportReviewRecord"] | null;
+    };
+    /** ReportReviewRecord */
+    ReportReviewRecord: {
+      /** Decisions */
+      decisions: components["schemas"]["ReviewDecision"][];
+      /** Deterministic */
+      deterministic: {
+        [key: string]: unknown;
+      };
+      /** Initial Duration Ms */
+      initial_duration_ms: number;
+      /** Initial Observed */
+      initial_observed: {
+        [key: string]: unknown;
+      };
+      initial_report: components["schemas"]["ReportV2"];
+      /** Initial Tool Calls */
+      initial_tool_calls?: number | null;
+      /** Initial Usage */
+      initial_usage: {
+        [key: string]: unknown;
+      };
+      /** Input Report Sha256 */
+      input_report_sha256: string;
+      /** Notes */
+      notes: string[];
+      /** Output Report Sha256 */
+      output_report_sha256: string;
+      /** Review Calls */
+      review_calls: number;
+      /** Revision */
+      revision: {
+        [key: string]: unknown;
+      };
+      /** Revision Calls */
+      revision_calls: number;
+      /** Status */
+      status: string;
+      /** Supplement */
+      supplement: {
+        [key: string]: unknown;
+      };
+      /** Supplement Rounds */
+      supplement_rounds: number;
+      /** Triggers */
+      triggers: string[];
+      /** Version */
+      version: string;
     };
     /** ReportV2 */
     ReportV2: {
@@ -1930,6 +1979,48 @@ export interface components {
     RepositoryCreate: {
       /** Url */
       url: string;
+    };
+    /** ReviewDecision */
+    ReviewDecision: {
+      /**
+       * Action
+       * @enum {string}
+       */
+      action: "keep" | "need_evidence" | "downgrade" | "remove";
+      /**
+       * Category
+       * @enum {string}
+       */
+      category:
+        | "none"
+        | "citation"
+        | "version"
+        | "unread"
+        | "metadata_conflict"
+        | "truncation"
+        | "missing_context"
+        | "unsupported_cause"
+        | "historical_only"
+        | "duplicate"
+        | "overstated_impact"
+        | "unsupported_advice"
+        | "calculation"
+        | "other";
+      /** Evidence */
+      evidence: components["schemas"]["Citation"][];
+      /** Metadata Evidence */
+      metadata_evidence: (
+        | "input_version"
+        | "resources"
+        | "collection_complete"
+        | "knowledge_enabled"
+        | "current_versions"
+        | "reads"
+      )[];
+      /** Reason */
+      reason: string;
+      /** Target */
+      target: string;
     };
     /** RunBudget */
     RunBudget: {

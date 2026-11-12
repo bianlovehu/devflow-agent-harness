@@ -36,6 +36,12 @@ def test_conversation_history_paginates_beyond_fifty_without_other_conversations
     # 模拟同一时间创建的任务，仍须以 UUID 倒序保证分页顺序稳定。
     same_time = datetime.now(UTC) + timedelta(days=1)
     with Session(context.engine) as session, session.begin():
+        # 请求顺序不保证服务器墙钟严格递增；固定数据同时验证倒序及UUID并列排序。
+        first_time = same_time - timedelta(days=1)
+        for index, run_id in enumerate(first_ids):
+            session.get(RunRecord, UUID(run_id)).created_at = first_time + timedelta(
+                microseconds=index
+            )
         for run_id in second_ids:
             session.get(RunRecord, UUID(run_id)).created_at = same_time
     legacy = context.client.get("/api/v1/runs", params={"repo_id": "repo-taskboard"}).json()

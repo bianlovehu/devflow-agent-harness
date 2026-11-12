@@ -3,7 +3,9 @@
 
 面向 PR 审查与 CI 排障的研发协作 Agent Harness，提供版本化证据、任务持久化和可复现演示案例。基于 FastAPI、Next.js 和 PostgreSQL，按 [六周开发计划](docs/development-plan.md) 独立实现。
 
-当前已完成**第 1—20 步，包含前五周功能**：GitHub 只读数据、固定版本证据、持久化 worker、SSE 进度、PR 审查、CI 排障，以及仓库内的文档知识库和 RAG 知识问答。支持本地 CPU 多语言向量、关键词混合检索、文档版本/删除和可点击引用。模型入口支持阿里云百炼的 DeepSeek 4.1、DeepSeek 官方 API 与离线假模型；报告包含经校验的证据引用、检查范围和 Markdown 草稿。新增上下文预算与压缩、人工审核的长期记忆、PostgreSQL checkpoint 恢复、可编辑草稿和 PR 版本变化检查，详见 [第五周验收记录](docs/week-05.md)。系统不执行被分析仓库的代码。实现与三分钟演示见 [第四周验收记录](docs/week-04.md)，前三周记录见 [第三周验收记录](docs/week-03.md) 和 [完整性审查报告](docs/progress-report-2026-10-29.md)。
+当前已完成**第 1—21 步，包含前五周功能与固定评测闭环**：GitHub 只读数据、固定版本证据、持久化 worker、SSE 进度、PR 审查、CI 排障，以及仓库内的文档知识库和 RAG 知识问答。支持本地 CPU 多语言向量、关键词混合检索、文档版本/删除和可点击引用。模型入口支持阿里云百炼的 DeepSeek 4.1、DeepSeek 官方 API 与离线假模型；报告包含经校验的证据引用、检查范围和 Markdown 草稿。新增上下文预算与压缩、人工审核的长期记忆、PostgreSQL checkpoint 恢复、可编辑草稿和 PR 版本变化检查，详见 [第五周验收记录](docs/week-05.md)。系统不执行被分析仓库的代码。实现与三分钟演示见 [第四周验收记录](docs/week-04.md)，前三周记录见 [第三周验收记录](docs/week-03.md) 和 [完整性审查报告](docs/progress-report-2026-10-29.md)。
+
+当前范围（2026-11-11）：完善本地运行及真实评测闭环；发布封装和跨机器部署验收已取消。启动/排障见[本地运行手册](docs/local-runbook.md)，第22—24步状态见[核对表](docs/release-checklist.md)。 第22步两组真实对照、开发/新留出及GPT复核结果见[真实基线报告](docs/real-baseline-report.md)，其中保留未通过结果与限制。
 
 ## 环境
 
@@ -68,7 +70,7 @@ docker compose ps
 docker compose stop db
 
 # 迁移：应用、查看、生成下一步业务迁移
-uv run --locked alembic upgrade head
+uv run --locked python -m devflow.bootstrap
 uv run --locked alembic current
 uv run --locked alembic revision --autogenerate -m "add business tables"
 
@@ -96,10 +98,11 @@ apps/
     tests/             单元与显式启用的真实数据库检查
   web/                 Next.js App Router / TypeScript / Tailwind / TanStack Query
 fixtures/              演示工程、PR 快照与 diff、CI 日志和项目资料
-evals/fixtures/        与业务输入分离的 6 个案例参考标注
+evals/fixtures/        原有 6 个样例参考标注
+evals/devflow-v1/      30 题固定评测输入与独立标注（开发 20 / 留出 10）
 scripts/               初始化、开发启动、样例生成与检查入口
 docs/                  开发计划与步骤验收记录
-compose.yaml           PostgreSQL 17 + pgvector，持久化数据卷
+compose.yaml           本地db与保留的完整容器配置；日常只需启动db
 pyproject.toml          Python 项目配置与 Ruff/pytest 配置
 ```
 
@@ -111,7 +114,7 @@ pyproject.toml          Python 项目配置与 Ruff/pytest 配置
 
 - **Docker named pipe 不存在：** 启动 Docker Desktop，确认使用 Linux containers，然后执行 `docker info`。
 - **端口 5432 已占用：** 修改根目录 `.env` 中 `POSTGRES_PORT`，重新创建 db 容器并重启 API。
-- **数据库已连接但扩展/迁移待配置：** 执行 `uv run --locked alembic upgrade head`。
+- **数据库已连接但扩展/迁移待配置：** 执行 `uv run --locked python -m devflow.bootstrap`。
 - **修改数据库密码后连接失败：** 既有数据卷保留原密码，修改 `.env` 不会自动变更数据库内的用户密码。
 - **后端地址变化：** 修改 `apps/web/.env.local` 中的 `BACKEND_URL`，重启前端。
 - **初始化下载失败：** 确认上述发布源可访问后重跑脚本；已有配置和数据库卷会保留。
@@ -171,7 +174,7 @@ uv run --locked python scripts/week03_smoke.py
 
 ```powershell
 . .\scripts\env.ps1
-uv run --locked alembic upgrade head
+uv run --locked python -m devflow.bootstrap
 uv run --locked python -m devflow.import_fixtures
 uv run --locked alembic check
 ```
@@ -252,7 +255,7 @@ uv run --locked python scripts/week02_smoke.py --github pallets/flask --output d
 
 ```powershell
 . .\scripts\env.ps1
-uv run --locked alembic upgrade head
+uv run --locked python -m devflow.bootstrap
 uv run --locked python scripts/prepare_rag.py
 uv run --locked python scripts/week04_smoke.py --import-only
 # 使用真实本地向量与离线假模型生成问答、PR 对照、CI 报告
@@ -267,15 +270,27 @@ uv run --locked python scripts/week04_smoke.py
 
 报告支持“提取经验”，在 [长期记忆](http://127.0.0.1:3000/memories) 编辑、批准、撤销或替代经验。只有已批准、未过期且仓库/提交匹配的条目才参与后续分析，默认有效期30天。报告提供上下文压缩前后材料、预算和实际 usage 对比，草稿可本地编辑，重新打开 PR 报告会检查提交变化。
 
-新任务默认单次输入估算12,000 token、输出上限2,000 token；已有 `.env` 的显式模型上限继续生效。PostgreSQL checkpoint 按 run 隔离，失联后自动恢复一次，复用固定证据与已完成工具。恢复可能重复模型请求，未知 usage 明确标注。
+新任务默认单次输入估算120,000 token、输出上限20,000 token，任务累计600,000 token。所有真实模型入口共享200元项目预算，140元提醒、180元停止新请求，按保守目录价估算；连续三次相同工具请求会在第三次执行前停止。详见 [运行限制与预算说明](docs/runtime-budget.md)。PostgreSQL checkpoint 按 run 隔离，失联后自动恢复一次，复用固定证据与已完成工具。恢复可能重复模型请求，未知 usage 明确标注。
 
 ```powershell
 . .\scripts\env.ps1
 uv sync --locked
-uv run --locked alembic upgrade head
+uv run --locked python -m devflow.bootstrap
 uv run --locked python scripts/week05_smoke.py
 # 真实供应商的报告与候选提取验收，临时数据库不影响业务数据
 uv run --locked python scripts/week05_smoke.py --real
 ```
 
 完整验收、强制退出 worker 的三个恢复场景与边界见 [第五周记录](docs/week-05.md)。升级后重启 API、worker 和前端。
+
+## 评测与回归
+
+评测与改进入口：`uv run --locked python -m devflow.eval_cli run`，默认运行 20 题开发集和离线假模型，输出逐题报告、失败诊断和人工复核模板；支持失败题重跑与基线回归比较。完整用法、30 题数据集及首轮 12/20 → 14/20 的离线验证见 [评测与回归闭环](docs/evaluation-loop.md)。自动通过仍需语义复核；真实模型和两组检索/压缩效果实验尚未验收。
+
+## 项目预算与运行限制
+
+升级至 `0007_runtime_budget` 后重启 API、worker 和前端。工作台可展开项目预算摘要，任务中可查看分析与记忆提取的费用明细。正常浏览、健康检查和假模型不计费；旧运行显示“未纳入账本”。
+
+所有真实分析、恢复、记忆提取、探针及验收脚本都通过主数据库共享额度。费用采用阿里云北京 `deepseek-v4.1-flash` 的保守忙时目录价：输入2元/百万 token、输出8元/百万 token。120,000输入＋20,000输出为0.40元；未确认用量保留预留金额，服务重启不清零。未知报价或账本不可用时拒绝真实请求，最终费用以供应商账单为准。
+
+完整默认值、接口、验证和兼容边界见 [统一运行限制与200元项目预算](docs/runtime-budget.md)。第21步固定评测与回归入口已完成，后续为第22步效果对照实验。

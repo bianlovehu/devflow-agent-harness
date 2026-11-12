@@ -3,6 +3,7 @@
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
@@ -14,6 +15,7 @@ from sqlalchemy import (
     ForeignKeyConstraint,
     Index,
     Integer,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -325,4 +327,37 @@ class MemoryRecord(Base):
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     replaces_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("memories.id"))
     extraction: Mapped[dict] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BudgetAccount(Base):
+    __tablename__ = "budget_accounts"
+    __table_args__ = (CheckConstraint("settled_cny >= 0 AND reserved_cny >= 0"),)
+    id: Mapped[str] = mapped_column(String(24), primary_key=True)
+    settled_cny: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal(0))
+    reserved_cny: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal(0))
+    warned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ModelCharge(Base):
+    __tablename__ = "model_charges"
+    __table_args__ = (
+        CheckConstraint("status IN ('reserved', 'inflight', 'settled', 'uncertain', 'released')"),
+        CheckConstraint("reserved_cny >= 0 AND (settled_cny IS NULL OR settled_cny >= 0)"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
+    account_id: Mapped[str] = mapped_column(ForeignKey("budget_accounts.id"))
+    # 临时验收数据库的 run 不存在于主账本库，关联标识不设置跨库外键。
+    run_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, index=True)
+    purpose: Mapped[str] = mapped_column(String(24))
+    source: Mapped[str] = mapped_column(String(80))
+    status: Mapped[str] = mapped_column(String(16))
+    estimated_input: Mapped[int] = mapped_column(Integer)
+    output_limit: Mapped[int] = mapped_column(Integer)
+    reserved_cny: Mapped[Decimal] = mapped_column(Numeric(18, 8))
+    settled_cny: Mapped[Decimal | None] = mapped_column(Numeric(18, 8))
+    pricing: Mapped[dict] = mapped_column(JSONB)
+    usage: Mapped[dict | None] = mapped_column(JSONB)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -29,6 +29,9 @@ const labels: Record<string, string> = {
   "knowledge.retrieved": "项目资料检索完成",
   "run.failed": "任务失败",
   "run.needs_attention": "任务需要处理",
+  "run.loop_detected": "连续重复工具请求，已停止",
+  "budget.warning": "项目预算达到提醒线",
+  "budget.blocked": "预算或报价检查阻止请求",
 };
 export function activeRun(run: Run) {
   return run.status === "queued" || run.status === "running";
@@ -131,6 +134,14 @@ export function RunProgress({ run }: { run: Run }) {
           mergeEvents(run.id, before, [event]),
         );
         void cache.invalidateQueries({ queryKey: ["run", run.id] });
+        if (
+          event.event_type.startsWith("budget.") ||
+          event.event_type.startsWith("model.") ||
+          event.event_type.startsWith("run.")
+        ) {
+          void cache.invalidateQueries({ queryKey: ["budget"] });
+          void cache.invalidateQueries({ queryKey: ["run-cost", run.id] });
+        }
         if (
           event.event_type === "tool.completed" ||
           event.event_type.startsWith("run.")

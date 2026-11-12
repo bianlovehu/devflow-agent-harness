@@ -21,6 +21,7 @@ import { readMessages, runStatus, taskName } from "@/lib/workflows";
 import { activeRun, RunControls, RunProgress } from "@/components/run-progress";
 import { QueryState } from "@/components/query-state";
 import { AnalysisReport } from "@/components/analysis-report";
+import { RunCost } from "@/components/budget-summary";
 
 function date(value: string) {
   return new Date(value).toLocaleString("zh-CN", { hour12: false });
@@ -269,6 +270,7 @@ function TaskContent({ run }: { run: Run }) {
           )}
         </section>
       )}
+      <RunCost runId={run.id} />
       <RunProgress run={run} />
       {messages.data && messages.data.length > 1 && (
         <details className="conversation-history">

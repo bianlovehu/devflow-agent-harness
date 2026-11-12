@@ -17,6 +17,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/budget": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Summary */
+    get: operations["summary_api_v1_budget_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/conversations": {
     parameters: {
       query?: never;
@@ -548,6 +565,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/runs/{run_id}/cost": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Run Cost */
+    get: operations["run_cost_api_v1_runs__run_id__cost_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/runs/{run_id}/events": {
     parameters: {
       query?: never;
@@ -740,6 +774,54 @@ export interface components {
       sha256: string;
       /** Size Bytes */
       size_bytes: number;
+    };
+    /** BoundaryClaim */
+    BoundaryClaim: {
+      /**
+       * Evidence Id
+       * Format: uuid
+       */
+      evidence_id: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "source_truncated" | "reading_incomplete";
+    };
+    /** BudgetResponse */
+    BudgetResponse: {
+      /** Available Cny */
+      available_cny: string;
+      /** Basis */
+      basis: string;
+      /**
+       * Currency
+       * @constant
+       */
+      currency: "CNY";
+      /** Limits */
+      limits: {
+        [key: string]: number;
+      };
+      /** Reserved Cny */
+      reserved_cny: string;
+      /** Settled Cny */
+      settled_cny: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "ok" | "warning" | "blocked";
+      /** Stop Cny */
+      stop_cny: string;
+      /** Total Cny */
+      total_cny: string;
+      /** Tracked */
+      tracked: boolean;
+      /** Unknown Requests */
+      unknown_requests: number;
+      /** Warning Cny */
+      warning_cny: string;
     };
     /** CIJob */
     CIJob: {
@@ -1032,6 +1114,29 @@ export interface components {
       /** Title */
       title: string;
     };
+    /** CostResponse */
+    CostResponse: {
+      /** Requests */
+      requests: {
+        [key: string]: unknown;
+      }[];
+      /** Reserved Cny */
+      reserved_cny: string;
+      /** Settled Cny */
+      settled_cny: string;
+      /** Tracked */
+      tracked: boolean;
+      /** Unknown Requests */
+      unknown_requests: number;
+    };
+    /** DirectEvidence */
+    DirectEvidence: {
+      citation: components["schemas"]["Citation"];
+      /** Observation */
+      observation: string;
+      /** Quote */
+      quote: string;
+    };
     /** DocumentDetail */
     DocumentDetail: {
       /** Content */
@@ -1097,6 +1202,19 @@ export interface components {
       /** Next After */
       next_after?: number | null;
     };
+    /** EvidenceFacts */
+    EvidenceFacts: {
+      /** Collection Complete */
+      collection_complete: boolean | null;
+      /** Current Versions */
+      current_versions: {
+        [key: string]: unknown;
+      }[];
+      /** Knowledge Enabled */
+      knowledge_enabled: boolean | null;
+      /** Reads */
+      reads: components["schemas"]["ReadState"][];
+    };
     /** EvidenceResponse */
     EvidenceResponse: {
       /**
@@ -1147,6 +1265,63 @@ export interface components {
       suggestion: string;
       /** Title */
       title: string;
+    };
+    /** FindingResultV2 */
+    FindingResultV2: {
+      /**
+       * Basis
+       * @enum {string}
+       */
+      basis: "current" | "reference";
+      /** Call Chain */
+      call_chain: components["schemas"]["Citation"][];
+      /**
+       * Citation Check
+       * @constant
+       */
+      citation_check: "passed";
+      /**
+       * Claim Type
+       * @enum {string}
+       */
+      claim_type:
+        "code_behavior" | "run_result" | "document_statement" | "follow_up";
+      /** Consequences */
+      consequences: string[];
+      /** Direct Evidence */
+      direct_evidence: components["schemas"]["DirectEvidence"][];
+      /** Evidence */
+      evidence: components["schemas"]["Citation"][];
+      /** Explanation */
+      explanation: string;
+      /**
+       * Nature
+       * @enum {string}
+       */
+      nature: "fact" | "hypothesis" | "suggestion";
+      /** Prerequisites */
+      prerequisites: string[];
+      /**
+       * Reachability
+       * @enum {string}
+       */
+      reachability: "local" | "system" | "unknown";
+      /** Root Cause */
+      root_cause: string;
+      semantic_support: components["schemas"]["SemanticReview"];
+      /**
+       * Severity
+       * @enum {string}
+       */
+      severity: "critical" | "high" | "medium" | "low" | "info";
+      /** Severity Reason */
+      severity_reason: string;
+      /** Suggestion */
+      suggestion: string;
+      /** Title */
+      title: string;
+      /** Unconfirmed Conditions */
+      unconfirmed_conditions: string[];
     };
     /** FreshnessResponse */
     FreshnessResponse: {
@@ -1647,11 +1822,74 @@ export interface components {
        */
       updated_at: string;
     };
+    /** ReadState */
+    ReadState: {
+      /**
+       * Evidence Id
+       * Format: uuid
+       */
+      evidence_id: string;
+      /** Path */
+      path: string;
+      /** Read Ranges */
+      read_ranges: [number, number][];
+      /** Reading Complete */
+      reading_complete: boolean;
+      /** Source Truncated */
+      source_truncated: boolean | null;
+      /** Stored End */
+      stored_end: number;
+      /** Stored Start */
+      stored_start: number;
+    };
     /** ReportResponse */
     ReportResponse: {
       /** Markdown */
       markdown: string;
-      report: components["schemas"]["AnalysisReport"];
+      /** Report */
+      report:
+        | components["schemas"]["AnalysisReport"]
+        | components["schemas"]["ReportV2"];
+    };
+    /** ReportV2 */
+    ReportV2: {
+      /** Answer */
+      answer?: string | null;
+      /** Answer Evidence */
+      answer_evidence?: components["schemas"]["Citation"][];
+      /** Boundary Claims */
+      boundary_claims: components["schemas"]["BoundaryClaim"][];
+      /**
+       * Citation Check
+       * @constant
+       */
+      citation_check: "passed";
+      evidence_facts: components["schemas"]["EvidenceFacts"];
+      /** Failure Stage */
+      failure_stage?: string | null;
+      /** Findings */
+      findings: components["schemas"]["FindingResultV2"][];
+      /**
+       * Report Version
+       * @constant
+       */
+      report_version: "2";
+      /** Scope */
+      scope: string[];
+      semantic_support: components["schemas"]["SemanticReview"];
+      /** Suggestions */
+      suggestions: string[];
+      /** Summary */
+      summary: string;
+      /**
+       * Task Type
+       * @enum {string}
+       */
+      task_type: "pr_review" | "ci_debug" | "knowledge_qa";
+      /** Unconfirmed */
+      unconfirmed: string[];
+      /** Verification Steps */
+      verification_steps: string[];
     };
     /** Repository */
     Repository: {
@@ -1707,7 +1945,7 @@ export interface components {
       max_tool_calls: number;
       /**
        * Max Total Tokens
-       * @default 60000
+       * @default 600000
        */
       max_total_tokens: number;
       /**
@@ -1802,6 +2040,10 @@ export interface components {
             | "model_network_error"
             | "model_format_error"
             | "model_configuration_error"
+            | "loop_detected"
+            | "cost_budget_exceeded"
+            | "pricing_not_configured"
+            | "budget_unavailable"
           )
         | null;
       /** Error Message */
@@ -1888,6 +2130,19 @@ export interface components {
       /** Task Execution Available */
       task_execution_available: boolean;
     };
+    /** SemanticReview */
+    SemanticReview: {
+      /** Notes */
+      notes?: string[];
+      /** Reviewer */
+      reviewer?: string | null;
+      /**
+       * Status
+       * @default not_reviewed
+       * @enum {string}
+       */
+      status: "not_reviewed" | "supported" | "partial" | "unsupported";
+    };
     /** SourceNotice */
     SourceNotice: {
       /** Code */
@@ -1948,6 +2203,26 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  summary_api_v1_budget_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BudgetResponse"];
         };
       };
     };
@@ -3047,6 +3322,37 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["ContextResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  run_cost_api_v1_runs__run_id__cost_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CostResponse"];
         };
       };
       /** @description Validation Error */

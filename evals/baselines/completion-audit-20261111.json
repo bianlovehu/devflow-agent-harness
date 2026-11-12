@@ -1,0 +1,276 @@
+{
+  "status": "verified",
+  "audited_at": "2026-11-11T07:43:01.123985+00:00",
+  "working_code_sha256": "9749ddcba0834bd8018243e9bda041d63139c43eb6e9199b69612a1d2859ec6c",
+  "requirements": [
+    {
+      "requirement": "original22_24_registration_and_cancelled_release",
+      "status": "verified",
+      "evidence": [
+        {
+          "path": "docs/release-checklist.md",
+          "sha256": "7f914c35ad6165c599b703318e4bbd7cba7252318022d734308b2adf2ac99cd3"
+        },
+        {
+          "path": "docs/development-plan.md",
+          "sha256": "e5d059c224af2bc729b65a0e4bff8176a6d8fd60cd75622a4837fea7886c4d5b"
+        }
+      ],
+      "finding": "原要求逐项登记；发布事项明确本轮不实施，录屏/简历仍保留未实现记录"
+    },
+    {
+      "requirement": "local_native_four_services_ready_restart_persistence",
+      "status": "verified",
+      "evidence": [
+        {
+          "path": "docs/local-runbook.md",
+          "sha256": "674cf313cdb1349a3ed5b7b004003061dc24919eb475aa5611f8c4f0cdb3c7c6"
+        },
+        {
+          "path": "scripts/dev.ps1",
+          "sha256": "04683543524ec8765c5343a1ed5ac2900ff00b1cd2d8debe36f77def32ddd0e7"
+        },
+        {
+          "path": "scripts/local_smoke.py",
+          "sha256": "e7b1f2a27c8e37e805e84e7e69e1be7e16ac4584797a8552e1c2a73f009d41b5"
+        },
+        {
+          "path": "data/local-verification/20261111-final-fixes/verification.json",
+          "sha256": "36488945f17624127e90ec637297d294c7cb5387e5293b469195c944b429be02"
+        },
+        {
+          "path": "data/local-verification/20261111-final-fixes/created.json",
+          "sha256": "f856056f88080c5c52f7e732a6d4e289a16a775d3d080940676fc993161af4ca"
+        },
+        {
+          "path": "data/local-verification/20261111-final-fixes/restarted.json",
+          "sha256": "f856056f88080c5c52f7e732a6d4e289a16a775d3d080940676fc993161af4ca"
+        }
+      ],
+      "finding": "本机源码进程两轮就绪；报告/文档/记忆/证据一致，隔离费用记录0；随机库已清理，日常库仍在"
+    },
+    {
+      "requirement": "single_explicit_migration_and_weights_preparation",
+      "status": "verified",
+      "evidence": [
+        {
+          "path": "apps/api/src/devflow/bootstrap.py",
+          "sha256": "fa1aba8fb369f6579795cc8e0aff3138181f026ad94928e31a46006d06d8de88"
+        },
+        {
+          "path": "apps/api/src/devflow/checkpoint.py",
+          "sha256": "000d0b47112023019454ddd5b25cd0f0b3080697336faaa61fbe7555b18e794b"
+        },
+        {
+          "path": "apps/api/migrations/versions/0008_checkpoint_tables.py",
+          "sha256": "610a4f2f1323aae42adf05f6a781547fb54a3e04c7b2c76cbff9320e20e1a52a"
+        },
+        {
+          "path": "apps/api/src/devflow/embeddings.py",
+          "sha256": "6710850f982a5eaff3dab27815b71134a97686c197a9ed7880726a8312e4c90d"
+        },
+        {
+          "path": "scripts/prepare_rag.py",
+          "sha256": "563788dc73fe51e60f377a6f4bb80872301f7ac3b60ffc14488e7a6d5ebc9bae"
+        },
+        {
+          "path": "apps/api/tests/test_release.py",
+          "sha256": "f036d0fab11b822dc15c8e2034f3e70780b8669579083b437075416c9ae4f7ae"
+        }
+      ],
+      "finding": "显式迁移，runtime不setup；缺权重不下载，固定SHA校验"
+    },
+    {
+      "requirement": "no_paid_engineering_gates_and_failure_recovery",
+      "status": "verified",
+      "evidence": [
+        {
+          "path": "scripts/check.ps1",
+          "sha256": "e069bd24b7891feefa94ac18290c22be2563cbae1ca1e22ddc1c016ca412b4ed"
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "sha256": "58006a4e988c5ed65495549bda2b30accbcc63e04ba033dd793f0688016bde1f"
+        },
+        {
+          "path": "data/local-verification/20261111-tool-fixes-recheck/verification.json",
+          "sha256": "6fc83cdafd7131791b559dc73f6d11113a07094cdfc86af092e465441bdaef2c"
+        },
+        {
+          "path": "data/local-verification/20261111-tool-fixes-recheck/checks.log",
+          "sha256": "5443ad75a2456dc493806c78d88c9b285e61b951804cbba6aee21a805584b2f9"
+        },
+        {
+          "path": "docs/local-verification-20261111.md",
+          "sha256": "98485baff1d44e0750738c3d1189f8b87f7d0e99c8fb74af85ad338df71f46d5"
+        }
+      ],
+      "finding": "259后端/56前端与静态、契约、构建通过；含隔离数据库、强制退出恢复、取消、SSE及记忆失效；云端Actions未运行不宣称通过"
+    },
+    {
+      "requirement": "server_only_configuration_and_failure_diagnosis",
+      "status": "verified",
+      "evidence": [
+        {
+          "path": "docs/local-runbook.md",
+          "sha256": "674cf313cdb1349a3ed5b7b004003061dc24919eb475aa5611f8c4f0cdb3c7c6"
+        },
+        {
+          "path": "data/local-verification/20261111-final-fixes/configuration.json",
+          "sha256": "8a16cee955c25e673898076b6176fd3d597f8236dbba5fd98cfbbed00376e92e"
+        },
+        {
+          "path": "docs/architecture-decisions.md",
+          "sha256": "78ef6f7e2915d85bcfb7bf9a0f6f9f85457cab5f1ff1473e76aa5e3ed3e365d8"
+        }
+      ],
+      "finding": "真实配置/fake免Key及四种拒绝情况本地校验；18份浏览器bundle不含已配置服务端凭据"
+    },
+    {
+      "requirement": "real_fixed_analysis_retrieval_context_stability_and_semantic_review",
+      "status": "verified",
+      "evidence": [
+        {
+          "path": "docs/real-baseline-report.md",
+          "sha256": "fa0c08e85ce26e30a06a6ce2ec2630630582b2a057b8d6b15894b61c36802f32"
+        },
+        {
+          "path": "evals\\reviews\\gpt-real-dev-v4-20261111.json",
+          "sha256": "8b07d2bef0b7dfbf309b7f02ef878a727ee9ac7ea6fe67a5b1c43c4a3f16a101"
+        },
+        {
+          "path": "evals\\reviews\\gpt-context-v3-20261111.json",
+          "sha256": "41850e74dbad920e0775f2a3f07cfe67a18b25717f2f233642da4f7cd90f5e41"
+        },
+        {
+          "path": "evals\\reviews\\gpt-stability-v3-20261111.json",
+          "sha256": "1427e1b945b04558851ee8f929c416eac5cba6a7a3e7588ab2784517f09aa2af"
+        },
+        {
+          "path": "evals\\reviews\\gpt-novel-holdout-20261111.json",
+          "sha256": "17b694a11334c36b7059603f676cf0a0af137932f91ffd9c78df7f0ab9ec1ffb"
+        },
+        {
+          "path": "evals/baselines/real-dev-v4-summary.json",
+          "sha256": "17b19113ef7081395859d9be3a64053f9d32e506dd2d5b27f67d232f6bf43e19"
+        },
+        {
+          "path": "evals/baselines/context-v3-summary.json",
+          "sha256": "58afde4370b0180ec15130feaef87d30e4b1fa6eccc877a29669d2ddef9dedcf"
+        },
+        {
+          "path": "evals/baselines/stability-v3-summary.json",
+          "sha256": "3d475f2d5c593db64010d65d80dd3b877a67bec69354f9f9779ea14ece8b8385"
+        },
+        {
+          "path": "evals/baselines/novel-holdout-summary.json",
+          "sha256": "b10acdcfe427f7414a078d64a9f87f336cddacdbbbdd13c01ebb2e6dd83805a6"
+        }
+      ],
+      "finding": "73个当前冻结版本任务逐题GPT复核/绑定输入输出哈希；各组真实usage、费用、实际读取均存在。对照初始消息相同，仅压缩预算策略不同；同组corpus内容哈希一致"
+    },
+    {
+      "requirement": "failure_improvement_regression_and_known_limits",
+      "status": "verified",
+      "evidence": [
+        {
+          "path": "evals/reviews/gpt-real-dev-v2-20261111.json",
+          "sha256": "ac368da00c0df6eb533be3b4bb3d425eeea38a9d1facc7001053448812024308"
+        },
+        {
+          "path": "evals/baselines/real-dev-v2-summary.json",
+          "sha256": "c8950809222c098bd6429431f2c481f0661397ada585e326c576232f9fac3c87"
+        },
+        {
+          "path": "apps/api/tests/test_context_budget.py",
+          "sha256": "fc782477893a208458c313f5768bc5b6ffb9ec00cb1885a1d0edbd2294be14f1"
+        },
+        {
+          "path": "apps/api/tests/test_baseline.py",
+          "sha256": "ede1a3e7c44c9de14fe1facfe259636c72303b863b8e43f6c047775d9c106331"
+        },
+        {
+          "path": "docs/real-baseline-report.md",
+          "sha256": "fa0c08e85ce26e30a06a6ce2ec2630630582b2a057b8d6b15894b61c36802f32"
+        }
+      ],
+      "finding": "保留工具元数据/尾换行读取/压缩次序修正前后；说明模型事实/建议、网络未知、检索缺资料、评分exact误判，明确误报退步及20k失败"
+    },
+    {
+      "requirement": "new_holdout_after_freeze",
+      "status": "verified",
+      "evidence": [
+        {
+          "path": "evals/freezes/development-20261111.json",
+          "sha256": "1d149a3ae2b3b28e769c339b938b8cde611130bca927dc036a16be46b6524fa3"
+        },
+        {
+          "path": "evals/devflow-novel-holdout-20261111/inputs.json",
+          "sha256": "921be5a63f0d3fef77a37385a113fd4d04620e929de2d6061615a2b53ef1df85"
+        },
+        {
+          "path": "evals/devflow-novel-holdout-20261111/expectations.json",
+          "sha256": "aeb4b099b3f67fcd9077e92181f3bd6b0b9b61d5e40449151ff7e8166701877f"
+        },
+        {
+          "path": "evals/devflow-novel-holdout-20261111/curation.json",
+          "sha256": "266095ea025e1314620015aeb0ecd3762bced6374a6e27fbc817ba20769198bd"
+        }
+      ],
+      "finding": "冻结时间<新题创建<执行；来源独立，未按留出改API/提示词；GPT作者与复核身份明确"
+    }
+  ],
+  "frozen_tasks_reviewed": 73,
+  "unique_model_charge_records": 184,
+  "frozen_task_cost_estimate_cny": "2.38894800",
+  "shared_ledger_final": {
+    "tracked": true,
+    "settled_cny": "8.00114800",
+    "reserved_cny": "0.16946000",
+    "unknown_requests": 1,
+    "total_cny": "200",
+    "warning_cny": "140",
+    "stop_cny": "180",
+    "available_cny": "171.82939200",
+    "currency": "CNY",
+    "status": "ok",
+    "limits": {
+      "input_tokens": 120000,
+      "output_tokens": 20000,
+      "total_tokens": 600000,
+      "model_calls": 6,
+      "tool_calls": 12,
+      "timeout_seconds": 600,
+      "model_timeout_seconds": 90,
+      "repeat_limit": 3
+    },
+    "basis": "保守目录价估算，不代表供应商最终账单"
+  },
+  "out_of_current_scope": [
+    "发布封装/镜像分发/跨机器部署",
+    "原24步录屏及简历材料仅登记缺口"
+  ],
+  "limitations_not_suppressed": [
+    "20k压缩两条无最终报告，成本不计零",
+    "开发正常PR混合标记臂误报2/3",
+    "模型金额算例/严重度/重复及契约推断仍有失败",
+    "小型合成语料与GPT自出题复核不能代表总体质量或独立人类盲审"
+  ],
+  "git_policy": "既有暂存及未提交工作保留，未提交或覆盖暂存区",
+  "editorial_updates": [
+    {
+      "at": "2026-11-11T08:00:32.527168+00:00",
+      "path": "docs/real-baseline-report.md",
+      "previous_sha256": "6333e012259136ee2cb8ca52aa07a958624342f7913f9add99740e7c59a50de3",
+      "sha256": "9224d59740d5b5044d718ba1d54a758fcdbdd893696e43281e60dacfa169a5d2",
+      "change": "仅简化说明文字和分组名称；测试数值、命令、模型输出和逐题复核未改动"
+    },
+    {
+      "at": "2026-11-11T09:10:14.994756+00:00",
+      "path": "docs/real-baseline-report.md",
+      "previous_sha256": "9224d59740d5b5044d718ba1d54a758fcdbdd893696e43281e60dacfa169a5d2",
+      "sha256": "fa0c08e85ce26e30a06a6ce2ec2630630582b2a057b8d6b15894b61c36802f32",
+      "change": "将混合检索解释为查找意思相近的资料，并说明每组20次的含义；历史测试数字、原始结果、费用和判定未改变"
+    }
+  ]
+}

@@ -1,0 +1,568 @@
+{
+  "schema_version": 1,
+  "reviewer": "GPT",
+  "author": "GPT",
+  "review_mode": "post-development-freeze subject-model unseen inputs; GPT authored and reviewed; not independent human blind review",
+  "reviewed_at": "2026-11-11T07:32:15.387883+00:00",
+  "cohort": "data\\baselines\\novel-holdout-20261111",
+  "status": "complete; 18 of 18 reviewed; no code/prompt tuning after holdout",
+  "freeze_file": "evals/freezes/development-20261111.json",
+  "rubric": {
+    "pass": "核心结论、证据和行动建议无实质问题",
+    "pass_with_notes": "核心正确，局部措辞/验证建议仍需限定；不等于无瑕疵",
+    "fail": "漏掉核心问题，或存在实质错误事实/不安全建议",
+    "not_assessable": "无通过运行时校验的最终报告，保留具体执行归因"
+  },
+  "cases": [
+    {
+      "job_id": "novel-pr-cents-keyword-1",
+      "case_id": "novel-pr-cents",
+      "arm": "keyword",
+      "case_sha256": "d27301a634f0ff99bde36082f1d26f85e97c14bf6a4b8513efe30500b4de0d4a",
+      "execution_sha256": "94b6c8e1bee38c229a5e063e8cb42a2d3b595fbe350a611e75fb60dc199f4498",
+      "verdict": "fail",
+      "core_correct": true,
+      "reason": "截断分币和返回类型变化的核心判断正确；具体算例错误：int(Decimal(19.99))*3=57，不是59。负数是向零截断，不是向下取整。",
+      "attribution": "model_reasoning",
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [],
+      "evidence_basis": [
+        {
+          "evidence_id": "d11dcaa6-29dd-5d7a-b25f-d97842a3ef40",
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 5,
+          "content_sha256": "513a0cfbfb778ec9d6e16b16158e21014cf37bfbe43401a796da733ab7d9e46f",
+          "actually_read": true
+        },
+        {
+          "evidence_id": "06589eba-8e94-5bad-af98-82bb8f2ef771",
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 5,
+          "content_sha256": "6af604dfedfc233a7b2943015b4ea33aa2d569b04c931b682f8455210800944a",
+          "actually_read": true
+        }
+      ],
+      "primary_issue_detected": true,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0,
+      "counterexample": {
+        "unit_price": "19.99",
+        "quantity": 3,
+        "base": "59.97",
+        "head": 57
+      }
+    },
+    {
+      "job_id": "novel-pr-cents-hybrid-1",
+      "case_id": "novel-pr-cents",
+      "arm": "hybrid",
+      "case_sha256": "d27301a634f0ff99bde36082f1d26f85e97c14bf6a4b8513efe30500b4de0d4a",
+      "execution_sha256": "f685a47ce56327a3188a46b45f0a547841d8c4d416092a3fda6499ff856be2d9",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "保留分币契约、截断和Decimal返回类型变化正确，1.99×3与0.99×2算例正确。quantize(0.01)是两位小数舍入，不应称为整数取整替代。",
+      "attribution": "model_precision",
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [],
+      "evidence_basis": [
+        {
+          "evidence_id": "d11dcaa6-29dd-5d7a-b25f-d97842a3ef40",
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 5,
+          "content_sha256": "513a0cfbfb778ec9d6e16b16158e21014cf37bfbe43401a796da733ab7d9e46f",
+          "actually_read": true
+        },
+        {
+          "evidence_id": "06589eba-8e94-5bad-af98-82bb8f2ef771",
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 5,
+          "content_sha256": "6af604dfedfc233a7b2943015b4ea33aa2d569b04c931b682f8455210800944a",
+          "actually_read": true
+        }
+      ],
+      "primary_issue_detected": true,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0
+    },
+    {
+      "job_id": "novel-pr-fifo-keyword-1",
+      "case_id": "novel-pr-fifo",
+      "arm": "keyword",
+      "case_sha256": "217697a4677f617489515a0409ba8d8cc292c9b3d217a7f64ebb5b724df0a6c4",
+      "execution_sha256": "c51e1e15fdc5714af532c00cbc7c8db730a7a9dd6852fab60ed81e35efe38104",
+      "verdict": "pass",
+      "core_correct": true,
+      "reason": "依据明确FIFO文档判断pop(0)变pop()，多元素、单元素和空队列对比正确，没有把原有空队列异常报成新增缺陷。",
+      "attribution": null,
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [],
+      "evidence_basis": [
+        {
+          "evidence_id": "00c74d71-5019-5a99-8c8e-25bb9fe22deb",
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 3,
+          "content_sha256": "556b5e1b13aed5063d1fd3c0d3e8b7c0765c8591c3d504caf9a4964926b52c2c",
+          "actually_read": true
+        },
+        {
+          "evidence_id": "052d44fd-fe71-5b2a-993e-10ec0e0b08f3",
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 3,
+          "content_sha256": "2edc4ee83d0aa3a596e7897551893cfa756630893516e0c5b8e40e3e7fcfe8fd",
+          "actually_read": true
+        }
+      ],
+      "primary_issue_detected": true,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0
+    },
+    {
+      "job_id": "novel-pr-fifo-hybrid-1",
+      "case_id": "novel-pr-fifo",
+      "arm": "hybrid",
+      "case_sha256": "217697a4677f617489515a0409ba8d8cc292c9b3d217a7f64ebb5b724df0a6c4",
+      "execution_sha256": "fe5e19979317db075d2112033a54c94da1b7145e93b91f96f7bdc2ffeb13b231",
+      "verdict": "pass",
+      "core_correct": true,
+      "reason": "根因、具体例子和0/1/多元素边界均正确，恢复pop(0)与明确另改LIFO契约分开。",
+      "attribution": null,
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [],
+      "evidence_basis": [
+        {
+          "evidence_id": "00c74d71-5019-5a99-8c8e-25bb9fe22deb",
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 3,
+          "content_sha256": "556b5e1b13aed5063d1fd3c0d3e8b7c0765c8591c3d504caf9a4964926b52c2c",
+          "actually_read": true
+        },
+        {
+          "evidence_id": "052d44fd-fe71-5b2a-993e-10ec0e0b08f3",
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 3,
+          "content_sha256": "2edc4ee83d0aa3a596e7897551893cfa756630893516e0c5b8e40e3e7fcfe8fd",
+          "actually_read": true
+        }
+      ],
+      "primary_issue_detected": true,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0
+    },
+    {
+      "job_id": "novel-pr-checksum-clean-keyword-1",
+      "case_id": "novel-pr-checksum-clean",
+      "arm": "keyword",
+      "case_sha256": "435cad3b92fceda6d33dc1f3846606abbf4db2a4fc09a6995c8eb8a7f8f7de44",
+      "execution_sha256": "8f2da46fc622456a527384123de1259554bb8e67def93993708574c7d16088d5",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "正确不报缺陷，bytes输入的digest().hex()与hexdigest()等价。输入函数含Python3注解，不必扩大到Python2兼容性假设；这是验证噪音。",
+      "attribution": "model_precision",
+      "citation_count": 0,
+      "valid_citation_count": 0,
+      "automatic_tags": [],
+      "evidence_basis": [
+        {
+          "evidence_id": "3bcbc95f-2e7b-5506-b610-42f3d43f2fc9",
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 5,
+          "content_sha256": "f9ad3aede191e4bafdc4aa5ef3a08d6ecbaed10550d1a5db47db232b7fa91eaa",
+          "actually_read": true
+        },
+        {
+          "evidence_id": "d044318e-fb64-5692-8cca-36db2c71ae7a",
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 6,
+          "content_sha256": "364d399f72d9d50ba1604df0a6f59cd8b3e3bad8230279f50c934a83c0cf30b3",
+          "actually_read": true
+        }
+      ],
+      "primary_issue_detected": null,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0
+    },
+    {
+      "job_id": "novel-pr-checksum-clean-hybrid-1",
+      "case_id": "novel-pr-checksum-clean",
+      "arm": "hybrid",
+      "case_sha256": "435cad3b92fceda6d33dc1f3846606abbf4db2a4fc09a6995c8eb8a7f8f7de44",
+      "execution_sha256": "4f7f93850f9d47d1dbf1e554b4e423026b32827dc8310cc07f0f41118b3a9f1d",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "bytes契约内的等价重构判断正确、无误报；summary称所有非bytes都会在sha256失败过宽，bytearray/memoryview等buffer输入不能据此归为失败。",
+      "attribution": "model_precision",
+      "citation_count": 0,
+      "valid_citation_count": 0,
+      "automatic_tags": [],
+      "evidence_basis": [
+        {
+          "evidence_id": "3bcbc95f-2e7b-5506-b610-42f3d43f2fc9",
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 5,
+          "content_sha256": "f9ad3aede191e4bafdc4aa5ef3a08d6ecbaed10550d1a5db47db232b7fa91eaa",
+          "actually_read": true
+        },
+        {
+          "evidence_id": "d044318e-fb64-5692-8cca-36db2c71ae7a",
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 6,
+          "content_sha256": "364d399f72d9d50ba1604df0a6f59cd8b3e3bad8230279f50c934a83c0cf30b3",
+          "actually_read": true
+        }
+      ],
+      "primary_issue_detected": null,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0
+    },
+    {
+      "job_id": "novel-ci-native-header-keyword-1",
+      "case_id": "novel-ci-native-header",
+      "arm": "keyword",
+      "case_sha256": "5d62a4cdac3222dff8a5890f35e63efa0eb4ab7bfffcabce7954e779298101d1",
+      "execution_sha256": "0db1c02d8ccc05553dff734b73dbe44546676558f9fb4d45ea3cb3b5bdac2c4b",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "正确定位源码依赖编译中libpq-fe.h不可见，保留未安装/搜索路径等替代假设，不误判gcc不存在。具体包名和pg_config配置应依实际系统/构建工具核实。",
+      "attribution": "model_precision",
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "evidence_basis": [
+        {
+          "evidence_id": "96006024-f3cb-5514-84c8-28ac4012d560",
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 5,
+          "content_sha256": "b55d3e2e18ec538685ba2412911e5ffd43911963207e73e6da1489e0a6ec6500",
+          "actually_read": true
+        }
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "novel-ci-native-header-hybrid-1",
+      "case_id": "novel-ci-native-header",
+      "arm": "hybrid",
+      "case_sha256": "5d62a4cdac3222dff8a5890f35e63efa0eb4ab7bfffcabce7954e779298101d1",
+      "execution_sha256": "053ee5e3dd070120b419a0c16950f58f4f8cd7f2c172c55157b0bc2311a3c172",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "编译阶段和头文件搜索失败正确，OS包名有条件给出；既已进入扩展编译，版本是否存在不是当前错误的并列直接根因，替代wheel也须先确认源码约束意图。",
+      "attribution": "model_precision",
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "evidence_basis": [
+        {
+          "evidence_id": "96006024-f3cb-5514-84c8-28ac4012d560",
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 5,
+          "content_sha256": "b55d3e2e18ec538685ba2412911e5ffd43911963207e73e6da1489e0a6ec6500",
+          "actually_read": true
+        }
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "novel-ci-platform-timeout-keyword-1",
+      "case_id": "novel-ci-platform-timeout",
+      "arm": "keyword",
+      "case_sha256": "359cf4ca49b59fc1f00ebb8ff24f7c4d99727664a88b31074f7fa2061195eecf",
+      "execution_sha256": "69d6d5217b54f8dfe38079258060e82d169ac195d0b7fc09f4144725469117b9",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "正确定位集成测试期间job30分钟时限取消，具体慢用例/等待未知；job时限包含前置步骤，不能当pytest自身已运行30分钟。缺证据应列未确认而非独立风险。",
+      "attribution": "model_precision",
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "evidence_basis": [
+        {
+          "evidence_id": "3369e049-c18b-5521-a902-d3382ebf99f9",
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 4,
+          "content_sha256": "7412e58be73be2e648e91a9fca29a55352fed3b6745be98963bce0dda80d7caf",
+          "actually_read": true
+        }
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "novel-ci-platform-timeout-hybrid-1",
+      "case_id": "novel-ci-platform-timeout",
+      "arm": "hybrid",
+      "case_sha256": "359cf4ca49b59fc1f00ebb8ff24f7c4d99727664a88b31074f7fa2061195eecf",
+      "execution_sha256": "2e014ebb73be8fe8a3d6b0a5feb5e0c30a04d3a90aa202ba1a37eac666bfccbf",
+      "verdict": "pass",
+      "core_correct": true,
+      "reason": "区分已确认的平台30分钟取消机制与未知业务超时原因，先取计时/进度再决定改性能或超时值，不直接归OOM或指定用例。",
+      "attribution": null,
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "evidence_basis": [
+        {
+          "evidence_id": "3369e049-c18b-5521-a902-d3382ebf99f9",
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 4,
+          "content_sha256": "7412e58be73be2e648e91a9fca29a55352fed3b6745be98963bce0dda80d7caf",
+          "actually_read": true
+        }
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "novel-ci-sqlite-lock-keyword-1",
+      "case_id": "novel-ci-sqlite-lock",
+      "arm": "keyword",
+      "case_sha256": "95b4fb35383195799bfb4acf132b608388993c076ae70b7df9b82678fb99bddd",
+      "execution_sha256": "e9475d39062c38ca10fc728f628323af6ce6110716897e53c7e3f239665a69a0",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "测试执行与SQLite写锁等待方向正确，具体事务/锁持有者仍未知。等待5秒不足不必然是配置过小，需查未提交事务或存储条件，不能仅调大等待掩盖问题。",
+      "attribution": "model_precision",
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "evidence_basis": [
+        {
+          "evidence_id": "717da0bb-e860-5ee6-8b84-061e159778a3",
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 4,
+          "content_sha256": "e2bb647207214a725d9cdaeaa0f8592d0067da5a016237ab41b1339ad3b6cec7",
+          "actually_read": true
+        }
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "novel-ci-sqlite-lock-hybrid-1",
+      "case_id": "novel-ci-sqlite-lock",
+      "arm": "hybrid",
+      "case_sha256": "95b4fb35383195799bfb4acf132b608388993c076ae70b7df9b82678fb99bddd",
+      "execution_sha256": "7e5e833878f55c01cc4b95fa37de572d8176031a7a960175283c37cf30ca18bc",
+      "verdict": "fail",
+      "core_correct": true,
+      "reason": "锁竞争阶段和根因方向正确；建议验证并发正确性时让每个worker使用独立数据库，会消除被测的共享写竞争，改变测试目标，应只隔离不同测试而保留同一测试内所需并发。",
+      "attribution": "model_advice",
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "evidence_basis": [
+        {
+          "evidence_id": "717da0bb-e860-5ee6-8b84-061e159778a3",
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 4,
+          "content_sha256": "e2bb647207214a725d9cdaeaa0f8592d0067da5a016237ab41b1339ad3b6cec7",
+          "actually_read": true
+        }
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "novel-qa-policy-version-keyword-1",
+      "case_id": "novel-qa-policy-version",
+      "arm": "keyword",
+      "case_sha256": "a799eb772626c965b6620f6c50eee8d5c150bfc4a5bd100daf350cd2a32af40c",
+      "execution_sha256": "16bce25525d5983d781963d9ffdf0b36263fac8f467f58fc6ee421514c8e6b2b",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "依据v3生效日期回答14个自然日，正确区分归档v2的30天。按费用发生日还是提交日划分过渡单据未规定，不应自行配置日期切换细则。",
+      "attribution": "model_precision",
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [],
+      "evidence_basis": [
+        {
+          "evidence_id": "2b03b8c9-5f5c-4569-88d9-bd511da2ba51",
+          "source_key": "current",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "9e9198797829be1c952a7f95d09d3c8f6636968ff868e86469418592168cdf08",
+          "actually_read": true
+        },
+        {
+          "evidence_id": "554af30c-cfae-4bf0-b057-334b66b719a9",
+          "source_key": "archive",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "f1de43f2b3a04f6401c1becf5dc535230c8702c8c69e618ecc96779c045ed494",
+          "actually_read": true
+        }
+      ]
+    },
+    {
+      "job_id": "novel-qa-policy-version-hybrid-1",
+      "case_id": "novel-qa-policy-version",
+      "arm": "hybrid",
+      "case_sha256": "a799eb772626c965b6620f6c50eee8d5c150bfc4a5bd100daf350cd2a32af40c",
+      "execution_sha256": "95255609adc32f025e8b9878f5413b64b2ba0e63a9aabe273a8ee532682537f4",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "正确采用v3的14自然日并引用两份版本资料；跨版本费用如何适用及唯一期限的例外未给出，应保留未知，不额外确定过渡政策。",
+      "attribution": "model_precision",
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [],
+      "evidence_basis": [
+        {
+          "evidence_id": "2b03b8c9-5f5c-4569-88d9-bd511da2ba51",
+          "source_key": "current",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "9e9198797829be1c952a7f95d09d3c8f6636968ff868e86469418592168cdf08",
+          "actually_read": true
+        },
+        {
+          "evidence_id": "554af30c-cfae-4bf0-b057-334b66b719a9",
+          "source_key": "archive",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "f1de43f2b3a04f6401c1becf5dc535230c8702c8c69e618ecc96779c045ed494",
+          "actually_read": true
+        }
+      ]
+    },
+    {
+      "job_id": "novel-qa-csv-mode-keyword-1",
+      "case_id": "novel-qa-csv-mode",
+      "arm": "keyword",
+      "case_sha256": "c19f0db6dcbac1b82c7fce3c57aa02b2b09b67dc663e386a7966651e35dd8fa2",
+      "execution_sha256": "6f10107265c383ef6b86bb738cd4049dda959fa5e281bf493672b3fdda93b947",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "默认UTF8无BOM、显式Excel模式加BOM与doc L2-L3一致，读取端容错清楚标为建议。默认不加BOM已有明确规定，触发接口未知不代表默认编码未知。",
+      "attribution": "model_precision",
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [],
+      "evidence_basis": [
+        {
+          "evidence_id": "102155a8-6b6c-4f6f-bf34-cd0a5d519e2b",
+          "source_key": "doc",
+          "start_line": 1,
+          "end_line": 3,
+          "content_sha256": "3ec29fe8fa44fec0c9fcb02cb0b74142c82812645ddc1c67ed67a02465b95b50",
+          "actually_read": true
+        }
+      ]
+    },
+    {
+      "job_id": "novel-qa-csv-mode-hybrid-1",
+      "case_id": "novel-qa-csv-mode",
+      "arm": "hybrid",
+      "case_sha256": "c19f0db6dcbac1b82c7fce3c57aa02b2b09b67dc663e386a7966651e35dd8fa2",
+      "execution_sha256": "db030d88e13568475f18fb76b3508bc858210c8b57cde7a888df6042fbda7a12",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "模式条件和读取端未规定的边界正确；“默认即绝大多数情况”不是文档事实，默认配置不能证明真实使用频率。",
+      "attribution": "model_precision",
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [],
+      "evidence_basis": [
+        {
+          "evidence_id": "102155a8-6b6c-4f6f-bf34-cd0a5d519e2b",
+          "source_key": "doc",
+          "start_line": 1,
+          "end_line": 3,
+          "content_sha256": "3ec29fe8fa44fec0c9fcb02cb0b74142c82812645ddc1c67ed67a02465b95b50",
+          "actually_read": true
+        }
+      ]
+    },
+    {
+      "job_id": "novel-qa-approval-event-keyword-1",
+      "case_id": "novel-qa-approval-event",
+      "arm": "keyword",
+      "case_sha256": "b25f44c1f39770edb25d521f3f349cbf4f25b89c945bd8d3ecd675a9866affdb",
+      "execution_sha256": "a1d891cf3d72cbac683a526a946bd2fdffeae46aa2880f1a3e1080bbbef84953",
+      "verdict": "pass",
+      "core_correct": true,
+      "reason": "明确证据不足，区分流程角色当班SRE与CHG-731实际审批事件，不编造人名、是否审批或时间。",
+      "attribution": null,
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [],
+      "evidence_basis": [
+        {
+          "evidence_id": "d9cf90a6-278f-4052-b6fa-f9e2dfc7a6ea",
+          "source_key": "doc",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "bbc618064b2dc220717474376100aba94076f4e42ac352ed531b60397e0ec6c1",
+          "actually_read": true
+        }
+      ]
+    },
+    {
+      "job_id": "novel-qa-approval-event-hybrid-1",
+      "case_id": "novel-qa-approval-event",
+      "arm": "hybrid",
+      "case_sha256": "b25f44c1f39770edb25d521f3f349cbf4f25b89c945bd8d3ecd675a9866affdb",
+      "execution_sha256": "ed024150b769b0301a78f82b296e2812a6357838ab0343bcab6679deeb8c1141",
+      "verdict": "pass",
+      "core_correct": true,
+      "reason": "只有流程说明与干扰文档时正确拒绝推断实际审批人，引用仅用于说明流程边界，要求补事件记录。",
+      "attribution": null,
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [],
+      "evidence_basis": [
+        {
+          "evidence_id": "d9cf90a6-278f-4052-b6fa-f9e2dfc7a6ea",
+          "source_key": "doc",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "bbc618064b2dc220717474376100aba94076f4e42ac352ed531b60397e0ec6c1",
+          "actually_read": true
+        }
+      ]
+    }
+  ]
+}

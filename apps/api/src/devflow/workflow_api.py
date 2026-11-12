@@ -21,7 +21,8 @@ from devflow.models import (
     RunJournal,
     RunRecord,
 )
-from devflow.reports import AnalysisReport, report_markdown, require_report
+from devflow.report_v2 import PublicReport
+from devflow.reports import report_markdown, require_report
 from devflow.workflow_contracts import (
     ArtifactContent,
     ArtifactResponse,
@@ -65,7 +66,7 @@ class EventPage(Contract):
 
 
 class ReportResponse(Contract):
-    report: AnalysisReport
+    report: PublicReport
     markdown: str
 
 

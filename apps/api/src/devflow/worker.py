@@ -14,12 +14,13 @@ from sqlalchemy.orm import Session
 from devflow.agent import AnalysisRunner
 from devflow.artifact_store import ArtifactStore
 from devflow.checkpoint import postgres_checkpointer
-from devflow.config import get_settings
+from devflow.config import get_settings, validate_service_configuration
 from devflow.database import create_database_engine
 from devflow.errors import DomainError
 from devflow.evidence_capture import bind_capture, capture_github
 from devflow.fake_model import FixtureModel
 from devflow.github_client import GitHubClient
+from devflow.healthcheck import worker_heartbeat
 from devflow.model_gateway import DeepSeekModel
 from devflow.models import (
     ArtifactRecord,
@@ -61,6 +62,7 @@ class Worker:
         owner=None,
         model_factory=None,
         embedder_factory=None,
+        budget_ledger=None,
     ):
         self.engine = engine
         self.settings = settings
@@ -68,6 +70,7 @@ class Worker:
         self.client_factory = client_factory
         self.model_factory = model_factory
         self.embedder_factory = embedder_factory
+        self.budget_ledger = budget_ledger
         self.owner = owner or "worker-" + uuid.uuid4().hex
         self.stop = threading.Event()
 
@@ -88,7 +91,7 @@ class Worker:
             if run.cancel_requested_at is not None:
                 raise RunCancelled()
             if now >= run.started_at + timedelta(
-                seconds=run.configuration["budget"]["timeout_seconds"]
+                seconds=min(run.configuration["budget"]["timeout_seconds"], 600)
             ):
                 raise RunTimedOut()
         return run, now
@@ -190,6 +193,7 @@ class Worker:
             run, now = self._owned(session, run_id, token, check_stop=False)
             run.heartbeat_at = now
             run.lease_expires_at = now + timedelta(seconds=self.settings.worker_lease_seconds)
+        worker_heartbeat()
 
     def guard(self, run_id, token):
         with Session(self.engine) as session, session.begin():
@@ -231,7 +235,7 @@ class Worker:
             if run.cancel_requested_at is not None:
                 status, code, message, result = "cancelled", None, None, None
             elif now >= run.started_at + timedelta(
-                seconds=run.configuration["budget"]["timeout_seconds"]
+                seconds=min(run.configuration["budget"]["timeout_seconds"], 600)
             ):
                 status, code, message, result = "failed", "timeout", "任务达到总时长限制", None
             if status == "failed" and run.recovery_count:
@@ -276,6 +280,12 @@ class Worker:
             run = session.get(RunRecord, run_id)
             repo = session.get(RepositoryRecord, run.repo_id)
             configuration = {**run.configuration, "recovering": run.recovery_count > 0}
+            for key, configured, fallback in [
+                ("context_input_tokens", self.settings.context_input_tokens, 12000),
+                ("max_output_tokens", self.settings.model_max_output_tokens, 2000),
+                ("model_timeout_seconds", min(self.settings.model_timeout_seconds, 90), 90),
+            ]:
+                configuration[key] = min(configuration.get(key, fallback), configured)
             items = []
             for evidence in run_evidence(session, run_id):
                 artifact = session.get(ArtifactRecord, evidence.artifact_id)
@@ -318,6 +328,10 @@ class Worker:
                                 if key in metadata and len(str(metadata[key])) <= 3000
                             },
                             "related_ci": payload.get("related_ci", []),
+                            "coverage_complete": payload.get("coverage_complete"),
+                            "files_limited": payload.get("files_limited"),
+                            "jobs_limited": payload.get("jobs_limited"),
+                            "warnings": payload.get("warnings", []),
                         }
                     )
             task_type = run.task_type
@@ -346,7 +360,7 @@ class Worker:
                 time.monotonic()
                 + (
                     run.started_at
-                    + timedelta(seconds=configuration["budget"]["timeout_seconds"])
+                    + timedelta(seconds=min(configuration["budget"]["timeout_seconds"], 600))
                     - now
                 ).total_seconds()
             )
@@ -357,6 +371,14 @@ class Worker:
                 "dashscope_model": configuration["model"],
                 "dashscope_base_url": configuration["base_url"],
                 "model_timeout_seconds": configuration["model_timeout_seconds"],
+                "model_max_output_tokens": min(
+                    self.settings.model_max_output_tokens,
+                    configuration.get("max_output_tokens", 2000),
+                ),
+                "context_input_tokens": min(
+                    self.settings.context_input_tokens,
+                    configuration.get("context_input_tokens", 12000),
+                ),
             }
         )
         if self.model_factory:
@@ -368,7 +390,21 @@ class Worker:
                 )
             model = FixtureModel()
         else:
-            model = DeepSeekModel(model_settings)
+            model = DeepSeekModel(
+                model_settings,
+                ledger=self.budget_ledger,
+                purpose="analysis",
+                run_id=run_id,
+                source="worker",
+                guard=lambda: self.guard(run_id, token),
+                emit=lambda name, payload: self._event(
+                    run_id,
+                    token,
+                    name,
+                    payload,
+                    key=f"budget:{name}:{payload.get('request_id') or uuid.uuid4()}",
+                ),
+            )
 
         def guard():
             self.guard(run_id, token)
@@ -465,7 +501,13 @@ class Worker:
         gateway = ToolGateway(
             repo_id,
             items,
-            {"resources": snapshots, "input_version": input_version},
+            {
+                "resources": snapshots,
+                "input_version": input_version,
+                "version_kind": "fixture_snapshot; not a remote Git commit"
+                if self.settings.data_source == "fixture"
+                else "git_commit",
+            },
             guard=guard,
             emit=emit,
             knowledge_search=knowledge_search,
@@ -545,7 +587,9 @@ class Worker:
         complete = all(
             resource.get("coverage_complete", True) for resource in input_version["resources"]
         )
-        if not complete:
+        if result["report"].get("report_version") == "2":
+            complete = result["report"]["evidence_facts"]["collection_complete"]
+        if complete is False:
             result["report"]["unconfirmed"] = result["report"]["unconfirmed"][:19]
             result["report"]["unconfirmed"].append(
                 "采集范围不完整，请核查固定输入中的 warnings 和元数据制品。"
@@ -707,14 +751,36 @@ class Worker:
         except LeaseLost:
             logger.info("Lease lost for run %s; no further writes", run_id)
         except DomainError as error:
+            attention = error.code in {
+                "loop_detected",
+                "cost_budget_exceeded",
+                "pricing_not_configured",
+                "budget_unavailable",
+            }
             code = (
                 error.code
                 if error.code
-                in {"input_changed", "artifact_missing", "timeout", "budget_exceeded", "tool_error"}
+                in {
+                    "input_changed",
+                    "artifact_missing",
+                    "timeout",
+                    "budget_exceeded",
+                    "tool_error",
+                    "loop_detected",
+                    "cost_budget_exceeded",
+                    "pricing_not_configured",
+                    "budget_unavailable",
+                }
                 or error.code.startswith("model_")
                 else "evidence_unavailable"
             )
-            self._finish(run_id, token, "failed", code=code, message=error.message)
+            self._finish(
+                run_id,
+                token,
+                "needs_attention" if attention else "failed",
+                code=code,
+                message=error.message,
+            )
         except Exception as error:
             logger.error("Run %s stopped: %s", run_id, type(error).__name__)
             self._finish(
@@ -741,7 +807,9 @@ class Worker:
     def run_forever(self):
         while not self.stop.is_set():
             try:
-                if not self.run_once():
+                ran = self.run_once()
+                worker_heartbeat()
+                if not ran:
                     self.stop.wait(self.settings.worker_poll_seconds)
             except Exception as error:
                 logger.error("Worker loop: %s", type(error).__name__)
@@ -755,6 +823,7 @@ def main():
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     settings = get_settings()
+    validate_service_configuration(settings)
     engine = create_database_engine(settings)
     worker = Worker(engine, settings, owner=args.owner)
     for signum in (signal.SIGINT, signal.SIGTERM):

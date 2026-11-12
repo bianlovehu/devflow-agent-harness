@@ -1,7 +1,13 @@
 // 文件用途：按接口和方法限制代理范围，校验来源并保留任务请求的幂等语义。
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const segment = /^[a-zA-Z0-9_-]{1,120}$/;
-const origins = new Set(["http://127.0.0.1:3000", "http://localhost:3000"]);
+const origins = new Set([
+  "http://127.0.0.1:3000",
+  "http://localhost:3000",
+  ...(process.env.WEB_ORIGIN
+    ? [process.env.WEB_ORIGIN.replace(/\/$/, "")]
+    : []),
+]);
 const maxBody = 128 * 1024;
 
 function queryKeys(path: string[], method: string): string[] | null {
@@ -64,6 +70,7 @@ function queryKeys(path: string[], method: string): string[] | null {
       : null;
   }
   if (method !== "GET") return null;
+  if (group === "budget" && path.length === 1) return [];
   if (group === "runtime" && path.length === 1) return [];
   if (group === "repositories") {
     if (
@@ -99,7 +106,8 @@ function queryKeys(path: string[], method: string): string[] | null {
       return ["limit", "offset"];
     if (group === "runs" && child === "stream") return ["after"];
     if (group === "runs" && child === "events") return ["after", "limit"];
-    if (group === "runs" && ["report", "freshness"].includes(child)) return [];
+    if (group === "runs" && ["report", "freshness", "cost"].includes(child))
+      return [];
     if (group === "runs" && child === "context") return ["call"];
     if (group === "runs" && ["evidence", "artifacts"].includes(child))
       return [];

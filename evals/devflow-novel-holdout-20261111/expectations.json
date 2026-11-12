@@ -1,0 +1,191 @@
+{
+  "schema_version": 1,
+  "dataset_version": "devflow-novel-holdout-20261111",
+  "cases": [
+    {
+      "case_id": "novel-pr-cents",
+      "expected_findings": [
+        "int(unit_price)截断小数，违反保留分币的明确契约；Decimal 12.50乘2由25变24"
+      ],
+      "required_evidence": [
+        {
+          "source_key": "base",
+          "start_line": 3,
+          "end_line": 5
+        },
+        {
+          "source_key": "head",
+          "start_line": 3,
+          "end_line": 5
+        }
+      ],
+      "must_not_conclude": [
+        "没有证据就声称已造成线上资金损失",
+        "把Decimal本身精度不足当根因"
+      ],
+      "allow_uncertain": "调用方和损失范围未知；代码中保留分币的契约和截断差异可直接判断",
+      "requires_abstention": false,
+      "allowed_stages": []
+    },
+    {
+      "case_id": "novel-pr-fifo",
+      "expected_findings": [
+        "pop()移除最后入队元素，与明确FIFO/oldest-first契约冲突"
+      ],
+      "required_evidence": [
+        {
+          "source_key": "base",
+          "start_line": 2,
+          "end_line": 3
+        },
+        {
+          "source_key": "head",
+          "start_line": 2,
+          "end_line": 3
+        }
+      ],
+      "must_not_conclude": [
+        "把空队列抛IndexError当作本次新增",
+        "声称所有输入下返回值都不同"
+      ],
+      "allow_uncertain": "单元素与空队列可保持原行为；多元素队列的顺序回归明确",
+      "requires_abstention": false,
+      "allowed_stages": []
+    },
+    {
+      "case_id": "novel-pr-checksum-clean",
+      "expected_findings": [],
+      "required_evidence": [],
+      "must_not_conclude": [
+        "把bytes.hex与hexdigest说成不同摘要算法",
+        "凭空增加密码加盐需求",
+        "正常重构强行报缺陷"
+      ],
+      "allow_uncertain": "固定bytes输入的SHA-256十六进制结果等价；调用方未采集不妨碍判断此等价重构",
+      "requires_abstention": false,
+      "allowed_stages": []
+    },
+    {
+      "case_id": "novel-ci-native-header",
+      "expected_findings": [
+        "依赖安装中的原生扩展编译找不到libpq-fe.h；缺开发头文件或include路径是待验证假设"
+      ],
+      "required_evidence": [
+        {
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 5
+        }
+      ],
+      "must_not_conclude": [
+        "把gcc未安装当成已确认根因",
+        "断定某个Linux发行版或某次PR引入"
+      ],
+      "allow_uncertain": "系统/镜像、头文件是否安装和编译搜索路径未提供，不能直接指定唯一修复包名",
+      "requires_abstention": false,
+      "allowed_stages": [
+        "安装依赖",
+        "编译扩展"
+      ]
+    },
+    {
+      "case_id": "novel-ci-sqlite-lock",
+      "expected_findings": [
+        "测试执行中SQLite数据库锁竞争/写事务等待，具体锁持有者和事务代码待核实"
+      ],
+      "required_evidence": [
+        {
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 4
+        }
+      ],
+      "must_not_conclude": [
+        "声称数据库损坏",
+        "建议直接删除业务数据库",
+        "把业务断言不匹配当作确定根因"
+      ],
+      "allow_uncertain": "需补完整traceback、并发写者与事务范围；不能从锁错误唯一确定哪个代码分支",
+      "requires_abstention": false,
+      "allowed_stages": [
+        "测试"
+      ]
+    },
+    {
+      "case_id": "novel-ci-platform-timeout",
+      "expected_findings": [
+        "集成测试步骤触发平台30分钟job时限；哪个用例慢或阻塞未知"
+      ],
+      "required_evidence": [
+        {
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 4
+        }
+      ],
+      "must_not_conclude": [
+        "断言是OOM",
+        "凭空指定某个测试或数据库死锁",
+        "认为timeout必然只需提高时限"
+      ],
+      "allow_uncertain": "区分平台终止机制与导致超时的业务根因，后者证据不足",
+      "requires_abstention": false,
+      "allowed_stages": [
+        "集成测试",
+        "测试"
+      ]
+    },
+    {
+      "case_id": "novel-qa-policy-version",
+      "expected_findings": [
+        "依据生效2026-11-01的v3回答14个自然日，不能把归档v2的30天当现行"
+      ],
+      "required_evidence": [
+        {
+          "source_key": "current",
+          "start_line": 1,
+          "end_line": 2
+        }
+      ],
+      "must_not_conclude": [
+        "当前期限30天",
+        "14个工作日"
+      ],
+      "allow_uncertain": "只能说明资料中已登记的政策版本，不代表已验证真实组织现状",
+      "requires_abstention": false,
+      "allowed_stages": []
+    },
+    {
+      "case_id": "novel-qa-csv-mode",
+      "expected_findings": [
+        "默认程序读取不加BOM，仅Excel兼容模式添加"
+      ],
+      "required_evidence": [
+        {
+          "source_key": "doc",
+          "start_line": 2,
+          "end_line": 3
+        }
+      ],
+      "must_not_conclude": [
+        "所有UTF-8导出都必须加BOM",
+        "任何模式都不加BOM"
+      ],
+      "allow_uncertain": "按资料的模式条件回答，不追加未登记的客户端兼容性保证",
+      "requires_abstention": false,
+      "allowed_stages": []
+    },
+    {
+      "case_id": "novel-qa-approval-event",
+      "expected_findings": [],
+      "required_evidence": [],
+      "must_not_conclude": [
+        "把当班SRE角色当成CHG-731实际审批人",
+        "编造姓名或声称已完成审批"
+      ],
+      "allow_uncertain": "只有流程要求，没有CHG-731事件记录；应说明证据不足并索取实际审批日志",
+      "requires_abstention": true,
+      "allowed_stages": []
+    }
+  ]
+}

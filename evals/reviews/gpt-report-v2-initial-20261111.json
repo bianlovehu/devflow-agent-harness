@@ -1,0 +1,65 @@
+{
+  "run_id": "4701cdcf-4be5-4792-9173-0c71e718c003",
+  "dataset_sha256": "1e4ab15d706aca6d34d710b430a85634a07dfd05df8c287c2119218f974230ff",
+  "reviews": [
+    {
+      "case_id": "pr-owner-removed",
+      "execution_sha256": "2570b44fce2a810222df67e916530d6125226678f96e4feac667df8b3474036d",
+      "verdict": "fail",
+      "reviewer": "GPT",
+      "notes": "未生成可用报告，不把本次执行失败计为语义漏报。第一次报告在JSON前加前言，修正后JSON有效；程序错误地要求直接摘录行号与总引用行号完全相同，拒绝了总引用L1-L2内的L2摘录。原始响应、用量和费用保留。",
+      "failure_tags": [
+        "other"
+      ]
+    },
+    {
+      "case_id": "ci-lint",
+      "execution_sha256": "6fc229030be7d2f48ba697bc27bbdd40e433413c85c7a9827d11073bccd664ca",
+      "verdict": "pass",
+      "reviewer": "GPT",
+      "notes": "主要判断正确：ci/job.txt L1为ruff check，L2为F401，L3为Found 1 error；定位静态检查合理。自动wrong_stage仅因名称要求一字不差，是评分限制。仍须删除严重程度依据中“可稳定检出并复现”的未验证表述；未实际执行复现。原始日志截断未知、缺少代码与退出码的边界已明确。",
+      "failure_tags": []
+    },
+    {
+      "case_id": "qa-owner",
+      "execution_sha256": "cec3839370102f1d05d97721718a921aabeb27df1ffcea22870868235ca3bbb1",
+      "verdict": "fail",
+      "reviewer": "GPT",
+      "notes": "policy.md L1支持owner_id必须等于actor_id、未匹配任务不得返回，主回答方向正确；但answer里写出的完整文档版本号遗漏981三位，与工具保存的版本e7b9e5b43f7f5b48fb8a4534c21dfe815981bc29不符。引用ID与行号有效不能抵消正文版本事实错误。",
+      "failure_tags": [
+        "unsupported_claim"
+      ]
+    }
+  ],
+  "reviewer": "GPT",
+  "scope": "第2版报告的少量真实格式试跑；旧开发题回归，不是新题或盲测；检索为固定资料的关键词适配器，不是生产检索成绩。",
+  "semantic_checks": [
+    {
+      "case_id": "pr-owner-removed",
+      "execution_sha256": "2570b44fce2a810222df67e916530d6125226678f96e4feac667df8b3474036d",
+      "report_sha256": null,
+      "citation_check": "no_report",
+      "semantic_support": "not_applicable",
+      "strict_pass": false,
+      "notes": "未生成可用报告，不把本次执行失败计为语义漏报。第一次报告在JSON前加前言，修正后JSON有效；程序错误地要求直接摘录行号与总引用行号完全相同，拒绝了总引用L1-L2内的L2摘录。原始响应、用量和费用保留。"
+    },
+    {
+      "case_id": "ci-lint",
+      "execution_sha256": "6fc229030be7d2f48ba697bc27bbdd40e433413c85c7a9827d11073bccd664ca",
+      "report_sha256": "9c1f523bbc2f4578602f1f9cd336e60d93c69a19b60eccf25bff1a026435e17a",
+      "citation_check": "passed",
+      "semantic_support": "partial",
+      "strict_pass": false,
+      "notes": "主要判断正确：ci/job.txt L1为ruff check，L2为F401，L3为Found 1 error；定位静态检查合理。自动wrong_stage仅因名称要求一字不差，是评分限制。仍须删除严重程度依据中“可稳定检出并复现”的未验证表述；未实际执行复现。原始日志截断未知、缺少代码与退出码的边界已明确。"
+    },
+    {
+      "case_id": "qa-owner",
+      "execution_sha256": "cec3839370102f1d05d97721718a921aabeb27df1ffcea22870868235ca3bbb1",
+      "report_sha256": "d2833115e5f8085b35a5ea0fab425f47b889b7f7bdee2d8cf77bbc3b44cbbf1c",
+      "citation_check": "passed",
+      "semantic_support": "partial",
+      "strict_pass": false,
+      "notes": "policy.md L1支持owner_id必须等于actor_id、未匹配任务不得返回，主回答方向正确；但answer里写出的完整文档版本号遗漏981三位，与工具保存的版本e7b9e5b43f7f5b48fb8a4534c21dfe815981bc29不符。引用ID与行号有效不能抵消正文版本事实错误。"
+    }
+  ]
+}

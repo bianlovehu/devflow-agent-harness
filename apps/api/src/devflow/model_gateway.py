@@ -1,5 +1,6 @@
 # 文件用途：统一 DeepSeek 消息、工具调用、超时、响应校验及用量；不自动重试模型请求。
 import json
+import sys
 import time
 from dataclasses import dataclass, field
 from urllib.error import HTTPError, URLError
@@ -8,7 +9,11 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from devflow.budget import get_budget_ledger
+from devflow.context_budget import estimate_tokens
 from devflow.errors import DomainError
+from devflow.runtime_policy import MAX_INPUT_TOKENS, MAX_MODEL_SECONDS, MAX_OUTPUT_TOKENS
+from devflow.security import redact
 
 
 class Usage(BaseModel):
@@ -22,6 +27,7 @@ class Usage(BaseModel):
 class ModelReply:
     message: dict
     usage: Usage = field(default_factory=Usage)
+    request_id: str | None = None
 
 
 class ModelError(DomainError):
@@ -38,15 +44,43 @@ class NoRedirect(HTTPRedirectHandler):
 class DeepSeekModel:
     provider = "deepseek"
 
-    def __init__(self, settings, *, opener=None):
+    def __init__(
+        self,
+        settings,
+        *,
+        opener=None,
+        ledger=None,
+        purpose="probe",
+        run_id=None,
+        source="cli",
+        guard=lambda: None,
+        emit=lambda *_: None,
+    ):
         self.settings = settings
         self.provider = settings.model_provider
         self.name = (
             settings.dashscope_model if self.provider == "aliyun" else settings.deepseek_model
         )
         self.opener = opener or build_opener(NoRedirect())
+        self.ledger, self.purpose, self.run_id, self.source = ledger, purpose, run_id, source
+        self.guard, self.emit = guard, emit
 
-    def complete(self, messages, tools, *, max_tokens=3000, timeout=None):
+    def complete(self, messages, tools, *, max_tokens=None, timeout=None):
+        messages = redact(messages)
+        estimated_input = estimate_tokens(messages) + estimate_tokens(tools)
+        maximum = min(self.settings.model_max_output_tokens, MAX_OUTPUT_TOKENS)
+        max_tokens = max_tokens if max_tokens is not None else maximum
+        if not isinstance(max_tokens, int) or not 1 <= max_tokens <= maximum:
+            raise DomainError(422, "budget_exceeded", "请求输出上限超过服务端限额，真实请求未发送")
+        if estimated_input > min(self.settings.context_input_tokens, MAX_INPUT_TOKENS):
+            raise DomainError(422, "budget_exceeded", "输入超过服务端预算，真实请求未发送")
+        timeout = min(
+            timeout if timeout is not None else MAX_MODEL_SECONDS,
+            self.settings.model_timeout_seconds,
+            MAX_MODEL_SECONDS,
+        )
+        if timeout <= 0:
+            raise DomainError(408, "timeout", "请求可用时间已耗尽")
         aliyun = self.provider == "aliyun"
         key = (
             (self.settings.dashscope_api_key if aliyun else self.settings.deepseek_api_key)
@@ -96,11 +130,34 @@ class DeepSeekModel:
             headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
             method="POST",
         )
-        usage = None
+        usage, receipt, sent = None, None, False
+        ledger = self.ledger or get_budget_ledger()
         try:
-            with self.opener.open(
-                request, timeout=min(timeout or 120, self.settings.model_timeout_seconds)
-            ) as response:
+            self.guard()
+            receipt = ledger.reserve(
+                provider=self.provider,
+                model=self.name,
+                base_url=self.settings.dashscope_base_url,
+                estimated_input=estimated_input,
+                output_limit=max_tokens,
+                purpose=self.purpose,
+                run_id=self.run_id,
+                source=self.source,
+                timeout=timeout,
+            )
+            if receipt["warning"]:
+                self.emit(
+                    "budget.warning",
+                    {
+                        **receipt,
+                        "label": f"项目预算达到{receipt.get('warning_cny', '140')}元提醒线",
+                    },
+                )
+            self.guard()
+            ledger.dispatch(receipt["request_id"])
+            self.guard()
+            sent = True
+            with self.opener.open(request, timeout=timeout) as response:
                 raw = response.read(1024 * 1024 + 1)
             if len(raw) > 1024 * 1024:
                 raise ModelError("model_format_error", "模型响应超过 1 MiB 限制")
@@ -149,7 +206,7 @@ class DeepSeekModel:
             clean = {"role": "assistant", "content": content}
             if calls:
                 clean["tool_calls"] = calls
-            return ModelReply(clean, usage)
+            return ModelReply(clean, usage, receipt["request_id"])
         except HTTPError as error:
             code, message = {
                 401: ("model_auth_error", "模型密钥无效或没有访问权限"),
@@ -162,6 +219,41 @@ class DeepSeekModel:
             raise ModelError("model_network_error", "模型连接失败或超时") from None
         except (ValueError, KeyError, IndexError, TypeError, ValidationError):
             raise ModelError("model_format_error", "模型响应格式不符合约定", usage=usage) from None
+        except DomainError as error:
+            if error.code in {
+                "cost_budget_exceeded",
+                "pricing_not_configured",
+                "budget_unavailable",
+            }:
+                self.emit(
+                    "budget.blocked",
+                    {
+                        "code": error.code,
+                        "label": error.message,
+                        "request_id": receipt["request_id"] if receipt else None,
+                    },
+                )
+            raise
+        finally:
+            pending = sys.exception()
+            if isinstance(pending, DomainError):
+                pending.request_sent = sent
+                pending.request_id = receipt["request_id"] if receipt else None
+            if receipt:
+                try:
+                    settlement = ledger.finish(receipt["request_id"], usage, sent=sent)
+                    if settlement and settlement.get("warning"):
+                        self.emit(
+                            "budget.warning",
+                            {
+                                "request_id": receipt["request_id"],
+                                "label": f"实际用量结算达到{settlement['warning_cny']}元提醒线",
+                            },
+                        )
+                except DomainError as error:
+                    error.request_sent, error.usage = sent, usage
+                    error.request_id = receipt["request_id"]
+                    raise
 
 
 class ScriptedModel:

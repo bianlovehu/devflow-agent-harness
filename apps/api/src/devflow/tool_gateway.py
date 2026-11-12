@@ -1,4 +1,5 @@
 # 文件用途：只向模型开放当前任务绑定的只读证据，校验参数、范围、分页和重复调用。
+import hashlib
 import json
 import re
 import time
@@ -61,6 +62,20 @@ TOOLS = {
         "不能查询当前 GitHub 状态。",
     ),
 }
+
+
+def call_fingerprint(name, arguments):
+    try:
+        value = json.loads(arguments)
+        if name in TOOLS:
+            try:
+                value = TOOLS[name][0].model_validate_json(arguments).model_dump()
+            except ValidationError:
+                pass
+        canonical = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    except (ValueError, TypeError):
+        canonical = arguments
+    return hashlib.sha256((name + "\n" + canonical).encode()).hexdigest()
 
 
 def definitions():
@@ -138,9 +153,11 @@ class ToolGateway:
 
     def _read(self, item, start, limit):
         lines = original_lines(item["content"])
-        if not item["start_line"] <= start <= item["end_line"]:
+        # 兼容旧文档把末尾换行算作额外一行的元数据；实际内容不能越界索引。
+        available_end = min(item["end_line"], len(lines))
+        if not item["start_line"] <= start <= available_end:
             raise DomainError(422, "invalid_line_range", "起始行超出证据范围")
-        end = min(start + limit - 1, item["end_line"])
+        end = min(start + limit - 1, available_end)
         result_lines, size = [], 0
         for number in range(start, end + 1):
             line = lines[number - 1]
@@ -156,12 +173,17 @@ class ToolGateway:
             "start_line": start,
             "end_line": end,
             "lines": result_lines,
-            "next_line": end + 1 if end < item["end_line"] else None,
+            "next_line": end + 1 if end < available_end else None,
             "full_artifact_id": item["artifact_id"],
+            "stored_range": [item["start_line"], available_end],
+            "source_truncated": item.get("capture_truncated"),
+            "range_note": "next_line 仅表示保存材料的续读位置，不证明原始材料是否截断。",
         }
 
     def _dispatch(self, name, args):
         if name == "search_knowledge":
+            if self.metadata.get("input_version", {}).get("use_knowledge") is False:
+                return {"available": False, "code": "knowledge_disabled", "items": []}
             if self.knowledge_search is None:
                 return {"available": False, "code": "knowledge_not_ready", "items": []}
             result = self.knowledge_search(args.query)

@@ -1,0 +1,280 @@
+{
+  "schema_version": 1,
+  "reviewer": "GPT",
+  "review_mode": "user-authorized semantic review; no claim of independent physical human review",
+  "reviewed_at": "2026-11-11T07:18:10.588952+00:00",
+  "cohort": "data\\baselines\\stability-v3-20261111",
+  "status": "complete; 9 of 9 reviewed; root correctness does not imply complete report quality",
+  "rubric": {
+    "pass": "核心结论、证据和行动建议无实质问题",
+    "pass_with_notes": "核心正确，局部措辞/验证建议仍需限定；不等于无瑕疵",
+    "fail": "漏掉核心问题，或存在实质错误事实/不安全建议",
+    "not_assessable": "无通过运行时校验的最终报告，保留具体执行归因"
+  },
+  "cases": [
+    {
+      "job_id": "pr-owner-removed-hybrid-1",
+      "case_id": "pr-owner-removed",
+      "arm": "hybrid",
+      "repeat": 1,
+      "case_sha256": "51032714e132824ed1c8f6884e3f9325045ecc9b6b8202edd28b895a2f3dc0a4",
+      "execution_sha256": "181f1331c5464521ec3dad9102335b96ad108b9a05aaf7366ba815d55dcb0a5b",
+      "verdict": "fail",
+      "core_correct": true,
+      "reason": "过滤删除核心正确且空集合对比正确；没有调用链/敏感性证据却定critical，严重级别过推。",
+      "attribution": "model_severity",
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [],
+      "evidence_basis": [
+        {
+          "evidence_id": "606afbb6-26e1-5504-bb4a-34f51ed75ac4",
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 2,
+          "actually_read": true
+        },
+        {
+          "evidence_id": "6d774c18-6ee4-5ed6-9e65-2e4e411e7093",
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 2,
+          "actually_read": true
+        }
+      ],
+      "primary_issue_detected": true,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0,
+      "duplicate_finding_count": 0
+    },
+    {
+      "job_id": "pr-owner-removed-hybrid-2",
+      "case_id": "pr-owner-removed",
+      "arm": "hybrid",
+      "repeat": 2,
+      "case_sha256": "51032714e132824ed1c8f6884e3f9325045ecc9b6b8202edd28b895a2f3dc0a4",
+      "execution_sha256": "34255986f6d2bd543e777bc8aac3482c19091e0c5055fb1017a98ff1d3bf4788",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "主根因、具体输入与影响条件正确，severity high。函数保留参数不是独立系统授权证明，实际影响仍需调用链，报告已保留该缺口。",
+      "attribution": "model_precision",
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [],
+      "evidence_basis": [
+        {
+          "evidence_id": "606afbb6-26e1-5504-bb4a-34f51ed75ac4",
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 2,
+          "actually_read": true
+        },
+        {
+          "evidence_id": "6d774c18-6ee4-5ed6-9e65-2e4e411e7093",
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 2,
+          "actually_read": true
+        }
+      ],
+      "primary_issue_detected": true,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0,
+      "duplicate_finding_count": 0
+    },
+    {
+      "job_id": "pr-owner-removed-hybrid-3",
+      "case_id": "pr-owner-removed",
+      "arm": "hybrid",
+      "repeat": 3,
+      "case_sha256": "51032714e132824ed1c8f6884e3f9325045ecc9b6b8202edd28b895a2f3dc0a4",
+      "execution_sha256": "f767d1f7a0eaa5eaf2b3e2a24893b1ba0ff7eb303951160f113ca389fae736c0",
+      "verdict": "fail",
+      "core_correct": true,
+      "reason": "核心过滤回归正确；critical缺暴露证据，“五条件过滤”不存在；把actor参数忽略作为第二条独立风险重复同一根因。",
+      "attribution": "model_reasoning",
+      "citation_count": 4,
+      "valid_citation_count": 4,
+      "automatic_tags": [],
+      "evidence_basis": [
+        {
+          "evidence_id": "606afbb6-26e1-5504-bb4a-34f51ed75ac4",
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 2,
+          "actually_read": true
+        },
+        {
+          "evidence_id": "6d774c18-6ee4-5ed6-9e65-2e4e411e7093",
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 2,
+          "actually_read": true
+        }
+      ],
+      "primary_issue_detected": true,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 1,
+      "duplicate_finding_count": 1
+    },
+    {
+      "job_id": "ci-lint-hybrid-1",
+      "case_id": "ci-lint",
+      "arm": "hybrid",
+      "repeat": 1,
+      "case_sha256": "f898256e3434537e1b2ef37969c1672805a2b7dd8ba5f6a4e775a8d22578f882",
+      "execution_sha256": "ccd809113dc71a414f60c8e33cd74edac780391fc1acb6fd11aa863be3626b20",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "ruff/F401阶段正确，非零退出保持通常行为推断，并保留workflow/后续步骤未知。具体导入用途及严重度仍需源码/门禁规则。",
+      "attribution": "model_precision",
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "evidence_basis": [
+        {
+          "evidence_id": "68361e5f-5378-5cb2-b396-dfcfde06ef85",
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 3,
+          "actually_read": true
+        }
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "ci-lint-hybrid-2",
+      "case_id": "ci-lint",
+      "arm": "hybrid",
+      "repeat": 2,
+      "case_sha256": "f898256e3434537e1b2ef37969c1672805a2b7dd8ba5f6a4e775a8d22578f882",
+      "execution_sha256": "84d387af0264dc8dca9dbb571170a4c3cd3719c3277872430899278c605deade",
+      "verdict": "pass",
+      "core_correct": true,
+      "reason": "静态检查与F401原因有L1-L3支持，删除与副作用导入修复条件合理，保留本次是否回归及后续步骤不确定性。",
+      "attribution": null,
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "evidence_basis": [
+        {
+          "evidence_id": "68361e5f-5378-5cb2-b396-dfcfde06ef85",
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 3,
+          "actually_read": true
+        }
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "ci-lint-hybrid-3",
+      "case_id": "ci-lint",
+      "arm": "hybrid",
+      "repeat": 3,
+      "case_sha256": "f898256e3434537e1b2ef37969c1672805a2b7dd8ba5f6a4e775a8d22578f882",
+      "execution_sha256": "ad51992904e9f32f4354dd43d713d18ad65c1a22b6a0cf64891557347dd45883",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "lint阶段与未使用导入正确，无运行时影响过推；具体配置来源和路径应按实际工具版本核对，不从缺失配置作事实断言。",
+      "attribution": "model_precision",
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "evidence_basis": [
+        {
+          "evidence_id": "68361e5f-5378-5cb2-b396-dfcfde06ef85",
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 3,
+          "actually_read": true
+        }
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "qa-owner-hybrid-1",
+      "case_id": "qa-owner",
+      "arm": "hybrid",
+      "repeat": 1,
+      "case_sha256": "68702cc6905c4c35780e416296017791d7a3e347b76ce65a47694564603c8010",
+      "execution_sha256": "26c2c0154f543c753f1a917bf04c4793339f1a695b4ee3e9e08763d02bc8e342",
+      "verdict": "fail",
+      "core_correct": true,
+      "reason": "owner=actor核心正确；把“不得返回”解释成必须静默过滤、不能返回错误或做字段掩码，是文档未提供的异常处理契约，超出引用支持。",
+      "attribution": "model_reasoning",
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [],
+      "evidence_basis": [
+        {
+          "evidence_id": "fb35e277-ba4c-4463-8b90-165eae24ffd5",
+          "source_key": "doc",
+          "start_line": 1,
+          "end_line": 1,
+          "actually_read": true
+        }
+      ]
+    },
+    {
+      "job_id": "qa-owner-hybrid-2",
+      "case_id": "qa-owner",
+      "arm": "hybrid",
+      "repeat": 2,
+      "case_sha256": "68702cc6905c4c35780e416296017791d7a3e347b76ce65a47694564603c8010",
+      "execution_sha256": "c8f34c646d6daf976dbdc32a5a5544d63136fe7dea03739d3e5c85a286494692",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "等值与未匹配不得返回正确；客户端owner参数的具体使用方式未给出，应作为实现建议，与actor来源未知保持一致。",
+      "attribution": "model_precision",
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [],
+      "evidence_basis": [
+        {
+          "evidence_id": "fb35e277-ba4c-4463-8b90-165eae24ffd5",
+          "source_key": "doc",
+          "start_line": 1,
+          "end_line": 1,
+          "actually_read": true
+        }
+      ]
+    },
+    {
+      "job_id": "qa-owner-hybrid-3",
+      "case_id": "qa-owner",
+      "arm": "hybrid",
+      "repeat": 3,
+      "case_sha256": "68702cc6905c4c35780e416296017791d7a3e347b76ce65a47694564603c8010",
+      "execution_sha256": "f9f69dbeb4a8772f9023274e1bedbf1f6aaf21f1a8031fa0fe3f6d4d41c402aa",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "owner约束有引用支持，查询下推建议明确标记非资料契约。称“唯一过滤依据”过强，文档没有排除其他过滤条件，应称至少满足的约束。",
+      "attribution": "model_precision",
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [],
+      "evidence_basis": [
+        {
+          "evidence_id": "fb35e277-ba4c-4463-8b90-165eae24ffd5",
+          "source_key": "doc",
+          "start_line": 1,
+          "end_line": 1,
+          "actually_read": true
+        }
+      ]
+    }
+  ]
+}

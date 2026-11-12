@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchData } from "@/lib/api-client";
+import {
+  knownState,
+  reportGroups,
+  supportLabel,
+} from "@/lib/report-presentation";
 import type { components } from "@/lib/generated/api";
 import type { ArtifactContent, Evidence, Page, Run } from "@/lib/workflows";
 import { QueryState } from "@/components/query-state";
@@ -172,7 +177,7 @@ export function AnalysisReport({ run }: { run: Run }) {
             </button>
           </div>
           <p className="hash-note">
-            依据提交：
+            依据代码版本：
             {String(
               fixedHead ?? run.input_version.repository_commit ?? "见固定输入",
             )}
@@ -223,6 +228,56 @@ export function AnalysisReport({ run }: { run: Run }) {
           )}
           <h3>摘要</h3>
           <p className="report-summary">{value.summary}</p>
+          {"report_version" in value ? (
+            <section className="report-section" aria-label="证据检查与范围">
+              <h3>检查状态 · 第2版报告</h3>
+              <p>引用检查：通过。来源、行号和读取范围有效。</p>
+              <p>
+                结论是否被证据支持：
+                {supportLabel(value.semantic_support.status)}。
+              </p>
+              <p>引用有效不代表结论正确。建议不计为新增缺陷。</p>
+              <p>
+                采集完整：{knownState(value.evidence_facts.collection_complete)}
+                ；本次启用知识库：
+                {knownState(value.evidence_facts.knowledge_enabled)}。
+              </p>
+              <p>
+                未启用知识库不表示知识库为空。没有采集标记时，原始材料是否截断显示“未知”。
+              </p>
+              <p>
+                本次固定代码版本：
+                {value.evidence_facts.current_versions.length
+                  ? value.evidence_facts.current_versions
+                      .map((v) => String(v.head))
+                      .join("、")
+                  : "未知"}
+              </p>
+              {value.evidence_facts.current_versions.some((v) =>
+                String(v.version_kind).includes("snapshot"),
+              ) && <p>这些是测试生成的版本编号，不能用于远端取代码。</p>}
+              <details>
+                <summary>查看实际读取范围</summary>
+                <ul>
+                  {value.evidence_facts.reads.map((item) => (
+                    <li key={item.evidence_id}>
+                      {item.path}：保存 L{item.stored_start}–{item.stored_end}；
+                      已读{" "}
+                      {item.read_ranges
+                        .map(([start, end]) => `L${start}–${end}`)
+                        .join("、") || "尚未读取"}
+                      ； 保存内容已读完：{knownState(item.reading_complete)}
+                      ；原始材料采集截断：{knownState(item.source_truncated)}。
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            </section>
+          ) : (
+            <p className="source-warning">
+              旧版报告未记录结论分类、成立前提、严重程度依据和复核状态，这些信息均为未知。
+            </p>
+          )}
           {value.answer && (
             <section className="report-section">
               <h3>回答</h3>
@@ -245,14 +300,6 @@ export function AnalysisReport({ run }: { run: Run }) {
           {value.failure_stage && (
             <p className="failure-stage">失败阶段：{value.failure_stage}</p>
           )}
-          <h3>
-            {run.task_type === "ci_debug"
-              ? "根因假设"
-              : run.task_type === "knowledge_qa"
-                ? "补充发现"
-                : "风险项"}{" "}
-            · {value.findings.length}
-          </h3>
           {value.findings.length === 0 && (
             <p className="empty-panel">
               {run.task_type === "knowledge_qa"
@@ -265,31 +312,118 @@ export function AnalysisReport({ run }: { run: Run }) {
             error={evidence.error}
             retry={() => void evidence.refetch()}
           />
-          {value.findings.map((finding, i) => (
-            <article key={i} className={`risk-card risk-${finding.severity}`}>
-              <div className="risk-heading">
-                <span className="severity-badge">
-                  {severity[finding.severity]}
-                </span>
-                <h4>{finding.title}</h4>
-              </div>
-              <p>{finding.explanation}</p>
-              <p>
-                <strong>建议：</strong>
-                {finding.suggestion}
-              </p>
-              {finding.evidence.map((citation, j) => (
-                <CitationView
-                  key={j}
-                  citation={citation}
-                  evidence={evidence.data?.items.find(
-                    (item) => item.id === citation.evidence_id,
+          {reportGroups(value).map((group) => (
+            <section key={group.label} className="report-section">
+              <h3>
+                {group.label} · {group.items.length}
+              </h3>
+              {!group.items.length && <p>无。</p>}
+              {group.items.map(({ finding, index }) => (
+                <article
+                  key={index}
+                  className={`risk-card risk-${finding.severity}`}
+                >
+                  <div className="risk-heading">
+                    <span className="severity-badge">
+                      {severity[finding.severity]}
+                    </span>
+                    <h4>{finding.title}</h4>
+                  </div>
+                  <p>{finding.explanation}</p>
+                  {"nature" in finding ? (
+                    <>
+                      <p>
+                        <strong>共同原因：</strong>
+                        {finding.root_cause}
+                      </p>
+                      <p>
+                        <strong>依据：</strong>
+                        {finding.basis === "current"
+                          ? "本次固定版本"
+                          : "历史或背景线索，不能算作本次已确认缺陷"}
+                      </p>
+                      <p>
+                        <strong>直接证据：</strong>
+                      </p>
+                      {finding.direct_evidence.map((direct, j) => (
+                        <div key={j}>
+                          <blockquote>{direct.quote}</blockquote>
+                          <p>{direct.observation}</p>
+                        </div>
+                      ))}
+                      <p>
+                        <strong>成立前提：</strong>
+                        {finding.prerequisites.join("；") || "无额外记录"}
+                      </p>
+                      <p>
+                        <strong>还没有确认：</strong>
+                        {finding.unconfirmed_conditions.join("；") ||
+                          "无额外记录"}
+                      </p>
+                      <p>
+                        <strong>严重程度依据：</strong>
+                        {finding.severity_reason}
+                      </p>
+                      <p>
+                        <strong>不同后果：</strong>
+                        {finding.consequences.join("；")}
+                      </p>
+                      <p>
+                        <strong>影响范围：</strong>
+                        {
+                          {
+                            local: "仅说明局部代码行为",
+                            system: "提供了调用链，是否成立仍待复核",
+                            unknown: "未知",
+                          }[finding.reachability]
+                        }
+                      </p>
+                      <p>
+                        引用检查：通过；结论是否被证据支持：
+                        {supportLabel(finding.semantic_support.status)}。
+                      </p>
+                      {finding.call_chain.length > 0 && (
+                        <details>
+                          <summary>查看调用链引用</summary>
+                          {finding.call_chain.map((citation, j) => (
+                            <CitationView
+                              key={j}
+                              citation={citation}
+                              evidence={evidence.data?.items.find(
+                                (item) => item.id === citation.evidence_id,
+                              )}
+                              repoId={run.repo_id}
+                            />
+                          ))}
+                        </details>
+                      )}
+                    </>
+                  ) : (
+                    <p>
+                      结论性质、直接证据说明、成立前提、未确认条件、严重程度依据：未知（旧版未记录）。
+                    </p>
                   )}
-                  repoId={run.repo_id}
-                />
+                  <p>
+                    <strong>建议：</strong>
+                    {finding.suggestion}
+                  </p>
+                  {finding.evidence.map((citation, j) => (
+                    <CitationView
+                      key={j}
+                      citation={citation}
+                      evidence={evidence.data?.items.find(
+                        (item) => item.id === citation.evidence_id,
+                      )}
+                      repoId={run.repo_id}
+                    />
+                  ))}
+                  {(!("nature" in finding) ||
+                    finding.nature !== "suggestion") && (
+                    <ExtractMemory runId={run.id} findingIndex={index} />
+                  )}
+                </article>
               ))}
-              <ExtractMemory runId={run.id} findingIndex={i} />
-            </article>
+            </section>
           ))}
           {(
             [

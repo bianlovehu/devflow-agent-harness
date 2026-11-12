@@ -1,0 +1,17 @@
+# 文件用途：仅把可复现源码与锁文件送入构建，不包含密钥、日常数据和宿主依赖。
+.git
+.env
+.env.*
+!.env.example
+**/.env.local
+.venv
+.tools
+.cache
+data
+**/node_modules
+**/.next
+**/__pycache__
+.pytest_cache
+.ruff_cache
+**/*.tsbuildinfo
+fixtures/**/.pytest_cache

@@ -1,0 +1,232 @@
+{
+  "status": "complete",
+  "scope": "任务3：本地报告格式、证据范围规则与分类展示；不包含发布封装和任务4的自动复核补查",
+  "audited_at": "2026-11-11T09:10:15.361094+00:00",
+  "provenance": {
+    "git_commit": "c5e6281c0e019cfef33c1847ad79e1baad2f9e01",
+    "dirty": true,
+    "working_code_sha256": "cf8527c2b172be2f7064912bcdf986c22570d9e10c2ab9f27d173d23bf4d77e5"
+  },
+  "requirements": [
+    {
+      "item": "事实、推测、建议及成立条件",
+      "status": "passed",
+      "evidence": [
+        "apps/api/src/devflow/report_v2.py",
+        "docs/report-rules.md"
+      ]
+    },
+    {
+      "item": "工具记录的采集、读取、当前版本及知识库开关",
+      "status": "passed",
+      "evidence": [
+        "apps/api/src/devflow/report_v2.py",
+        "apps/api/src/devflow/tool_gateway.py",
+        "apps/api/src/devflow/worker.py"
+      ]
+    },
+    {
+      "item": "历史线索不作当前代码缺陷，同因合并，建议单列",
+      "status": "passed",
+      "evidence": [
+        "apps/api/tests/test_report_v2.py",
+        "apps/api/src/devflow/evaluation.py"
+      ]
+    },
+    {
+      "item": "新版标识、旧报告和旧任务兼容",
+      "status": "passed",
+      "evidence": [
+        "apps/api/tests/test_week03_integration.py",
+        "apps/api/tests/test_week05_integration.py"
+      ]
+    },
+    {
+      "item": "四类历史问题回归、引用检查与结论复核分开",
+      "status": "passed",
+      "evidence": [
+        "apps/api/tests/test_report_v2.py",
+        "evals/reviews/gpt-report-v2-fixed-20261111.json"
+      ]
+    },
+    {
+      "item": "页面按三类展示且未知字段不补造",
+      "status": "passed",
+      "evidence": [
+        "apps/web/src/components/analysis-report.tsx",
+        "apps/web/tests/report-presentation.test.mjs"
+      ]
+    }
+  ],
+  "engineering": {
+    "backend_passed": 279,
+    "frontend_passed": 60,
+    "new_report_tests": 19,
+    "static_contract_build": "passed",
+    "log": "data/local-verification/20261111-report-v2/verified-checks.log"
+  },
+  "native": {
+    "status": "passed",
+    "evidence": "data/local-verification/20261111-report-v2-native/verification.json",
+    "isolated_model_charges": 0
+  },
+  "real_smoke": {
+    "initial": {
+      "reports": 2,
+      "tasks": 3,
+      "cost_cny": "0.16820800"
+    },
+    "fixed": {
+      "reports": 3,
+      "tasks": 3,
+      "citation_checks_passed": 3,
+      "cost_cny": "0.10333000",
+      "gpt_review": {
+        "strict_pass": 0,
+        "pass_with_notes": 1,
+        "needs_changes": 2
+      }
+    },
+    "total_cost_cny": "0.27153800",
+    "retrieval": "snapshot-keyword-v1; not a production retrieval benchmark",
+    "blind": false
+  },
+  "shared_ledger_final": {
+    "tracked": true,
+    "settled_cny": "8.27268600",
+    "reserved_cny": "0.16946000",
+    "unknown_requests": 1,
+    "total_cny": "200",
+    "warning_cny": "140",
+    "stop_cny": "180",
+    "available_cny": "171.55785400",
+    "currency": "CNY",
+    "status": "ok",
+    "limits": {
+      "input_tokens": 120000,
+      "output_tokens": 20000,
+      "total_tokens": 600000,
+      "model_calls": 6,
+      "tool_calls": 12,
+      "timeout_seconds": 600,
+      "model_timeout_seconds": 90,
+      "repeat_limit": 3
+    },
+    "basis": "保守目录价估算，不代表供应商最终账单"
+  },
+  "limitations": [
+    "结构检查不能证明任意自然语言推理正确；报告默认不自动标为已复核",
+    "真实样例仍有事实与推测混写、无条件性能推断和建议强加返回空的情况，已由GPT单独记录",
+    "同因合并依赖相同原因名称；不声称自动识别所有同义原因",
+    "没有执行任务4的自动模型复核或补查"
+  ],
+  "artifacts": [
+    {
+      "path": "apps/api/src/devflow/agent.py",
+      "sha256": "d52ccab22fb5046c6639a8de38365a49f2e8da04e9dd17bdb701c915c1e3ae89"
+    },
+    {
+      "path": "apps/api/src/devflow/reports.py",
+      "sha256": "4f13245ddc9a2e2a4aec88403b26557e853a6c9b77a4f3c030d1b801a8522a5c"
+    },
+    {
+      "path": "apps/api/src/devflow/report_v2.py",
+      "sha256": "09106a8b90736645e394bd8ef495aaf82697efb21dec965f063c6b37e467aeff"
+    },
+    {
+      "path": "apps/api/src/devflow/tool_gateway.py",
+      "sha256": "b11bf848ae7053db547e223250f6859b17460c574e0b2b6659c16d7a4c73e79b"
+    },
+    {
+      "path": "apps/api/src/devflow/worker.py",
+      "sha256": "60aacbd6f9b78fbe52bf8cdc482c90e3ff32cafdd21396d376fd374d2da92c5b"
+    },
+    {
+      "path": "apps/api/src/devflow/workflow_api.py",
+      "sha256": "560f6c71f0d41454b760e5f9b28dcc48b4b4e096602e0999440745e89950b3f6"
+    },
+    {
+      "path": "apps/api/src/devflow/evaluation.py",
+      "sha256": "03aaf1dfa1242554ecedc02d6c6496922a75c7c53705ace6b6563c7fb43efbe3"
+    },
+    {
+      "path": "apps/api/src/devflow/fake_model.py",
+      "sha256": "2b9c43b1392f0ecc52d32b5cbaf61e9f93c0956979db57d73b1e351649ccc099"
+    },
+    {
+      "path": "apps/api/tests/test_report_v2.py",
+      "sha256": "edd4f2a4beae698fb8821330ee60d93207793cf67e84c141bf11a9aa89e0d4bd"
+    },
+    {
+      "path": "apps/api/tests/test_agent.py",
+      "sha256": "7ebbcaed8af2a0e0e1c08d15841ce8e84fafd0bed5995cb9ecc15b60936db9ba"
+    },
+    {
+      "path": "apps/api/tests/test_week03_integration.py",
+      "sha256": "13c58059786b9cc235e0ed1388c5dc595e54ecf27e7b1f20ab38e2a1ef5a943d"
+    },
+    {
+      "path": "apps/web/src/components/analysis-report.tsx",
+      "sha256": "b846b5f3679a971068225f27be77b836dbb001e3670456c5ee47390485aec83f"
+    },
+    {
+      "path": "apps/web/src/lib/report-presentation.ts",
+      "sha256": "1bb6d29d92cde4bb21afa42eea0ba46805eb8955a3eb65bbe13aebd6d47d2266"
+    },
+    {
+      "path": "apps/web/src/lib/generated/api.d.ts",
+      "sha256": "563c70f749da6829e263d0d47fb58bfda341db50beebffe91a38f633d75b8db6"
+    },
+    {
+      "path": "apps/web/tests/report-presentation.test.mjs",
+      "sha256": "d1232d46d93ec025d290c50331e3336cfda240f979fa37c52c8552c2d32270e8"
+    },
+    {
+      "path": "docs/report-rules.md",
+      "sha256": "b9f32784682cd0aa82c6e7a69fcd9a517285d369c5768c59137ca3e8fe0a0e94"
+    },
+    {
+      "path": "docs/report-v2-verification-20261111.md",
+      "sha256": "6b23c3863efd17c398d79e86a071272e017c731ebb33ad16b373ed50ae1e7d1a"
+    },
+    {
+      "path": "docs/next-stage-plan.md",
+      "sha256": "f6377d47b038cc6612d6adb7687429d2816552bd2aca49220a477a842d82618c"
+    },
+    {
+      "path": "docs/file-guide.md",
+      "sha256": "0621b9b4d3f1ab45333128a004b83c3dac7de0153dbcfd6591a23864c3dcc915"
+    },
+    {
+      "path": "docs/real-baseline-report.md",
+      "sha256": "fa0c08e85ce26e30a06a6ce2ec2630630582b2a057b8d6b15894b61c36802f32"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "data/local-verification/20261111-report-v2/verified-checks.log",
+      "sha256": "682e271129819966177f14d2bc1303d1e76ba01486717dc4baa254784d70b542"
+    },
+    {
+      "path": "data/local-verification/20261111-report-v2-native/verification.json",
+      "sha256": "d59cbe44ad1866363c7f3752cc7afe2fa0dcaac5b85f6fbf971a3eecb7616952"
+    },
+    {
+      "path": "data/evals/report-v2-20261111/results.json",
+      "sha256": "a7e5449bcf26d3763cebea881cd44568c036c7618e56b7a3b85d712b0534dafa"
+    },
+    {
+      "path": "data/evals/report-v2-fixed-20261111/results.json",
+      "sha256": "38f8485f766544c49fdc785b81bedead476bd0ed1894531360c8dc648ea4a859"
+    },
+    {
+      "path": "evals/reviews/gpt-report-v2-initial-20261111.json",
+      "sha256": "736a95852518de19d86a7e6ecf8a07945485013e43adcd8df65366aefc90cef5"
+    },
+    {
+      "path": "evals/reviews/gpt-report-v2-fixed-20261111.json",
+      "sha256": "fb0118b79cc8e692d99d25f2562c297c7fa04f6cf1b6c965e221d0e1ea2c7a5c"
+    }
+  ],
+  "git_policy": "未提交、未暂存、未回退或覆盖既有未提交工作"
+}

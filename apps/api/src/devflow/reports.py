@@ -79,7 +79,8 @@ def validate_citations(report, gateway, task_type):
 
 def markdown_text(value):
     # 导出内容作为 Markdown 文本，不允许模型插入 HTML、链接或改变草稿结构。
-    return re.sub(r"([\\`*_{}\[\]<>#!|])", r"\\\1", str(value)).replace("\n", " ")
+    text = str(value).replace("\r\n", "\n").replace("\r", "\n").replace("\n", " ")
+    return re.sub(r"([\\`*_{}\[\]<>#!|])", r"\\\1", text)
 
 
 def report_markdown(report: AnalysisReport, result: dict, run_id: str) -> str:
@@ -98,6 +99,35 @@ def report_markdown(report: AnalysisReport, result: dict, run_id: str) -> str:
         "## 摘要",
         markdown_text(report.summary),
     ]
+    v2 = getattr(report, "report_version", None) == "2"
+    if v2:
+        lines += [
+            "",
+            "报告格式：第2版",
+            "引用检查：通过（来源、行号与读取范围）；结论是否被证据支持：尚未复核。",
+        ]
+        facts = getattr(report, "evidence_facts", None)
+        if facts:
+
+            def state(value):
+                return "未知" if value is None else "是" if value else "否"
+
+            lines += [
+                "",
+                "## 工具记录的范围",
+                "- 采集完整：" + state(facts.collection_complete),
+                "- 本次启用知识库：" + state(facts.knowledge_enabled),
+                "- 当前提交：" + markdown_text(facts.current_versions or "未知"),
+            ]
+            for read in facts.reads:
+                lines += [
+                    f"- {markdown_text(read.path)}：保存 L{read.stored_start}–{read.stored_end}；"
+                    f"已读范围 {markdown_text(read.read_ranges or '尚未读取')}；"
+                    f"保存内容已读完：{state(read.reading_complete)}；"
+                    f"源材料采集截断：{state(read.source_truncated)}"
+                ]
+    else:
+        lines += ["", "旧版报告：结论分类、成立前提、严重程度依据与复核状态均未记录，显示为未知。"]
     if report.failure_stage:
         lines += ["", "失败阶段：" + markdown_text(report.failure_stage)]
     if report.answer:
@@ -112,12 +142,36 @@ def report_markdown(report: AnalysisReport, result: dict, run_id: str) -> str:
             else "当前检查范围内未确认风险；这不代表没有缺陷。"
         ]
     for item in report.findings:
+        nature = {"fact": "事实", "hypothesis": "推测", "suggestion": "建议"}.get(
+            getattr(item, "nature", None), "分类未知"
+        )
         lines += [
             "",
-            f"### [{item.severity}] {markdown_text(item.title)}",
+            f"### [{nature} · {item.severity}] {markdown_text(item.title)}",
             markdown_text(item.explanation),
             "建议：" + markdown_text(item.suggestion),
         ]
+        if v2:
+            lines += [
+                "共同原因：" + markdown_text(item.root_cause),
+                "依据：" + ("本次版本" if item.basis == "current" else "历史或背景线索"),
+                "严重程度依据：" + markdown_text(item.severity_reason),
+                "影响范围："
+                + {"local": "局部代码", "system": "提供了调用链，仍待复核", "unknown": "未知"}[
+                    item.reachability
+                ],
+            ]
+            for direct in item.direct_evidence:
+                lines += [
+                    "- 原文：" + markdown_text(direct.quote),
+                    "  观察：" + markdown_text(direct.observation),
+                ]
+            for title, values in (
+                ("成立前提", item.prerequisites),
+                ("未确认条件", item.unconfirmed_conditions),
+                ("不同后果", item.consequences),
+            ):
+                lines += [title + "：" + markdown_text("；".join(values) or "无额外记录")]
         for citation in item.evidence:
             lines += [f"- 证据 {citation.evidence_id} · L{citation.start_line}–{citation.end_line}"]
     for title, items in (
@@ -133,4 +187,6 @@ def report_markdown(report: AnalysisReport, result: dict, run_id: str) -> str:
 def require_report(run):
     if run.status != "succeeded" or not run.result or run.result.get("kind") != "analysis_report":
         raise DomainError(409, "report_unavailable", "任务尚无可导出的分析报告")
-    return AnalysisReport.model_validate(run.result["report"])
+    from devflow.report_v2 import parse_report
+
+    return parse_report(run.result["report"])

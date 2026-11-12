@@ -13,7 +13,9 @@ class ArtifactStore:
     """Immutable artifacts; authored text uses CRLF and external bytes remain unchanged."""
 
     def __init__(self, root: Path | None = None):
-        self.root = (root or PROJECT_ROOT / "data" / "artifacts").resolve()
+        self.root = (
+            root or Path(os.environ.get("DEVFLOW_ARTIFACT_ROOT", PROJECT_ROOT / "data/artifacts"))
+        ).resolve()
 
     def put_text(self, content: str) -> tuple[str, str, int]:
         # 按实际写入的 CRLF 字节计算哈希，再通过临时文件原子替换目标。

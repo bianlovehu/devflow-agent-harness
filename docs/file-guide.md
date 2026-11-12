@@ -240,3 +240,54 @@ JSON、版本 pin、锁文件、diff 与日志保持标准原格式，避免破�
 | `apps/web/src/components/context-history.tsx` | 压缩估算、usage、恢复次数与原始材料查看 |
 | `scripts/week05_smoke.py` | 临时数据库中的离线/真实模型记忆完整流程验收 |
 | `docs/week-05.md` | 第17—20步实现、验收记录与边界 |
+
+## 统一运行限制与项目预算
+
+| 文件 | 用途 |
+|---|---|
+| `apps/api/src/devflow/runtime_policy.py` | 服务端限额、带来源与版本的保守报价及 Decimal 计费 |
+| `apps/api/src/devflow/budget.py` | 主库预算账户、并发预留、幂等结算与未知用量保留 |
+| `apps/api/src/devflow/budget_api.py` | 只读预算摘要和运行关联费用接口 |
+| `apps/api/migrations/versions/0007_runtime_budget_add_shared_model_cost_ledger.py` | 项目预算账户及逐请求账本迁移 |
+| `apps/api/tests/test_runtime_policy.py` | 配置上限、工具指纹、连续循环及恢复计数 |
+| `apps/api/tests/test_budget_integration.py` | 金额边界、并发、异常、跨入口计费及进程恢复 |
+| `apps/api/tests/budget_samples.py` | 模型适配器单测使用的显式假账本 |
+| `apps/api/tests/budget_crash_worker.py` | 收费请求边界的隔离进程强制退出实验 |
+| `apps/web/src/components/budget-summary.tsx` | 项目预算与运行费用的只读展示 |
+| `docs/runtime-budget.md` | 当前策略、计费方法、限制与验证说明 |
+
+## 固定评测与回归
+
+| 文件 | 用途 |
+|---|---|
+| `evals/devflow-v1/inputs.json` | 按来源分组的30题固定输入，仅此部分可进入模型 |
+| `evals/devflow-v1/expectations.json` | 预期结论、参考证据、禁止结论与不确定边界 |
+| `scripts/build_eval_dataset.py` | 可复现生成固定评测集 |
+| `apps/api/src/devflow/eval_runner.py` | 固定快照、关键词适配器和实际Agent执行，无参考答案输入 |
+| `apps/api/src/devflow/evaluation.py` | 数据校验、自动诊断、人工复核绑定、报告与逐题回归 |
+| `apps/api/src/devflow/eval_cli.py` | 评测、失败题重跑、复核与基线比较命令 |
+| `apps/api/tests/test_evaluation.py` | 来源与答案隔离、诊断、复核、版本和回归门禁测试 |
+| `evals/regressions/2026-11-05.json` | 首轮闭环的配置摘要、逐题结果与改善记录 |
+| `docs/evaluation-loop.md` | 复现步骤、退出码、实际结果和未验收边界 |
+
+## 本地运行与真实基线（2026-11-11）
+
+- docs/local-runbook.md：本地启动、就绪检查、fake演示与排障。
+- docs/release-checklist.md：原22—24步状态，发布事项标注取消。
+- docs/local-verification-20261111.md：源码进程隔离启动/重启与检查证据。
+- docs/architecture-decisions.md：架构选择、实现和测试索引。
+- scripts/local_smoke.py：本机源码进程的隔离fake演示，不构建镜像。
+- scripts/baseline_report.py：汇总usage、引用、检索与绑定输出哈希的GPT复核。
+- evals/reviews/gpt-real-dev-v2-20261111.json：40次真实开发结果的逐题GPT复核。
+
+- docs/real-baseline-report.md：改进前后、两组对照、重复采样、新留出及费用的最终报告。
+
+### 第2版报告：事实、推测和建议
+
+- `apps/api/src/devflow/report_v2.py`：新报告格式、工具记录的读取范围、同因合并，以及历史线索与当前问题的区分。
+- `apps/api/tests/test_report_v2.py`：四类历史结论错误、直接引用、建议计数和旧报告兼容检查。
+- `apps/web/src/lib/report-presentation.ts`：按三类分组，保留每项在原报告中的位置。
+- `docs/report-rules.md`：用直白说法说明报告内容、证据限制，以及引用检查与结论复核的区别。
+- evals/freezes/development-20261111.json：新留出创建前的开发冻结。
+- evals/devflow-novel-holdout-20261111：冻结后新建的9题及标注/来源记录。
+- evals/reviews/gpt-real-dev-v4-20261111.json、gpt-context-v3-20261111.json、gpt-stability-v3-20261111.json、gpt-novel-holdout-20261111.json：73条冻结版本的GPT逐题复核。

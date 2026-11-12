@@ -1,0 +1,65 @@
+{
+  "run_id": "27b0265e-a1ee-4536-99aa-d89eb17f018e",
+  "dataset_sha256": "1e4ab15d706aca6d34d710b430a85634a07dfd05df8c287c2119218f974230ff",
+  "reviews": [
+    {
+      "case_id": "pr-owner-removed",
+      "execution_sha256": "64fd85f06d7c213d9a6fd17b1ff487e3985f84fe1cfa2f9efa67a240971e6edf",
+      "verdict": "pass",
+      "reviewer": "GPT",
+      "notes": "base service.py L2按owner_id==actor_id过滤，head L2直接list(tasks)；两处直接摘录均落在总引用L1-L2内，当前局部行为变化成立。调用链和上游过滤未知已记录。仍需修改“额外内存与遍历开销”的无条件说法：原实现同样遍历并构造列表，额外结果数量取决于被过滤掉的元素；上游逻辑失效也只能写为条件性后果。本例有备注，不计严格通过。",
+      "failure_tags": []
+    },
+    {
+      "case_id": "ci-lint",
+      "execution_sha256": "0aca69624008c7f47aafc5bc9c2438026e089dcb52518577dedee761ff24b587",
+      "verdict": "fail",
+      "reviewer": "GPT",
+      "notes": "ci/job.txt L1-L3确实报告ruff命令、F401及1个错误，失败阶段定位正确；自动wrong_stage仍属名称精确匹配的评分限制。但发现标成fact，标题和后果断言该CI作业失败/PR无法通过，同时解释又承认没有退出码、步骤状态、必过门禁信息，属于事实与推断混写。应将事实限定为“日志报告F401”，将步骤失败、门禁阻塞及原因列为推测或待确认。引用检查通过，语义支持不充分。",
+      "failure_tags": [
+        "unsupported_claim"
+      ]
+    },
+    {
+      "case_id": "qa-owner",
+      "execution_sha256": "c7175f4581cde4b058e6c77db19cab50691d7952e34a051ed3157317cf1349af",
+      "verdict": "fail",
+      "reviewer": "GPT",
+      "notes": "policy.md L1仅规定未匹配任务不得返回；主回答与正确版本前缀有依据，也承认实现未知。但verification_steps直接把“owner_id不匹配时返回空”作为用例结果，资料并未排除拒绝请求等处理方式，不能强加该要求。应改为验证响应不含未授权任务，具体返回空或报错须按接口约定确认。建议不计为新增缺陷，但建议本身仍需要复核。",
+      "failure_tags": [
+        "unsupported_claim"
+      ]
+    }
+  ],
+  "reviewer": "GPT",
+  "scope": "第2版报告的少量真实格式试跑；旧开发题回归，不是新题或盲测；检索为固定资料的关键词适配器，不是生产检索成绩。",
+  "semantic_checks": [
+    {
+      "case_id": "pr-owner-removed",
+      "execution_sha256": "64fd85f06d7c213d9a6fd17b1ff487e3985f84fe1cfa2f9efa67a240971e6edf",
+      "report_sha256": "053c224de184f11ff25581866d6bb540618c694508ca284723bf47aaf633d814",
+      "citation_check": "passed",
+      "semantic_support": "partial",
+      "strict_pass": false,
+      "notes": "base service.py L2按owner_id==actor_id过滤，head L2直接list(tasks)；两处直接摘录均落在总引用L1-L2内，当前局部行为变化成立。调用链和上游过滤未知已记录。仍需修改“额外内存与遍历开销”的无条件说法：原实现同样遍历并构造列表，额外结果数量取决于被过滤掉的元素；上游逻辑失效也只能写为条件性后果。本例有备注，不计严格通过。"
+    },
+    {
+      "case_id": "ci-lint",
+      "execution_sha256": "0aca69624008c7f47aafc5bc9c2438026e089dcb52518577dedee761ff24b587",
+      "report_sha256": "5b2f330ec4d7f5af82a95c38e74b05cfb62b0640dd82d1b6a1925a562348df2f",
+      "citation_check": "passed",
+      "semantic_support": "partial",
+      "strict_pass": false,
+      "notes": "ci/job.txt L1-L3确实报告ruff命令、F401及1个错误，失败阶段定位正确；自动wrong_stage仍属名称精确匹配的评分限制。但发现标成fact，标题和后果断言该CI作业失败/PR无法通过，同时解释又承认没有退出码、步骤状态、必过门禁信息，属于事实与推断混写。应将事实限定为“日志报告F401”，将步骤失败、门禁阻塞及原因列为推测或待确认。引用检查通过，语义支持不充分。"
+    },
+    {
+      "case_id": "qa-owner",
+      "execution_sha256": "c7175f4581cde4b058e6c77db19cab50691d7952e34a051ed3157317cf1349af",
+      "report_sha256": "e674455d76038f737d96730db8fec101959fa4be62a13b6707129c361bd2e96b",
+      "citation_check": "passed",
+      "semantic_support": "partial",
+      "strict_pass": false,
+      "notes": "policy.md L1仅规定未匹配任务不得返回；主回答与正确版本前缀有依据，也承认实现未知。但verification_steps直接把“owner_id不匹配时返回空”作为用例结果，资料并未排除拒绝请求等处理方式，不能强加该要求。应改为验证响应不含未授权任务，具体返回空或报错须按接口约定确认。建议不计为新增缺陷，但建议本身仍需要复核。"
+    }
+  ]
+}

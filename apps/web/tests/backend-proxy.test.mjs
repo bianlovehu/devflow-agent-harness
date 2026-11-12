@@ -18,6 +18,7 @@ function post(path, body = "{}", headers = {}) {
 
 for (const path of [
   "runtime",
+  "budget",
   "repositories",
   "repositories/repo-taskboard",
   "repositories/repo-taskboard/pull-requests/101",
@@ -28,6 +29,7 @@ for (const path of [
   `runs/${id}/evidence`,
   `runs/${id}/artifacts`,
   `runs/${id}/report`,
+  `runs/${id}/cost`,
   `runs/${id}/context`,
   `runs/${id}/context?call=1`,
   `runs/${id}/freshness`,

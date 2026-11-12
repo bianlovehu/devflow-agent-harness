@@ -1,5 +1,33 @@
-# 文件用途：启动带持久化数据卷的 PostgreSQL 和 pgvector。
+# 文件用途：完整本机部署；init是唯一自动迁移入口，API/worker只等待初始化完成。
 name: devflow
+
+x-app-environment: &app-environment
+  POSTGRES_HOST: db
+  POSTGRES_PORT: 5432
+  POSTGRES_DB: ${POSTGRES_DB:-devflow}
+  POSTGRES_USER: ${POSTGRES_USER:-devflow}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devflow-local}
+  DATA_SOURCE: ${DEPLOY_DATA_SOURCE:-fixture}
+  FIXTURE_STORAGE: database
+  MODEL_PROVIDER: ${DEPLOY_MODEL_PROVIDER:-fake}
+  ANALYSIS_EXECUTOR: agent
+  SIMULATION_STEP_SECONDS: 0
+  DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+  DASHSCOPE_BASE_URL: ${DASHSCOPE_BASE_URL:-}
+  DASHSCOPE_MODEL: ${DASHSCOPE_MODEL:-deepseek-v4.1-flash}
+  DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+  DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-flash}
+  GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+  BUDGET_TOTAL_CNY: ${BUDGET_TOTAL_CNY:-200}
+  BUDGET_WARNING_CNY: ${BUDGET_WARNING_CNY:-140}
+  BUDGET_STOP_CNY: ${BUDGET_STOP_CNY:-180}
+  WEB_ORIGIN: http://127.0.0.1:${WEB_PORT:-3000}
+
+x-app: &app
+  image: devflow-api:${DEVFLOW_TAG:-candidate}
+  environment: *app-environment
+  volumes:
+    - app_data:/app/data
 
 services:
   db:
@@ -20,5 +48,72 @@ services:
       retries: 12
       start_period: 10s
 
+  init:
+    <<: *app
+    restart: "no"
+    command: ["python", "-m", "devflow.bootstrap", "--seed", "--knowledge"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    <<: *app
+    build:
+      context: .
+      dockerfile: infra/api.Dockerfile
+      additional_contexts:
+        model_weights: ./.cache/build-models
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-m", "devflow.healthcheck", "api"]
+      interval: 10s
+      timeout: 8s
+      retries: 12
+      start_period: 20s
+
+  worker:
+    <<: *app
+    restart: unless-stopped
+    command: ["python", "-m", "devflow.worker"]
+    environment:
+      <<: *app-environment
+      DEVFLOW_WORKER_HEARTBEAT: /tmp/devflow-worker-heartbeat.json
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-m", "devflow.healthcheck", "worker"]
+      interval: 10s
+      timeout: 8s
+      retries: 6
+      start_period: 20s
+
+  web:
+    image: devflow-web:${DEVFLOW_TAG:-candidate}
+    build:
+      context: .
+      dockerfile: infra/web.Dockerfile
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://api:8000
+      WEB_ORIGIN: http://127.0.0.1:${WEB_PORT:-3000}
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+
 volumes:
   postgres_data:
+  app_data:

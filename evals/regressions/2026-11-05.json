@@ -1,0 +1,802 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-05",
+  "provider": "fake",
+  "semantic_review": "pending",
+  "baseline_note": "Initial saved executions rescored with identical final grading rules; model not rerun.",
+  "runs": [
+    {
+      "run_id": "b34b97a8-902d-4dab-9125-87cd9ea05f76",
+      "dataset": {
+        "version": "devflow-v1",
+        "sha256": "1e4ab15d706aca6d34d710b430a85634a07dfd05df8c287c2119218f974230ff"
+      },
+      "evaluator_version": "devflow-evaluator-v1",
+      "profile": {
+        "provider": "fake",
+        "model": "fixture-demo-v1",
+        "retrieval": {
+          "adapter": "snapshot-keyword-v1",
+          "limit": 6,
+          "min_overlap": 1
+        }
+      },
+      "summary": {
+        "cases": 20,
+        "auto_passed": 12,
+        "auto_failed": 8,
+        "review_pending": 20,
+        "human_passed": 0,
+        "human_failed": 0,
+        "failure_tags": {
+          "false_positive": 2,
+          "evidence_miss": 6,
+          "missed_issue": 5,
+          "wrong_stage": 3
+        },
+        "duration_ms": 3953,
+        "tokens": 0,
+        "usage_unknown_cases": 0,
+        "known_usage_cost_cny": "0",
+        "cost_unavailable_cases": 0
+      },
+      "provenance": {
+        "git_commit": "c5e6281c0e019cfef33c1847ad79e1baad2f9e01",
+        "dirty": true,
+        "working_code_sha256": "26be67bb88087396d81f5012345816c5e16fb4f957fc003d265084c72be4c907"
+      },
+      "artifact_directory": "data/evals/loop-baseline-v1",
+      "prompt_version": "week05-context-memory-v1",
+      "context_input_tokens": 120000,
+      "rescored": {
+        "source_run_id": "3c1d1c90-04e3-4d70-8495-669767d361e8",
+        "source_results": "data/evals/loop-baseline/results.json",
+        "source_sha256": "02681ea18653db3762c93ba421984a4361a645a6f03c3b56dc931434458faee8",
+        "grader_code_sha256": "2619e21d8a0608dd1474fa2d956a910fa8792794b03598911d7a6e3f51c55680",
+        "reason": "Identical final grading rules applied to saved original executions. No model rerun."
+      },
+      "cases": [
+        {
+          "case_id": "pr-title-clean",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-owner-removed",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-null-labels",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-owner-fixed",
+          "split": "dev",
+          "auto_failure_tags": [
+            "false_positive"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-null-unchanged",
+          "split": "dev",
+          "auto_failure_tags": [
+            "false_positive"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-page-boundary",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-zero-divisor",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-null",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-dependency",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-config",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-lint",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue",
+            "wrong_stage"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-oom",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue",
+            "wrong_stage"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-dns",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue",
+            "wrong_stage"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-unknown",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-owner",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-null",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-retry",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-citation",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-delete",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-missing",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        }
+      ]
+    },
+    {
+      "run_id": "ca02131e-19d8-4501-89c5-ae55dde209df",
+      "dataset": {
+        "version": "devflow-v1",
+        "sha256": "1e4ab15d706aca6d34d710b430a85634a07dfd05df8c287c2119218f974230ff"
+      },
+      "evaluator_version": "devflow-evaluator-v1",
+      "profile": {
+        "provider": "fake",
+        "model": "fixture-demo-v1",
+        "retrieval": {
+          "adapter": "snapshot-keyword-v1",
+          "limit": 6,
+          "min_overlap": 1
+        }
+      },
+      "summary": {
+        "cases": 20,
+        "auto_passed": 14,
+        "auto_failed": 6,
+        "review_pending": 20,
+        "human_passed": 0,
+        "human_failed": 0,
+        "failure_tags": {
+          "evidence_miss": 6,
+          "missed_issue": 5,
+          "wrong_stage": 3
+        },
+        "duration_ms": 1891,
+        "tokens": 0,
+        "usage_unknown_cases": 0,
+        "known_usage_cost_cny": "0",
+        "cost_unavailable_cases": 0
+      },
+      "provenance": {
+        "git_commit": "c5e6281c0e019cfef33c1847ad79e1baad2f9e01",
+        "dirty": true,
+        "working_code_sha256": "904664320f05a3a7832977f91b5869f5014e55b6a1c1b29f86e595220648d004"
+      },
+      "artifact_directory": "data/evals/loop-regression-v1",
+      "prompt_version": "week05-context-memory-v1",
+      "context_input_tokens": 120000,
+      "rescored": null,
+      "cases": [
+        {
+          "case_id": "pr-title-clean",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-owner-removed",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-null-labels",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-owner-fixed",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-null-unchanged",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-page-boundary",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-zero-divisor",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-null",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-dependency",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-config",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-lint",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue",
+            "wrong_stage"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-oom",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue",
+            "wrong_stage"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-dns",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue",
+            "wrong_stage"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-unknown",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-owner",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-null",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-retry",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-citation",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-delete",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-missing",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        }
+      ]
+    },
+    {
+      "run_id": "aa0a706e-542b-4ed6-aa47-4b9e3e67a05d",
+      "dataset": {
+        "version": "devflow-v1",
+        "sha256": "1e4ab15d706aca6d34d710b430a85634a07dfd05df8c287c2119218f974230ff"
+      },
+      "evaluator_version": "devflow-evaluator-v1",
+      "profile": {
+        "provider": "fake",
+        "model": "fixture-demo-v1",
+        "retrieval": {
+          "adapter": "snapshot-keyword-v1",
+          "limit": 6,
+          "min_overlap": 1
+        }
+      },
+      "summary": {
+        "cases": 8,
+        "auto_passed": 2,
+        "auto_failed": 6,
+        "review_pending": 8,
+        "human_passed": 0,
+        "human_failed": 0,
+        "failure_tags": {
+          "evidence_miss": 6,
+          "missed_issue": 5,
+          "wrong_stage": 3
+        },
+        "duration_ms": 673,
+        "tokens": 0,
+        "usage_unknown_cases": 0,
+        "known_usage_cost_cny": "0",
+        "cost_unavailable_cases": 0
+      },
+      "provenance": {
+        "git_commit": "c5e6281c0e019cfef33c1847ad79e1baad2f9e01",
+        "dirty": true,
+        "working_code_sha256": "904664320f05a3a7832977f91b5869f5014e55b6a1c1b29f86e595220648d004"
+      },
+      "artifact_directory": "data/evals/loop-failures-rerun-v1",
+      "prompt_version": "week05-context-memory-v1",
+      "context_input_tokens": 120000,
+      "rescored": null,
+      "cases": [
+        {
+          "case_id": "pr-owner-fixed",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-null-unchanged",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-page-boundary",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-zero-divisor",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-null",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-lint",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue",
+            "wrong_stage"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-oom",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue",
+            "wrong_stage"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-dns",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue",
+            "wrong_stage"
+          ],
+          "review": "pending"
+        }
+      ]
+    },
+    {
+      "run_id": "98c740bc-aedd-4b12-89ef-d1c037e4e65f",
+      "dataset": {
+        "version": "devflow-v1",
+        "sha256": "1e4ab15d706aca6d34d710b430a85634a07dfd05df8c287c2119218f974230ff"
+      },
+      "evaluator_version": "devflow-evaluator-v1",
+      "profile": {
+        "provider": "fake",
+        "model": "fixture-demo-v1",
+        "retrieval": {
+          "adapter": "snapshot-keyword-v1",
+          "limit": 6,
+          "min_overlap": 1
+        }
+      },
+      "summary": {
+        "cases": 30,
+        "auto_passed": 18,
+        "auto_failed": 12,
+        "review_pending": 30,
+        "human_passed": 0,
+        "human_failed": 0,
+        "failure_tags": {
+          "evidence_miss": 12,
+          "missed_issue": 10,
+          "wrong_stage": 6
+        },
+        "duration_ms": 3137,
+        "tokens": 0,
+        "usage_unknown_cases": 0,
+        "known_usage_cost_cny": "0",
+        "cost_unavailable_cases": 0
+      },
+      "provenance": {
+        "git_commit": "c5e6281c0e019cfef33c1847ad79e1baad2f9e01",
+        "dirty": true,
+        "working_code_sha256": "904664320f05a3a7832977f91b5869f5014e55b6a1c1b29f86e595220648d004"
+      },
+      "artifact_directory": "data/evals/loop-all-v1",
+      "prompt_version": "week05-context-memory-v1",
+      "context_input_tokens": 120000,
+      "rescored": null,
+      "cases": [
+        {
+          "case_id": "pr-title-clean",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-owner-removed",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-null-labels",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-owner-fixed",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-null-unchanged",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-page-boundary",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-zero-divisor",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-cache-tenant",
+          "split": "holdout",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-timezone",
+          "split": "holdout",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "pr-param-query-clean",
+          "split": "holdout",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-null",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-dependency",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-config",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-lint",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue",
+            "wrong_stage"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-oom",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue",
+            "wrong_stage"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-dns",
+          "split": "dev",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue",
+            "wrong_stage"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-unknown",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-permission",
+          "split": "holdout",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue",
+            "wrong_stage"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-disk",
+          "split": "holdout",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue",
+            "wrong_stage"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "ci-lockfile",
+          "split": "holdout",
+          "auto_failure_tags": [
+            "evidence_miss",
+            "missed_issue",
+            "wrong_stage"
+          ],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-owner",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-null",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-retry",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-citation",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-delete",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-missing",
+          "split": "dev",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-rotation",
+          "split": "holdout",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-backup",
+          "split": "holdout",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-region",
+          "split": "holdout",
+          "auto_failure_tags": [],
+          "review": "pending"
+        },
+        {
+          "case_id": "qa-injection",
+          "split": "holdout",
+          "auto_failure_tags": [
+            "evidence_miss"
+          ],
+          "review": "pending"
+        }
+      ]
+    }
+  ],
+  "comparison": {
+    "baseline_run_id": "b34b97a8-902d-4dab-9125-87cd9ea05f76",
+    "current_run_id": "ca02131e-19d8-4501-89c5-ae55dde209df",
+    "regressions": [],
+    "improvements": [
+      {
+        "case_id": "pr-owner-fixed",
+        "added": [],
+        "removed": [
+          "false_positive"
+        ]
+      },
+      {
+        "case_id": "pr-null-unchanged",
+        "added": [],
+        "removed": [
+          "false_positive"
+        ]
+      }
+    ],
+    "unresolved": [
+      "pr-page-boundary",
+      "pr-zero-divisor",
+      "ci-null",
+      "ci-lint",
+      "ci-oom",
+      "ci-dns"
+    ],
+    "review_pending": 20
+  }
+}

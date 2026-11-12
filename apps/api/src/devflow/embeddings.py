@@ -1,7 +1,9 @@
 # 文件用途：校验固定 E5 权重，使用 CPU ONNX 推理与相同 tokenizer，不在请求时联网下载。
 import hashlib
+import os
 import threading
 from functools import lru_cache
+from pathlib import Path
 
 import numpy as np
 from tokenizers import Tokenizer
@@ -16,7 +18,11 @@ MODEL_FILES = {
     "onnx/model_quantized.onnx": "f80102d3f2a1229f387d3c81909990d8945513e347b0eab049f7de3c6f98c193",
     "tokenizer.json": "0b44a9d7b51c3c62626640cda0e2c2f70fdacdc25bbbd68038369d14ebdf4c39",
 }
-MODEL_DIR = PROJECT_ROOT / "data" / "models" / "multilingual-e5-small" / MODEL_REVISION
+MODEL_DIR = (
+    Path(os.environ.get("DEVFLOW_MODEL_ROOT", PROJECT_ROOT / "data/models"))
+    / ("multilingual-e5-small")
+    / MODEL_REVISION
+)
 _lock = threading.Lock()
 
 

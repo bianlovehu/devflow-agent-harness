@@ -1925,3 +1925,22 @@ select:focus-visible {
   text-align: left;
   border-bottom: 1px solid #ddd;
 }
+.budget-summary {
+  margin: 16px 32px;
+  padding: 12px 16px;
+  border: 1px solid #d8dee7;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.budget-summary summary {
+  cursor: pointer;
+}
+.run-cost {
+  margin: 16px 0;
+}
+.run-cost pre {
+  max-height: 360px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

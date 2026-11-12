@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { fetchData, type RuntimeInfo } from "@/lib/repositories";
+import { BudgetSummary } from "@/components/budget-summary";
 
 export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -137,6 +138,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
             日志为人工构造；上传资料按各自来源标注。浏览不会调用 GitHub 或模型。
           </div>
         )}
+        <BudgetSummary />
         {children}
       </main>
     </div>

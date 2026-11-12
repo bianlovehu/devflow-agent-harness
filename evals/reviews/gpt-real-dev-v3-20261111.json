@@ -1,0 +1,208 @@
+{
+  "schema_version": 1,
+  "reviewer": "GPT",
+  "review_mode": "user-authorized semantic review; no claim of independent physical human review",
+  "reviewed_at": "2026-11-11T06:57:08.381990+00:00",
+  "cohort": "data\\baselines\\real-dev-v3-20261111",
+  "status": "partial; 6 reviewed of 40; pending rows must not inherit v2 verdicts",
+  "rubric": {
+    "pass": "核心结论、证据和行动建议无实质问题",
+    "pass_with_notes": "核心正确，局部措辞/验证建议仍需限定；不等于无瑕疵",
+    "fail": "漏掉核心问题，或存在实质错误事实/不安全建议",
+    "not_assessable": "无通过运行时校验的最终报告，保留具体执行归因"
+  },
+  "cases": [
+    {
+      "job_id": "pr-null-labels-keyword-1",
+      "case_id": "pr-null-labels",
+      "arm": "keyword",
+      "case_sha256": "3929046900e80bb77d96242a72a2e03b46ca2da65181db68db94e828232dfce7",
+      "execution_sha256": "d38254ffca26f8fe4beee54c2089dd7ebc3e7374896549d5229a528fdd75b9ec",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "明确区分缺键与显式None，正确报告[]变ValueError并给出两版引用；返回副本变同一对象的具体append示例也正确。其他可迭代输入的收紧需核对契约，报告已说明这一缺口。",
+      "attribution": "model_precision",
+      "evidence_basis": [
+        {
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 3,
+          "content": "def labels(payload):\n    labels = payload.get(\"labels\")\n    return [] if labels is None else list(labels)\n"
+        },
+        {
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 5,
+          "content": "def labels(payload):\n    labels = payload.get(\"labels\", [])\n    if not isinstance(labels, list):\n        raise ValueError(\"labels must be a list or null\")\n    return labels\n"
+        }
+      ],
+      "citation_count": 4,
+      "valid_citation_count": 4,
+      "automatic_tags": [],
+      "primary_issue_detected": true,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0,
+      "duplicate_finding_count": 0
+    },
+    {
+      "job_id": "pr-null-labels-hybrid-1",
+      "case_id": "pr-null-labels",
+      "arm": "hybrid",
+      "case_sha256": "3929046900e80bb77d96242a72a2e03b46ca2da65181db68db94e828232dfce7",
+      "execution_sha256": "41d171b8f250ef8bf3aa0dd81872ddd9d23033c4dd234599cb5f3761a4196e2b",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "核心None回归已正确定位，取得真实提交映射前不建议checkout派生ID。把可迭代收紧与列表别名混在同一发现项不利于逐根因复核，但不再声称已有tuple合法契约。",
+      "attribution": "model_precision",
+      "evidence_basis": [
+        {
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 3,
+          "content": "def labels(payload):\n    labels = payload.get(\"labels\")\n    return [] if labels is None else list(labels)\n"
+        },
+        {
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 5,
+          "content": "def labels(payload):\n    labels = payload.get(\"labels\", [])\n    if not isinstance(labels, list):\n        raise ValueError(\"labels must be a list or null\")\n    return labels\n"
+        }
+      ],
+      "citation_count": 4,
+      "valid_citation_count": 4,
+      "automatic_tags": [],
+      "primary_issue_detected": true,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0,
+      "duplicate_finding_count": 0
+    },
+    {
+      "job_id": "pr-title-clean-keyword-1",
+      "case_id": "pr-title-clean",
+      "arm": "keyword",
+      "case_sha256": "5256cbf2bc74bfb789dc3770111a4286408a0d6026f365ccbbc745a678155264",
+      "execution_sha256": "f0e7e32eadfa32baf58e89ac21b2e54c72765766d1f7e4b85e3e73e412d9cb33",
+      "verdict": "fail",
+      "core_correct": true,
+      "reason": "仍错误声称None在base/head均抛AttributeError；base直接返回None。含空白字符串两版结果并不一致。无缺陷项误报，但事实错误未修复。",
+      "attribution": "model_reasoning",
+      "evidence_basis": [
+        {
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 2,
+          "content": "def title(task):\n    return task[\"title\"]\n"
+        },
+        {
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 2,
+          "content": "def title(task):\n    return \" \".join(task[\"title\"].split())\n"
+        }
+      ],
+      "citation_count": 0,
+      "valid_citation_count": 0,
+      "automatic_tags": [],
+      "primary_issue_detected": null,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0,
+      "duplicate_finding_count": 0
+    },
+    {
+      "job_id": "pr-title-clean-hybrid-1",
+      "case_id": "pr-title-clean",
+      "arm": "hybrid",
+      "case_sha256": "5256cbf2bc74bfb789dc3770111a4286408a0d6026f365ccbbc745a678155264",
+      "execution_sha256": "d8d322c3d4b55d78a6fdc546b78c090d5464d39b3c842b977c4f04faf36791bc",
+      "verdict": "fail",
+      "core_correct": true,
+      "reason": "新增多处错误：base返回纯空白原字符串，不能说两边都返回空串；base接受None/数字/list并直接返回，不在split处抛错。Unicode空白示例的预期也与split/join不符。",
+      "attribution": "model_reasoning",
+      "evidence_basis": [
+        {
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 2,
+          "content": "def title(task):\n    return task[\"title\"]\n"
+        },
+        {
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 2,
+          "content": "def title(task):\n    return \" \".join(task[\"title\"].split())\n"
+        }
+      ],
+      "citation_count": 0,
+      "valid_citation_count": 0,
+      "automatic_tags": [],
+      "primary_issue_detected": null,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0,
+      "duplicate_finding_count": 0
+    },
+    {
+      "job_id": "pr-page-boundary-keyword-1",
+      "case_id": "pr-page-boundary",
+      "arm": "keyword",
+      "case_sha256": "b9a84f18b458500f25f07af16be55e4b8284256960adadd65780cd9425477de5",
+      "execution_sha256": "1dc2bf556a035db180bcc7de94c77e960a0dd93242c978c7e4037d2f4b225d30",
+      "verdict": "fail",
+      "core_correct": true,
+      "reason": "核心off-by-one正确，但具体推导错误：range(25),n=2,size=10两版均返回[20..24]，head不是4项；size=0时head是items[0:-1]而非空列表；末页剩1不必为空。还把size=1同根因重复列发现。",
+      "attribution": "model_reasoning",
+      "evidence_basis": [
+        {
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 2,
+          "content": "def page(items, n, size):\n    return items[n * size:(n + 1) * size]\n"
+        },
+        {
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 2,
+          "content": "def page(items, n, size):\n    return items[n * size:(n + 1) * size - 1]\n"
+        }
+      ],
+      "citation_count": 4,
+      "valid_citation_count": 4,
+      "automatic_tags": [],
+      "primary_issue_detected": true,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0,
+      "duplicate_finding_count": 1
+    },
+    {
+      "job_id": "pr-page-boundary-hybrid-1",
+      "case_id": "pr-page-boundary",
+      "arm": "hybrid",
+      "case_sha256": "b9a84f18b458500f25f07af16be55e4b8284256960adadd65780cd9425477de5",
+      "execution_sha256": "dfa5c8ee7731b3717808fbc840e74f952098c0dd5508fd6651807fe64e60a70c",
+      "verdict": "fail",
+      "core_correct": true,
+      "reason": "summary/title说跨页重复，explanation又正确说明只丢弃不重复，报告自相矛盾；size=0/1符合预期的说法错误。主要丢元素根因仍正确。",
+      "attribution": "model_reasoning",
+      "evidence_basis": [
+        {
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 2,
+          "content": "def page(items, n, size):\n    return items[n * size:(n + 1) * size]\n"
+        },
+        {
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 2,
+          "content": "def page(items, n, size):\n    return items[n * size:(n + 1) * size - 1]\n"
+        }
+      ],
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [],
+      "primary_issue_detected": true,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0,
+      "duplicate_finding_count": 0
+    }
+  ]
+}

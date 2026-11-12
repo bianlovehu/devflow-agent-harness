@@ -57,6 +57,13 @@ def test_fixture_agent_reports_are_persisted_and_exportable(context, task, targe
     report = context.client.get(f"/api/v1/runs/{run_id}/report")
     assert report.status_code == 200, report.text
     value = report.json()
+    assert value["report"]["report_version"] == "2"
+    assert value["report"]["citation_check"] == "passed"
+    assert value["report"]["semantic_support"]["status"] == "not_reviewed"
+    assert (
+        value["report"]["evidence_facts"]["knowledge_enabled"]
+        == result["input_version"]["use_knowledge"]
+    )
     assert len(value["report"]["findings"]) >= expected
     if target == "101":
         assert not value["report"]["findings"]
@@ -182,6 +189,8 @@ def test_directory_only_report_always_discloses_unread_evidence(context):
                         {
                             "task_type": "pr_review",
                             "summary": "未确认风险。",
+                            "report_version": "2",
+                            "boundary_claims": [],
                             "findings": [],
                             "verification_steps": ["补查正文。"],
                             "suggestions": [],
@@ -198,3 +207,21 @@ def test_directory_only_report_always_discloses_unread_evidence(context):
     assert result["status"] == "succeeded", result
     assert any("未读取任何证据正文" in item for item in result["result"]["report"]["unconfirmed"])
     assert not result["result"]["report"]["findings"]
+
+
+def test_old_frozen_task_and_persisted_report_are_still_readable(context):
+    from devflow.reports import AnalysisReport
+
+    run_id, worker = agent_run(context)
+    with Session(context.engine) as session, session.begin():
+        run = session.get(RunRecord, run_id)
+        old = {**run.configuration, "report_schema": AnalysisReport.model_json_schema()}
+        old.pop("report_version", None)
+        run.configuration = old
+    assert worker.run_once()
+    response = context.client.get(f"/api/v1/runs/{run_id}/report")
+    assert response.status_code == 200, response.text
+    report = response.json()
+    assert "report_version" not in report["report"]
+    assert "nature" not in report["report"]["findings"][0]
+    assert "显示为未知" in report["markdown"]

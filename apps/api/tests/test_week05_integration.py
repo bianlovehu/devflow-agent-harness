@@ -223,6 +223,8 @@ def test_context_material_usage_error_and_stale_report_are_reviewable(context):
 
 
 def test_long_conversation_runs_with_constraints_and_original_material(context):
+    # 验证小预算下的压缩行为；新默认预算已提升到120,000。
+    context.settings = context.settings.model_copy(update={"context_input_tokens": 12000})
     run, worker = create_agent_run(context)
     conversation = run["conversation_id"]
     response = context.client.post(

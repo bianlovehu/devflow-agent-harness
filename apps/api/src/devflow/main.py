@@ -10,7 +10,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from devflow import __version__
-from devflow.config import get_settings
+from devflow.budget_api import router as budget_router
+from devflow.config import get_settings, validate_service_configuration
 from devflow.database import create_database_engine
 from devflow.errors import (
     DomainError,
@@ -31,7 +32,9 @@ from devflow.workflow_api import router as workflows_router
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # 启动时创建连接池，服务退出时释放连接资源。
-    app.state.engine = create_database_engine(get_settings())
+    settings = get_settings()
+    validate_service_configuration(settings)
+    app.state.engine = create_database_engine(settings)
     yield
     app.state.engine.dispose()
 
@@ -48,7 +51,7 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:3000", "http://localhost:3000"],
+    allow_origins=["http://127.0.0.1:3000", "http://localhost:3000", get_settings().web_origin],
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "Idempotency-Key", "Last-Event-ID"],
@@ -79,6 +82,7 @@ app.include_router(repositories_router)
 app.include_router(workflows_router)
 app.include_router(knowledge_router)
 app.include_router(memory_router)
+app.include_router(budget_router)
 app.add_exception_handler(DomainError, domain_error_handler)
 app.add_exception_handler(StarletteHTTPException, http_error_handler)
 app.add_exception_handler(RequestValidationError, validation_error_handler)
@@ -97,6 +101,7 @@ async def request_context(request: Request, call_next):
     if request.method not in {"GET", "HEAD", "OPTIONS"}:
         origin = request.headers.get("origin")
         allowed = {
+            get_settings().web_origin.rstrip("/"),
             "http://127.0.0.1:3000",
             "http://localhost:3000",
             "http://127.0.0.1:8000",

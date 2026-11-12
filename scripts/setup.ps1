@@ -39,7 +39,6 @@ try { Invoke-Checked { npm.cmd ci --no-audit --no-fund } } finally { Pop-Locatio
 if (-not $SkipDatabase) {
     if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { throw 'Install Docker Desktop first.' }
     Invoke-Checked { docker compose up -d --wait --wait-timeout 120 db }
-    Invoke-Checked { uv run --locked alembic upgrade head }
-    Invoke-Checked { uv run --locked python -m devflow.import_fixtures }
+    Invoke-Checked { uv run --locked python -m devflow.bootstrap --seed }
 }
 Write-Host 'Setup complete. Start API and web in separate terminals using scripts/dev.ps1.'

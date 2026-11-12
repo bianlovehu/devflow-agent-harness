@@ -82,6 +82,40 @@ def test_protected_material_that_cannot_fit_fails_before_model_request():
     assert failure.value.code == "budget_exceeded"
 
 
+def test_history_is_reduced_before_discarding_fresh_code_evidence():
+    code = "return [task for task in tasks if task['owner_id'] == actor_id]"
+    messages = [
+        {"role": "system", "content": "只读审查，不执行测试"},
+        {"role": "user", "content": "比较当前base/head，不把历史讨论当作当前代码"},
+        {
+            "role": "user",
+            "content": json.dumps(
+                {
+                    "conversation_history": [
+                        {"id": f"old-{i}", "role": "user", "content": "普通背景" * 1000}
+                        for i in range(4)
+                    ]
+                },
+                ensure_ascii=False,
+            ),
+        },
+        {"role": "assistant", "tool_calls": [{"id": "read-1"}], "content": None},
+        {
+            "role": "tool",
+            "tool_call_id": "read-1",
+            "content": json.dumps(
+                {"ok": True, "data": {"id": "source-1", "lines": [{"line": 2, "text": code}]}},
+                ensure_ascii=False,
+            ),
+        },
+    ]
+    result, metrics = compress_context(messages, [], 4000)
+    assert metrics["saved_tokens"] > 0 and metrics["estimated_input"] <= 4000
+    assert result[-1]["content"] == messages[-1]["content"]
+    assert code in result[-1]["content"]
+    assert result[:2] == messages[:2]
+
+
 def test_known_tokens_redacted_without_losing_line_numbers_and_write_tools_unavailable():
     raw = "ghp_" + "a" * 36 + "\nAuthorization: Bearer " + "secret" * 7
     raw += "\nsk-" + "b" * 32 + "\napi_key='" + "x" * 32 + "'"

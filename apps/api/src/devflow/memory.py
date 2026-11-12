@@ -33,7 +33,7 @@ class Candidate(BaseModel):
         return value.strip()
 
 
-def extract_memory(session, run_id, selection, settings, model=None):
+def extract_memory(session, run_id, selection, settings, model=None, ledger=None):
     run = require_run(session, run_id)
     require_repository(session, run.repo_id, settings.data_source)
     report = require_report(run)
@@ -67,7 +67,9 @@ def extract_memory(session, run_id, selection, settings, model=None):
             "label": "离线规则演示候选，需要人工审核",
         }
     else:
-        model = model or DeepSeekModel(settings)
+        model = model or DeepSeekModel(
+            settings, ledger=ledger, purpose="memory", run_id=run_id, source="memory_api"
+        )
         reply, elapsed = measured_call(
             model,
             [

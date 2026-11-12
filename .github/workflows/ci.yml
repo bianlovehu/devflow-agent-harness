@@ -1,0 +1,85 @@
+# 文件用途：无真实模型额度的静态、契约、构建、数据库及进程恢复回归。
+name: engineering-regression
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      MODEL_PROVIDER: fake
+      DATA_SOURCE: fixture
+      DEVFLOW_TEST_DATABASE: "1"
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: devflow
+      POSTGRES_USER: devflow
+      POSTGRES_PASSWORD: devflow-local
+      DASHSCOPE_API_KEY: ""
+      DEEPSEEK_API_KEY: ""
+      NEXT_TELEMETRY_DISABLED: "1"
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.2-pg17@sha256:feb68f4f15446397d8cac7f4fe48fe4586de83160d1fc48b46283312d1a33966
+        env:
+          POSTGRES_DB: devflow
+          POSTGRES_USER: devflow
+          POSTGRES_PASSWORD: devflow-local
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U devflow -d devflow"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.3"
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: uv sync --locked
+      - run: uv run --locked ruff check apps/api scripts
+      - run: uv run --locked ruff format --check apps/api scripts
+      - run: uv run --locked python scripts/prepare_rag.py
+      - run: uv run --locked pytest --junitxml=data/ci-tests.xml
+      - run: npm ci --no-audit --no-fund
+        working-directory: apps/web
+      - run: npm run api:check && npm test && npm run lint && npm run typecheck && npm run format:check && npm run build
+        working-directory: apps/web
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: engineering-test-results
+          path: data/ci-tests.xml
+  containers:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      DEPLOY_MODEL_PROVIDER: fake
+      DEPLOY_DATA_SOURCE: fixture
+      POSTGRES_PORT: "15432"
+      API_PORT: "18000"
+      WEB_PORT: "13000"
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/prepare_model_assets.py
+      - run: docker compose -p devflow-ci build
+      - run: docker compose -p devflow-ci up -d --wait --wait-timeout 240
+      - run: python3 scripts/release_smoke.py --api http://127.0.0.1:18000 --web http://127.0.0.1:13000 --output data/ci-release.json
+      - run: docker compose -p devflow-ci restart api worker web && docker compose -p devflow-ci up -d --wait --wait-timeout 240
+      - run: python3 scripts/release_smoke.py --api http://127.0.0.1:18000 --web http://127.0.0.1:13000 --baseline data/ci-release.json --output data/ci-restarted.json
+      - run: python3 scripts/release_backup.py backup --project devflow-ci --directory data/ci-backup
+      - run: POSTGRES_PORT=15433 API_PORT=18001 WEB_PORT=13001 python3 scripts/release_backup.py restore --project devflow-ci-restored --directory data/ci-backup
+      - run: python3 scripts/release_smoke.py --api http://127.0.0.1:18001 --web http://127.0.0.1:13001 --baseline data/ci-release.json --output data/ci-restored.json
+      - run: docker compose -p devflow-ci logs --no-color
+        if: failure()
+      - run: docker compose -p devflow-ci down -v
+        if: always()
+      - run: POSTGRES_PORT=15433 API_PORT=18001 WEB_PORT=13001 docker compose -p devflow-ci-restored down -v
+        if: always()

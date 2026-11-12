@@ -3,10 +3,11 @@ from datetime import UTC, datetime
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import Field, field_validator
 from sqlalchemy import select
 
+from devflow.budget import BudgetLedger, get_budget_ledger
 from devflow.contracts import Contract
 from devflow.memory import change_memory, extract_memory
 from devflow.models import MemoryRecord
@@ -69,8 +70,16 @@ class MemoryApprove(Contract):
 
 
 @router.post("/runs/{run_id}/memories", response_model=MemoryOutput, status_code=201)
-def extract(run_id: UUID, data: MemoryExtract, session: Database, settings: Configuration):
-    return MemoryOutput.from_record(extract_memory(session, run_id, data.finding_index, settings))
+def extract(
+    run_id: UUID,
+    data: MemoryExtract,
+    session: Database,
+    settings: Configuration,
+    ledger: Annotated[BudgetLedger, Depends(get_budget_ledger)],
+):
+    return MemoryOutput.from_record(
+        extract_memory(session, run_id, data.finding_index, settings, ledger=ledger)
+    )
 
 
 @router.get("/memories", response_model=Page[MemoryOutput])

@@ -22,7 +22,7 @@ def client():
 
 
 def test_fixture_browsing_needs_no_credentials_and_never_calls_model(client):
-    with patch("devflow.model_probe.urlopen") as request:
+    with patch("devflow.model_gateway.DeepSeekModel.complete") as request:
         repositories = client.get("/api/v1/repositories")
         assert repositories.status_code == 200
         assert repositories.json()["data_source"] == "fixture"

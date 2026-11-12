@@ -31,10 +31,5 @@ def postgres_checkpointer(engine, fence):
         options="-c search_path=devflow_checkpoints",
     ) as connection:
         saver = LeasedPostgresSaver(connection, fence)
-        # 库自身维护 checkpoint 表版本，串行 setup；业务 Alembic 管理 schema 生命周期。
-        connection.execute("SELECT pg_advisory_lock(529053172)")
-        try:
-            saver.setup()
-        finally:
-            connection.execute("SELECT pg_advisory_unlock(529053172)")
+        # 表结构由显式bootstrap/Alembic入口准备；执行任务只读取和写入状态，不执行DDL。
         yield saver

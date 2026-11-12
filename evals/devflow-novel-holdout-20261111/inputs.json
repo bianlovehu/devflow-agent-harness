@@ -1,0 +1,178 @@
+{
+  "schema_version": 1,
+  "dataset_version": "devflow-novel-holdout-20261111",
+  "cases": [
+    {
+      "case_id": "novel-pr-cents",
+      "source_group": "holdout-ledger-cents",
+      "split": "holdout",
+      "task_type": "pr_review",
+      "question": "核查本次变更新引入的具体缺陷，引用两版证据；资料不足时说明前提，不把行为差异自动当作缺陷。",
+      "sources": [
+        {
+          "key": "base",
+          "source_type": "file",
+          "path": "billing.py",
+          "revision": "base",
+          "content": "from decimal import Decimal\n\ndef total_price(unit_price: Decimal, quantity: int) -> Decimal:\n    \"\"\"Unit prices include fractional currency; preserve cents in the product.\"\"\"\n    return unit_price * quantity\n"
+        },
+        {
+          "key": "head",
+          "source_type": "file",
+          "path": "billing.py",
+          "revision": "head",
+          "content": "from decimal import Decimal\n\ndef total_price(unit_price: Decimal, quantity: int) -> Decimal:\n    \"\"\"Unit prices include fractional currency; preserve cents in the product.\"\"\"\n    return int(unit_price) * quantity\n"
+        }
+      ]
+    },
+    {
+      "case_id": "novel-pr-fifo",
+      "source_group": "holdout-queue-order",
+      "split": "holdout",
+      "task_type": "pr_review",
+      "question": "核查本次变更新引入的具体缺陷，引用两版证据；资料不足时说明前提，不把行为差异自动当作缺陷。",
+      "sources": [
+        {
+          "key": "base",
+          "source_type": "file",
+          "path": "queueing.py",
+          "revision": "base",
+          "content": "def take_next(queue):\n    \"\"\"Remove the earliest enqueued item; queue stores oldest first (FIFO).\"\"\"\n    return queue.pop(0)\n"
+        },
+        {
+          "key": "head",
+          "source_type": "file",
+          "path": "queueing.py",
+          "revision": "head",
+          "content": "def take_next(queue):\n    \"\"\"Remove the earliest enqueued item; queue stores oldest first (FIFO).\"\"\"\n    return queue.pop()\n"
+        }
+      ]
+    },
+    {
+      "case_id": "novel-pr-checksum-clean",
+      "source_group": "holdout-checksum-refactor",
+      "split": "holdout",
+      "task_type": "pr_review",
+      "question": "核查本次变更新引入的具体缺陷，引用两版证据；资料不足时说明前提，不把行为差异自动当作缺陷。",
+      "sources": [
+        {
+          "key": "base",
+          "source_type": "file",
+          "path": "checksum.py",
+          "revision": "base",
+          "content": "import hashlib\n\ndef checksum(payload: bytes) -> str:\n    \"\"\"Return the SHA-256 hex checksum of a byte payload.\"\"\"\n    return hashlib.sha256(payload).hexdigest()\n"
+        },
+        {
+          "key": "head",
+          "source_type": "file",
+          "path": "checksum.py",
+          "revision": "head",
+          "content": "import hashlib\n\ndef checksum(payload: bytes) -> str:\n    \"\"\"Return the SHA-256 hex checksum of a byte payload.\"\"\"\n    digest = hashlib.sha256(payload).digest()\n    return digest.hex()\n"
+        }
+      ]
+    },
+    {
+      "case_id": "novel-ci-native-header",
+      "source_group": "holdout-native-header",
+      "split": "holdout",
+      "task_type": "ci_debug",
+      "question": "定位日志直接支持的失败阶段、根因或替代假设，提出验证步骤，不把未知信息写成确定事实。",
+      "sources": [
+        {
+          "key": "log",
+          "source_type": "log",
+          "path": "ci/native-build.txt",
+          "revision": "head",
+          "content": "python -m pip install --no-binary psycopg2 psycopg2==2.9.10\nbuilding 'psycopg2._psycopg' extension\npsycopg/psycopgmodule.c:28:10: fatal error: libpq-fe.h: No such file or directory\ncompilation terminated.\nerror: command '/usr/bin/gcc' failed with exit code 1\n"
+        }
+      ]
+    },
+    {
+      "case_id": "novel-ci-sqlite-lock",
+      "source_group": "holdout-sqlite-lock",
+      "split": "holdout",
+      "task_type": "ci_debug",
+      "question": "定位日志直接支持的失败阶段、根因或替代假设，提出验证步骤，不把未知信息写成确定事实。",
+      "sources": [
+        {
+          "key": "log",
+          "source_type": "log",
+          "path": "ci/test-lock.txt",
+          "revision": "head",
+          "content": "pytest tests/test_jobs.py::test_parallel_writers\nFAILED tests/test_jobs.py::test_parallel_writers\nE   sqlite3.OperationalError: database is locked\nCaptured log: worker-b waited 5.0s for a write transaction\n"
+        }
+      ]
+    },
+    {
+      "case_id": "novel-ci-platform-timeout",
+      "source_group": "holdout-platform-timeout",
+      "split": "holdout",
+      "task_type": "ci_debug",
+      "question": "定位日志直接支持的失败阶段、根因或替代假设，提出验证步骤，不把未知信息写成确定事实。",
+      "sources": [
+        {
+          "key": "log",
+          "source_type": "log",
+          "path": "ci/job-timeout.txt",
+          "revision": "head",
+          "content": "Run integration suite\nExecuting: pytest -q tests/integration\nError: The operation was canceled.\nRunner reason: job exceeded timeout-minutes=30.\n"
+        }
+      ]
+    },
+    {
+      "case_id": "novel-qa-policy-version",
+      "source_group": "holdout-travel-policy",
+      "split": "holdout",
+      "task_type": "knowledge_qa",
+      "question": "根据资料，2026年11月生效的差旅报销提交期限是多少？",
+      "sources": [
+        {
+          "key": "current",
+          "source_type": "document",
+          "path": "travel-v3.md",
+          "revision": "head",
+          "content": "# 差旅报销政策v3（生效2026-11-01）\n费用发生后14个自然日内提交；本规则替代v2。\n"
+        },
+        {
+          "key": "archive",
+          "source_type": "document",
+          "path": "travel-v2-archived.md",
+          "revision": "head",
+          "content": "# 差旅报销政策v2（已归档，仅供历史查阅）\n费用发生后30个自然日内提交，适用截至2026-10-31。\n"
+        }
+      ]
+    },
+    {
+      "case_id": "novel-qa-csv-mode",
+      "source_group": "holdout-csv-mode",
+      "split": "holdout",
+      "task_type": "knowledge_qa",
+      "question": "程序读取与Excel兼容模式导出的CSV，是否都应该加BOM？",
+      "sources": [
+        {
+          "key": "doc",
+          "source_type": "document",
+          "path": "csv-encoding.md",
+          "revision": "head",
+          "content": "# CSV导出编码约定\n默认使用UTF-8且不加BOM，供程序读取。\n仅明确选择Excel兼容模式时，UTF-8文件开头添加BOM。\n"
+        }
+      ]
+    },
+    {
+      "case_id": "novel-qa-approval-event",
+      "source_group": "holdout-approval-event",
+      "split": "holdout",
+      "task_type": "knowledge_qa",
+      "question": "变更CHG-731的实际审批人是谁？",
+      "sources": [
+        {
+          "key": "doc",
+          "source_type": "document",
+          "path": "change-approval-process.md",
+          "revision": "head",
+          "content": "# 生产变更审批流程\n生产变更必须由当班SRE审批后执行，并记录审批人和时间。\n"
+        }
+      ]
+    }
+  ]
+}

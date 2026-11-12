@@ -1,0 +1,16 @@
+{
+  "created_at": "2026-11-11T07:21:32.861057+00:00",
+  "freeze_file": "evals\\freezes\\development-20261111.json",
+  "freeze_sha256": "93d344acd8ddf07770a480dbd5523b8954bb20f8f778110ae083061bb13dd95e",
+  "dataset": {
+    "version": "devflow-novel-holdout-20261111",
+    "sha256": "edea81cc9d7d32838260a1aa4aa33402362bc400334b0b73fccaa3adeba22111"
+  },
+  "author": "GPT",
+  "reviewer": "GPT",
+  "purpose": "post-development-freeze unseen inputs for the subject DeepSeek model, not independent human blind review",
+  "case_count": 9,
+  "planned_analysis_jobs": 18,
+  "source_groups_disjoint_from_devflow_v1": true,
+  "policy": "Do not change inputs, expectations, API code or prompts after subject model results are viewed."
+}

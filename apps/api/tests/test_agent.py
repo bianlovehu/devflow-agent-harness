@@ -5,6 +5,7 @@ from urllib.error import HTTPError
 from uuid import uuid4
 
 import pytest
+from budget_samples import StubLedger
 from devflow.agent import AnalysisRunner, model_configuration
 from devflow.config import Settings
 from devflow.errors import DomainError
@@ -39,9 +40,30 @@ def gateway(*items):
     return ToolGateway("registered", list(items or [evidence()]), {})
 
 
+@pytest.mark.parametrize("ending", ["\n", "\r\n", "\r"])
+def test_old_document_trailing_newline_metadata_does_not_crash_reread(ending):
+    item = evidence("owner policy" + ending, source_type="document", end_line=2)
+    tools = gateway(item)
+    reply = tools.execute(
+        "read_evidence",
+        json.dumps({"repo_id": "registered", "evidence_id": item["id"], "limit": 20}),
+    )
+    assert reply["ok"]
+    assert reply["data"]["lines"] == [{"line": 1, "text": "owner policy"}]
+    assert reply["data"]["end_line"] == 1 and reply["data"]["next_line"] is None
+    invalid = tools.execute(
+        "read_evidence",
+        json.dumps({"repo_id": "registered", "evidence_id": item["id"], "start_line": 2}),
+    )
+    assert invalid["error"]["code"] == "invalid_line_range"
+
+
 def config(**budget):
     return {
         **model_configuration(Settings(_env_file=None, model_provider="fake")),
+        # 此文件保留旧版报告与旧任务恢复的回归，新版分类另见 test_report_v2.py。
+        "report_version": "1",
+        "report_schema": AnalysisReport.model_json_schema(),
         "budget": {
             "max_model_calls": 6,
             "max_tool_calls": 12,
@@ -226,6 +248,7 @@ def test_model_http_errors_are_classified_and_never_retried(status, code):
     model = DeepSeekModel(
         Settings(_env_file=None, model_provider="deepseek", deepseek_api_key="private"),
         opener=opener,
+        ledger=StubLedger(),
     )
     with pytest.raises(ModelError) as error:
         model.complete([], [])
@@ -256,7 +279,7 @@ def test_aliyun_uses_selected_model_endpoint_and_non_thinking_payload():
         dashscope_api_key="private",
         dashscope_base_url="https://workspace.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
     )
-    model = DeepSeekModel(settings, opener=opener)
+    model = DeepSeekModel(settings, opener=opener, ledger=StubLedger())
     assert model.complete([], []).usage.total_tokens == 5
     assert opener.request.full_url == settings.dashscope_base_url + "/chat/completions"
     assert opener.payload["model"] == "deepseek-v4.1-flash"
@@ -303,6 +326,7 @@ def test_malformed_model_message_is_classified_without_internal_error(message):
     model = DeepSeekModel(
         Settings(_env_file=None, model_provider="deepseek", deepseek_api_key="private"),
         opener=Opener(),
+        ledger=StubLedger(),
     )
     with pytest.raises(ModelError) as error:
         model.complete([], [])
@@ -326,6 +350,7 @@ def test_real_model_never_silently_defaults_missing_usage_to_zero(usage):
     model = DeepSeekModel(
         Settings(_env_file=None, model_provider="deepseek", deepseek_api_key="private"),
         opener=Opener(),
+        ledger=StubLedger(),
     )
     with pytest.raises(ModelError) as error:
         model.complete([], [])

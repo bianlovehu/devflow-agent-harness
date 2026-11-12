@@ -1,49 +1,64 @@
-# 文件用途：用模拟响应验证模型探测次数、用量输出和密钥脱敏。
+# 文件用途：验证探针通过统一网关、显式隔离账本，且不泄露密钥或自动重试。
 import io
 import json
-from unittest.mock import MagicMock, patch
 from urllib.error import HTTPError
 
+from budget_samples import StubLedger
 from devflow.config import Settings
 from devflow.model_probe import probe_deepseek
 
 
+class Opener:
+    calls = 0
+
+    def __init__(self, failure=None):
+        self.failure = failure
+
+    def open(self, request, timeout):
+        self.calls += 1
+        self.request = request
+        if self.failure:
+            raise self.failure
+        return io.BytesIO(
+            json.dumps(
+                {
+                    "choices": [{"finish_reason": "stop", "message": {"content": '{"ok":true}'}}],
+                    "usage": {"prompt_tokens": 9, "completion_tokens": 1, "total_tokens": 10},
+                }
+            ).encode()
+        )
+
+
 def test_probe_without_key_makes_no_request():
-    with patch("devflow.model_probe.urlopen") as request:
-        result = probe_deepseek(Settings(_env_file=None, deepseek_api_key=""))
-    assert result["status"] == "not_configured"
-    request.assert_not_called()
+    opener = Opener()
+    result = probe_deepseek(
+        Settings(_env_file=None, deepseek_api_key=""), opener=opener, ledger=StubLedger()
+    )
+    assert result["status"] == "not_configured" and opener.calls == 0
 
 
 def test_probe_makes_one_bounded_request_and_returns_usage_only():
-    settings = Settings(_env_file=None, deepseek_api_key="private-test-value")
-    response = MagicMock()
-    response.__enter__.return_value = io.BytesIO(
-        json.dumps(
-            {
-                "model": "deepseek-flash",
-                "choices": [{"message": {"content": "OK"}}],
-                "usage": {"prompt_tokens": 9, "completion_tokens": 1, "total_tokens": 10},
-            }
-        ).encode()
+    opener, ledger = Opener(), StubLedger()
+    result = probe_deepseek(
+        Settings(_env_file=None, deepseek_api_key="private-test-value"),
+        opener=opener,
+        ledger=ledger,
     )
-    with patch("devflow.model_probe.urlopen", return_value=response) as request:
-        result = probe_deepseek(settings)
-    assert result["status"] == "ok"
-    assert result["total_tokens"] == 10
-    request.assert_called_once()
-    payload = json.loads(request.call_args.args[0].data)
-    assert payload["max_tokens"] == 8
-    assert payload["thinking"]["type"] == "disabled"
+    assert result["status"] == "ok" and result["total_tokens"] == 10
+    assert opener.calls == 1 and ledger.reservations[0]["purpose"] == "probe"
+    payload = json.loads(opener.request.data)
+    assert payload["max_tokens"] == 16 and payload["thinking"]["type"] == "disabled"
     assert "private-test-value" not in json.dumps(result)
 
 
 def test_auth_error_is_sanitized_and_not_retried():
-    settings = Settings(_env_file=None, deepseek_api_key="private-test-value")
-    failure = HTTPError("https://api.deepseek.com/chat/completions", 401, "secret", {}, None)
-    with patch("devflow.model_probe.urlopen", side_effect=failure) as request:
-        result = probe_deepseek(settings)
-    assert result["http_status"] == 401
-    assert "private-test-value" not in json.dumps(result)
-    assert "secret" not in json.dumps(result)
-    request.assert_called_once()
+    opener = Opener(HTTPError("https://api.deepseek.com/chat/completions", 401, "secret", {}, None))
+    ledger = StubLedger()
+    result = probe_deepseek(
+        Settings(_env_file=None, deepseek_api_key="private-test-value"),
+        opener=opener,
+        ledger=ledger,
+    )
+    assert result["code"] == "model_auth_error" and opener.calls == 1
+    assert "private-test-value" not in json.dumps(result) and "secret" not in json.dumps(result)
+    assert ledger.finished[0]["usage"] is None and ledger.finished[0]["sent"]

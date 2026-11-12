@@ -9,6 +9,7 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from devflow.artifact_store import ArtifactStore, get_artifact_store
+from devflow.budget import BudgetLedger, get_budget_ledger
 from devflow.config import PROJECT_ROOT, get_settings
 from devflow.data_source import fixture_source
 from devflow.database import Base, create_database_engine, get_session
@@ -76,6 +77,7 @@ def context(tmp_path):
         app.dependency_overrides[get_session] = database_session
         app.dependency_overrides[get_settings] = lambda: settings
         app.dependency_overrides[get_artifact_store] = lambda: store
+        app.dependency_overrides[get_budget_ledger] = lambda: BudgetLedger(engine, settings)
         with TestClient(app) as client:
             yield SimpleNamespace(
                 client=client,

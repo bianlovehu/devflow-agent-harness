@@ -1,0 +1,1112 @@
+{
+  "schema_version": 1,
+  "reviewer": "GPT",
+  "review_mode": "user-authorized semantic review; no claim of independent physical human review",
+  "reviewed_at": "2026-11-11T07:13:10.549164+00:00",
+  "cohort": "data\\baselines\\real-dev-v4-20261111",
+  "status": "complete; 40 of 40 reviewed, including all failed/qualified judgments",
+  "rubric": {
+    "pass": "核心结论、证据和行动建议无实质问题",
+    "pass_with_notes": "核心正确，局部措辞/验证建议仍需限定；不等于无瑕疵",
+    "fail": "漏掉核心问题，或存在实质错误事实/不安全建议",
+    "not_assessable": "无通过运行时校验的最终报告，保留具体执行归因"
+  },
+  "cases": [
+    {
+      "job_id": "pr-title-clean-keyword-1",
+      "case_id": "pr-title-clean",
+      "arm": "keyword",
+      "case_sha256": "5256cbf2bc74bfb789dc3770111a4286408a0d6026f365ccbbc745a678155264",
+      "execution_sha256": "3eecf8962715c82354bef38d0ab319135215e3141978b025c203fc112a8dd54a",
+      "verdict": "fail",
+      "core_correct": true,
+      "reason": "summary与验证步骤仍错误声称base在None.split处抛异常；base只返回None。unconfirmed对其他非字符串的描述反而正确，报告内部矛盾。无发现项误报。",
+      "attribution": "model_reasoning",
+      "evidence_basis": [
+        {
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "376933f089f140c5b337e5158dce1240178897fc375846c08fba99b0d025291b"
+        },
+        {
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "0e3c054e52eeb7763cbb126920a26a2dd4242c61e1ba3403c84f8b23df3a4dd1"
+        }
+      ],
+      "citation_count": 0,
+      "valid_citation_count": 0,
+      "automatic_tags": [],
+      "primary_issue_detected": null,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0,
+      "duplicate_finding_count": 0
+    },
+    {
+      "job_id": "pr-title-clean-hybrid-1",
+      "case_id": "pr-title-clean",
+      "arm": "hybrid",
+      "case_sha256": "5256cbf2bc74bfb789dc3770111a4286408a0d6026f365ccbbc745a678155264",
+      "execution_sha256": "d6fc0d14808dd85beed7a63ad5936ec9e574c61d3076604dafcb4875d865b87d",
+      "verdict": "fail",
+      "core_correct": false,
+      "reason": "非字符串与空白变化本身有代码支持，但没有允许输入或下游保真契约，仍把两个未证实边界假设列入findings。应放unconfirmed；正常清洗PR发生误报。",
+      "attribution": "model_reasoning",
+      "evidence_basis": [
+        {
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "376933f089f140c5b337e5158dce1240178897fc375846c08fba99b0d025291b"
+        },
+        {
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "0e3c054e52eeb7763cbb126920a26a2dd4242c61e1ba3403c84f8b23df3a4dd1"
+        }
+      ],
+      "citation_count": 4,
+      "valid_citation_count": 4,
+      "automatic_tags": [
+        "false_positive"
+      ],
+      "primary_issue_detected": null,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 2,
+      "duplicate_finding_count": 0
+    },
+    {
+      "job_id": "pr-null-labels-keyword-1",
+      "case_id": "pr-null-labels",
+      "arm": "keyword",
+      "case_sha256": "3929046900e80bb77d96242a72a2e03b46ca2da65181db68db94e828232dfce7",
+      "execution_sha256": "375e3a7496684fc45de33670f38bb6cd20d5a75156105a8e88f96409e72b4137",
+      "verdict": "fail",
+      "core_correct": true,
+      "reason": "finding正确找出None从[]变ValueError，不再漏报；summary却说保留None且无明显缺陷。建议只放行None而仍return labels会返回None，未恢复空列表契约。",
+      "attribution": "model_reasoning",
+      "evidence_basis": [
+        {
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 3,
+          "content_sha256": "b6224c0b5cb97528c644b71e66f2ddc1aa60b3eaf36f612110e94fa3afce49ab"
+        },
+        {
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 5,
+          "content_sha256": "50c1e3ae803ccbbe8219bd466def1cb7f52f0d3a27b6568e2296cdd304b9d6bf"
+        }
+      ],
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [],
+      "primary_issue_detected": true,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0,
+      "duplicate_finding_count": 0
+    },
+    {
+      "job_id": "pr-null-labels-hybrid-1",
+      "case_id": "pr-null-labels",
+      "arm": "hybrid",
+      "case_sha256": "3929046900e80bb77d96242a72a2e03b46ca2da65181db68db94e828232dfce7",
+      "execution_sha256": "5ef1bc60c052972cb7f62e25c6019ea1c5ac556efc39b2d8319c495ecb81ee12",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "正确区分缺键与显式None，定位null回归和列表别名差异；非list收紧保留为待确认。修复建议需明确None先归一化，不仅放行。",
+      "attribution": "model_precision",
+      "evidence_basis": [
+        {
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 3,
+          "content_sha256": "b6224c0b5cb97528c644b71e66f2ddc1aa60b3eaf36f612110e94fa3afce49ab"
+        },
+        {
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 5,
+          "content_sha256": "50c1e3ae803ccbbe8219bd466def1cb7f52f0d3a27b6568e2296cdd304b9d6bf"
+        }
+      ],
+      "citation_count": 4,
+      "valid_citation_count": 4,
+      "automatic_tags": [],
+      "primary_issue_detected": true,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0,
+      "duplicate_finding_count": 0
+    },
+    {
+      "job_id": "pr-owner-removed-keyword-1",
+      "case_id": "pr-owner-removed",
+      "arm": "keyword",
+      "case_sha256": "51032714e132824ed1c8f6884e3f9325045ecc9b6b8202edd28b895a2f3dc0a4",
+      "execution_sha256": "ca31928770337d653c5a7b35793861a2a37edc8b9bccdeacf81d21f780941225",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "两版与具体混合owner输入支持过滤删除；系统影响已限定接口使用条件。t.get替代下标会改变缺键语义，应先确认契约。",
+      "attribution": "model_precision",
+      "evidence_basis": [
+        {
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "0ef9158a4bd459c81bfe9f4593293bffd14c8c7c56b74cf00d07cbccd865a4f5"
+        },
+        {
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "ba07d6bf2a429b71304e2a9052573250a99c06036e1a9b013858f2f4981fdd1a"
+        }
+      ],
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [],
+      "primary_issue_detected": true,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0,
+      "duplicate_finding_count": 0
+    },
+    {
+      "job_id": "pr-owner-removed-hybrid-1",
+      "case_id": "pr-owner-removed",
+      "arm": "hybrid",
+      "case_sha256": "51032714e132824ed1c8f6884e3f9325045ecc9b6b8202edd28b895a2f3dc0a4",
+      "execution_sha256": "f24b6ad3fc43b018559f300c79fcd0ad163d06e1414e402034afae3feb2e5433",
+      "verdict": "fail",
+      "core_correct": true,
+      "reason": "过滤删除主根因和算例正确。把未使用actor参数作为第二独立风险重复同一根因，还断言会触发lint而无规则配置。未提供副作用即可独立证明，违反仅具体缺陷约束。",
+      "attribution": "model_reasoning",
+      "evidence_basis": [
+        {
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "0ef9158a4bd459c81bfe9f4593293bffd14c8c7c56b74cf00d07cbccd865a4f5"
+        },
+        {
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "ba07d6bf2a429b71304e2a9052573250a99c06036e1a9b013858f2f4981fdd1a"
+        }
+      ],
+      "citation_count": 3,
+      "valid_citation_count": 3,
+      "automatic_tags": [],
+      "primary_issue_detected": true,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 1,
+      "duplicate_finding_count": 1
+    },
+    {
+      "job_id": "pr-owner-fixed-keyword-1",
+      "case_id": "pr-owner-fixed",
+      "arm": "keyword",
+      "case_sha256": "27438c4ce764e2eead6df7ba55204ab66fd63bdd5cb5e8c4c49a5e628284e279",
+      "execution_sha256": "42176c30f81c001696fa64c3a83b6da562f34cb37748a7b81e70a35b53a22a7a",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "正确不把owner过滤修复报缺陷，缺键只列待确认。若建议t.get，需明确actor=None时不能意外接纳无owner数据。",
+      "attribution": "model_precision",
+      "evidence_basis": [
+        {
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "e75082e01ed23a403f3b15013248c2ea6b6ac0f65d6e1b739a0775956d42a1d6"
+        },
+        {
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "0707731f428f5c3901cdd858af22cd6e226c7eaeed7752771e4137d367ba52e4"
+        }
+      ],
+      "citation_count": 0,
+      "valid_citation_count": 0,
+      "automatic_tags": [],
+      "primary_issue_detected": null,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0,
+      "duplicate_finding_count": 0
+    },
+    {
+      "job_id": "pr-owner-fixed-hybrid-1",
+      "case_id": "pr-owner-fixed",
+      "arm": "hybrid",
+      "case_sha256": "27438c4ce764e2eead6df7ba55204ab66fd63bdd5cb5e8c4c49a5e628284e279",
+      "execution_sha256": "5b4ffa46732195781955cb68ea975f263b45db2ab64ae6761e831f6b103a42a8",
+      "verdict": "fail",
+      "core_correct": false,
+      "reason": "无字段可选或公共任务契约，却把缺键、全量变过滤两个行为差异列findings，正常修复PR误报；建议允许owner=None公共任务没有授权依据。",
+      "attribution": "model_reasoning",
+      "evidence_basis": [
+        {
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "e75082e01ed23a403f3b15013248c2ea6b6ac0f65d6e1b739a0775956d42a1d6"
+        },
+        {
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "0707731f428f5c3901cdd858af22cd6e226c7eaeed7752771e4137d367ba52e4"
+        }
+      ],
+      "citation_count": 4,
+      "valid_citation_count": 4,
+      "automatic_tags": [
+        "false_positive"
+      ],
+      "primary_issue_detected": null,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 2,
+      "duplicate_finding_count": 0
+    },
+    {
+      "job_id": "pr-null-unchanged-keyword-1",
+      "case_id": "pr-null-unchanged",
+      "arm": "keyword",
+      "case_sha256": "836fb717630257ae3341bff95632cea3f573342086f4b5b8ad28a810287e1ab2",
+      "execution_sha256": "bfe456e549ccc0dc738ead6be86155a063a8d492be0a7c4c4df6a417cb8108ce",
+      "verdict": "pass",
+      "core_correct": true,
+      "reason": "正确识别仅行尾注释变化，显式None原样透传属于既有行为，不作新增缺陷。",
+      "attribution": null,
+      "evidence_basis": [
+        {
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 3,
+          "content_sha256": "c744d1b3f0422c27d3fc1dd601fc743f822ebec5d4219237acd70b96aa3e86db"
+        },
+        {
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 3,
+          "content_sha256": "42d791e3cabaaa62e8fb28d9384a340ac2ec094aa92291b899695fd75b85b104"
+        }
+      ],
+      "citation_count": 0,
+      "valid_citation_count": 0,
+      "automatic_tags": [],
+      "primary_issue_detected": null,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0,
+      "duplicate_finding_count": 0
+    },
+    {
+      "job_id": "pr-null-unchanged-hybrid-1",
+      "case_id": "pr-null-unchanged",
+      "arm": "hybrid",
+      "case_sha256": "836fb717630257ae3341bff95632cea3f573342086f4b5b8ad28a810287e1ab2",
+      "execution_sha256": "87113a240ff4b982d708018fa2bfff42288b491331ecc570f55b25d534cc1ddd",
+      "verdict": "pass",
+      "core_correct": true,
+      "reason": "无行为变化、无新增缺陷，典型缺省/None/空列表对比正确。",
+      "attribution": null,
+      "evidence_basis": [
+        {
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 3,
+          "content_sha256": "c744d1b3f0422c27d3fc1dd601fc743f822ebec5d4219237acd70b96aa3e86db"
+        },
+        {
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 3,
+          "content_sha256": "42d791e3cabaaa62e8fb28d9384a340ac2ec094aa92291b899695fd75b85b104"
+        }
+      ],
+      "citation_count": 0,
+      "valid_citation_count": 0,
+      "automatic_tags": [],
+      "primary_issue_detected": null,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0,
+      "duplicate_finding_count": 0
+    },
+    {
+      "job_id": "pr-page-boundary-keyword-1",
+      "case_id": "pr-page-boundary",
+      "arm": "keyword",
+      "case_sha256": "b9a84f18b458500f25f07af16be55e4b8284256960adadd65780cd9425477de5",
+      "execution_sha256": "c807df354966f2335cddd9c22293688214b56790ec0aa433998fb4e0dafe91ab",
+      "verdict": "fail",
+      "core_correct": true,
+      "reason": "off-by-one及size=1根因正确；summary错误断言size=0两版均为空，实际head为items[0:-1]。每个非空页恒少1也不成立，部分末页可一致。",
+      "attribution": "model_reasoning",
+      "evidence_basis": [
+        {
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "1a57da3ac857a21039108870df6a2ecb8826d26c69d0103bcce224a01f7b20c0"
+        },
+        {
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "34a5c3856babcc802161f60da3a6508d2d4679cd0da4d6a43e9f4a0fcd6bdfb3"
+        }
+      ],
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [],
+      "primary_issue_detected": true,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0,
+      "duplicate_finding_count": 0
+    },
+    {
+      "job_id": "pr-page-boundary-hybrid-1",
+      "case_id": "pr-page-boundary",
+      "arm": "hybrid",
+      "case_sha256": "b9a84f18b458500f25f07af16be55e4b8284256960adadd65780cd9425477de5",
+      "execution_sha256": "7fa62d097ffcca31a6383b8bacd756b981609bd5328fde64fe66072597cf0736",
+      "verdict": "fail",
+      "core_correct": true,
+      "reason": "核心少取元素正确，但range(10),n=3,size=3时head仍返回[9]，不是[]；负索引并非不被Python切片支持。过度推广末页和边界结论。",
+      "attribution": "model_reasoning",
+      "evidence_basis": [
+        {
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "1a57da3ac857a21039108870df6a2ecb8826d26c69d0103bcce224a01f7b20c0"
+        },
+        {
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "34a5c3856babcc802161f60da3a6508d2d4679cd0da4d6a43e9f4a0fcd6bdfb3"
+        }
+      ],
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [],
+      "primary_issue_detected": true,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0,
+      "duplicate_finding_count": 0
+    },
+    {
+      "job_id": "pr-zero-divisor-keyword-1",
+      "case_id": "pr-zero-divisor",
+      "arm": "keyword",
+      "case_sha256": "fb15e954d1ba5638a95ec3c1456c16fedaf108bce4e2837a82f96581f6595c6f",
+      "execution_sha256": "4076c821b7ed29c556656fe092d460a872a7a0f94b8ff4b2cf8d770d67fbfcd4",
+      "verdict": "pass",
+      "core_correct": true,
+      "reason": "count=0/None与正常输入逐项推理正确，未把原有真值非数值错误报成新增缺陷，同根因合并且保留调用链未知。",
+      "attribution": null,
+      "evidence_basis": [
+        {
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "676edb04aefa25147441158ef7c48dd1b6c825bbac986a137f84ec37b64f5c1d"
+        },
+        {
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "2ab9e87f7325f2203a79bdcc5f5d698607c52566e601b3a3db7556287c656ad3"
+        }
+      ],
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [],
+      "primary_issue_detected": true,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0,
+      "duplicate_finding_count": 0
+    },
+    {
+      "job_id": "pr-zero-divisor-hybrid-1",
+      "case_id": "pr-zero-divisor",
+      "arm": "hybrid",
+      "case_sha256": "fb15e954d1ba5638a95ec3c1456c16fedaf108bce4e2837a82f96581f6595c6f",
+      "execution_sha256": "6c04d4d625eed7deb995f7949b2c5f3edf7d7e5896e94500fe00625bc4358956",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "零值/None回归及异常类型正确、合并同根因。备选None抛ValueError仍改变原None返回0语义，需要作为另行契约选择而非恢复原语义。",
+      "attribution": "model_precision",
+      "evidence_basis": [
+        {
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "676edb04aefa25147441158ef7c48dd1b6c825bbac986a137f84ec37b64f5c1d"
+        },
+        {
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "2ab9e87f7325f2203a79bdcc5f5d698607c52566e601b3a3db7556287c656ad3"
+        }
+      ],
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [],
+      "primary_issue_detected": true,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0,
+      "duplicate_finding_count": 0
+    },
+    {
+      "job_id": "ci-config-keyword-1",
+      "case_id": "ci-config",
+      "arm": "keyword",
+      "case_sha256": "d27c8319b0171eafa235c7b5e460bdd8e2682bea66b994c860d881352fdbbe71",
+      "execution_sha256": "ba2ab5322499c279f1961aa133c8b87e6426ea27adb9dc3866384b0d3701c2d2",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "正确定位配置校验和DATABASE_URL不可用，布尔/脱敏检查替代env打印，保留未配置/空值等假设。未捕获终止仅由错误文本推断，应保留退出码缺口。",
+      "attribution": "model_precision",
+      "evidence_basis": [
+        {
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "33f20687568d3ace2eb2a264768b839a555fa4d72be45d5769229e95bfb9796d"
+        }
+      ],
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "ci-config-hybrid-1",
+      "case_id": "ci-config",
+      "arm": "hybrid",
+      "case_sha256": "d27c8319b0171eafa235c7b5e460bdd8e2682bea66b994c860d881352fdbbe71",
+      "execution_sha256": "f5bd8f7681193a1a2f6ec814ebfbf45920dc5643f2dae959b9a87c96269156fa",
+      "verdict": "fail",
+      "core_correct": true,
+      "reason": "阶段和配置假设正确且不输出凭据；建议未配置就跳过必需校验、只对配置错误抛错没有job需求依据，可能掩盖实际必填配置失败。资料缺口宜放unconfirmed而不是独立风险项。",
+      "attribution": "model_advice",
+      "evidence_basis": [
+        {
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "33f20687568d3ace2eb2a264768b839a555fa4d72be45d5769229e95bfb9796d"
+        }
+      ],
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "ci-dependency-keyword-1",
+      "case_id": "ci-dependency",
+      "arm": "keyword",
+      "case_sha256": "f62b1875d0cdca2bf7cbbf0d9878b4b4114d1d223f8283b92e313b8e79832bf5",
+      "execution_sha256": "85d5ab00eac1276c72e69cd745bdc8f6eff0b196fa6f31c8cc8d7617670bb61a",
+      "verdict": "pass",
+      "core_correct": true,
+      "reason": "仅确认pip无匹配分发，平行保留索引/认证/平台假设，不把陌生版本断言不存在。敏感索引与凭据只查脱敏/存在性，先取得真实提交映射。",
+      "attribution": null,
+      "evidence_basis": [
+        {
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "173e84e4e144bcb65930fe3aa037a89e0317b75916b0b545660e369bcadc1727"
+        }
+      ],
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "ci-dependency-hybrid-1",
+      "case_id": "ci-dependency",
+      "arm": "hybrid",
+      "case_sha256": "f62b1875d0cdca2bf7cbbf0d9878b4b4114d1d223f8283b92e313b8e79832bf5",
+      "execution_sha256": "fea3dd1c0ddb679bdcf0020d8550ccc7c16ea7becb9c18a6d89ed2ff710e80fa",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "依赖安装和替代假设准确，避免未知版本与critical过推。应区分已读完整存储制品的两行与上游原始日志不足，不能说已有制品完全未读。",
+      "attribution": "model_precision",
+      "evidence_basis": [
+        {
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 2,
+          "content_sha256": "173e84e4e144bcb65930fe3aa037a89e0317b75916b0b545660e369bcadc1727"
+        }
+      ],
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "ci-null-keyword-1",
+      "case_id": "ci-null",
+      "arm": "keyword",
+      "case_sha256": "7df8029df1d75b0895c0714fd55640467d40234d293e9f5680e4126b40f44ad1",
+      "execution_sha256": "cf653c9372bfe1738c8c728dbaf0575f549ae207bd9d487fd5c64c5d85ba0db0",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "pytest阶段和labels校验假设支持充分，实际输入类型保留未知。无需将测试名当真实入参，报告已要求获取traceback并核对实际输入。",
+      "attribution": "model_precision",
+      "evidence_basis": [
+        {
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 3,
+          "content_sha256": "d3c920e7ac6ab01c76def21390864b44ac3a135f4a7a4e820aa4dec436828c08"
+        }
+      ],
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "ci-null-hybrid-1",
+      "case_id": "ci-null",
+      "arm": "hybrid",
+      "case_sha256": "7df8029df1d75b0895c0714fd55640467d40234d293e9f5680e4126b40f44ad1",
+      "execution_sha256": "486c25ac891c8175ab34a4fef97ce4c325104b07849bd1017cc21aee2e1f9d25",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "根因保持为None归一化/校验或测试契约假设，阶段正确。用例名不证明实际传None，标题应保留假设；日志缺口应归unconfirmed，避免重复风险。",
+      "attribution": "model_precision",
+      "evidence_basis": [
+        {
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 3,
+          "content_sha256": "d3c920e7ac6ab01c76def21390864b44ac3a135f4a7a4e820aa4dec436828c08"
+        }
+      ],
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "ci-lint-keyword-1",
+      "case_id": "ci-lint",
+      "arm": "keyword",
+      "case_sha256": "f898256e3434537e1b2ef37969c1672805a2b7dd8ba5f6a4e775a8d22578f882",
+      "execution_sha256": "0db21e7694c745eab4365913cde28568844d9f721aee816fa660e516b0d26bdf",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "ruff/F401与文件位置正确；无退出码/配置时应把阻断性表述限定为命令语义推断。日志不足不是新增代码风险，宜列未确认。",
+      "attribution": "model_precision",
+      "evidence_basis": [
+        {
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 3,
+          "content_sha256": "53688a164bfdf54a894a510533028df5df7d634dccf74d079544fcf03569982e"
+        }
+      ],
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "ci-lint-hybrid-1",
+      "case_id": "ci-lint",
+      "arm": "hybrid",
+      "case_sha256": "f898256e3434537e1b2ef37969c1672805a2b7dd8ba5f6a4e775a8d22578f882",
+      "execution_sha256": "72db40ad403cf872ee466fb72858702cab04be7202ad4071bdda4195d68ed77d",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "静态检查阶段、未使用导入与合理修复方向正确，保留副作用导入和配置差异。未采集退出码，非零退出为命令行为推断。",
+      "attribution": "model_precision",
+      "evidence_basis": [
+        {
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 3,
+          "content_sha256": "53688a164bfdf54a894a510533028df5df7d634dccf74d079544fcf03569982e"
+        }
+      ],
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "ci-dns-keyword-1",
+      "case_id": "ci-dns",
+      "arm": "keyword",
+      "case_sha256": "d1c3f8461837dfcbae3e672fa7015a8e4357c00b937711a26c698e0a2fa31120",
+      "execution_sha256": "2fd807212f6111996ac7bd6266675b9f1c01de96348436aba0618c9da2e3bec0",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "pip获取依赖时名称解析失败正确，脱敏和存在性检查已改进。具体主机不一定PyPI，也可能是私有索引或代理，正文已有替代假设。",
+      "attribution": "model_precision",
+      "evidence_basis": [
+        {
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 3,
+          "content_sha256": "08744f8a9c849bd2a66f0d0da7bb01911d3c502ff6455e40eeee1e79f3b850f9"
+        }
+      ],
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "ci-dns-hybrid-1",
+      "case_id": "ci-dns",
+      "arm": "hybrid",
+      "case_sha256": "d1c3f8461837dfcbae3e672fa7015a8e4357c00b937711a26c698e0a2fa31120",
+      "execution_sha256": "a21e6af4a9e57587b5f87da32a83ae905ed5b4e35aea2e44c4605e2affac465f",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "正确不把DNS失败断为依赖版本或代码缺陷，保留上游日志/索引/代理缺口。不能仅凭字面package断言被占位，包名真实性仍未知。",
+      "attribution": "model_precision",
+      "evidence_basis": [
+        {
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 3,
+          "content_sha256": "08744f8a9c849bd2a66f0d0da7bb01911d3c502ff6455e40eeee1e79f3b850f9"
+        }
+      ],
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "ci-oom-keyword-1",
+      "case_id": "ci-oom",
+      "arm": "keyword",
+      "case_sha256": "38f13529f60771cb6955b63f3583a7d62f657dbd048dc4b4ab6b81cae174c5bc",
+      "execution_sha256": "53e55345f6da0c0d4b581c0ceabc6755f3d72c6b8bfa022af70bac7c0490cd35",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "构建npm步骤、Killed/137与OOM/超时替代假设正确；资源调整成功不唯一证明原因，报告已要求内核/容器事件。",
+      "attribution": "model_precision",
+      "evidence_basis": [
+        {
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 4,
+          "content_sha256": "e371cb523e5865767c8a90fa896577d118e147100e99c715716a70bc662b6928"
+        }
+      ],
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "ci-oom-hybrid-1",
+      "case_id": "ci-oom",
+      "arm": "hybrid",
+      "case_sha256": "38f13529f60771cb6955b63f3583a7d62f657dbd048dc4b4ab6b81cae174c5bc",
+      "execution_sha256": "447afcace43c5319e7723eac4bf1ed6b3e932c77d314f6b1c5074c59624fcc6a",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "阶段正确，finding/unconfirmed明确OOM未证实。summary的内核OOM措辞应与该不确定性保持一致；证据不足单独列风险及不相关空值提醒增加噪音。",
+      "attribution": "model_precision",
+      "evidence_basis": [
+        {
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 4,
+          "content_sha256": "e371cb523e5865767c8a90fa896577d118e147100e99c715716a70bc662b6928"
+        }
+      ],
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "ci-unknown-keyword-1",
+      "case_id": "ci-unknown",
+      "arm": "keyword",
+      "case_sha256": "c4cce59eb1909850c271602b8a11a59cbb1b429434e6585cb78299f55e44b877",
+      "execution_sha256": "4dc71a86ead731fbb85da651710d5d3a31d5d2e869707e692a8cee539af3db64",
+      "verdict": "pass",
+      "core_correct": true,
+      "reason": "failure_stage明确写未知，正确依retention expired与exit1拒绝具体根因，未触发原null业务schema失败；复现先获取真实提交映射。",
+      "attribution": null,
+      "evidence_basis": [
+        {
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 3,
+          "content_sha256": "dcff659aab20c399ea04e9c5f13ed5d5300fad3b85d593c82b4485d97150cb01"
+        }
+      ],
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": false
+    },
+    {
+      "job_id": "ci-unknown-hybrid-1",
+      "case_id": "ci-unknown",
+      "arm": "hybrid",
+      "case_sha256": "c4cce59eb1909850c271602b8a11a59cbb1b429434e6585cb78299f55e44b877",
+      "execution_sha256": "248494fa8b3b712150a0f106b6987280f56780c1ee8d1e2809e610ae31f74c78",
+      "verdict": "pass",
+      "core_correct": true,
+      "reason": "退出码不当根因，保留未知、日志过期和缺workflow边界；引用原L1-L3且无远端派生ID重跑建议。",
+      "attribution": null,
+      "evidence_basis": [
+        {
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 3,
+          "content_sha256": "dcff659aab20c399ea04e9c5f13ed5d5300fad3b85d593c82b4485d97150cb01"
+        }
+      ],
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": false
+    },
+    {
+      "job_id": "qa-owner-keyword-1",
+      "case_id": "qa-owner",
+      "arm": "keyword",
+      "case_sha256": "68702cc6905c4c35780e416296017791d7a3e347b76ce65a47694564603c8010",
+      "execution_sha256": "43f47ba4987907d9d240f035b2467c778d8c85a7d928d220da8606a3c320b752",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "owner与actor相等的核心约束有doc L1支持；labels资料仅作明确区分，不应成为owner空值契约。没有归属的处理还取决于actor与字段契约，建议不要当正文规定。",
+      "attribution": "model_precision",
+      "evidence_basis": [
+        {
+          "evidence_id": "2edbb83c-9a23-483e-be41-7859191aec82",
+          "source_key": "doc",
+          "start_line": 1,
+          "end_line": 1,
+          "content_sha256": "0ecccb83e5a0e7a0355fea6e28fd8702bf3f9498e5bb36f16dedfd37df22f675",
+          "actually_read": true
+        }
+      ],
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": []
+    },
+    {
+      "job_id": "qa-owner-hybrid-1",
+      "case_id": "qa-owner",
+      "arm": "hybrid",
+      "case_sha256": "68702cc6905c4c35780e416296017791d7a3e347b76ce65a47694564603c8010",
+      "execution_sha256": "6bddaf2fdf08e86d43a2c5269a076d868328c58ca998abe5ab5e14719e617ec9",
+      "verdict": "pass",
+      "core_correct": true,
+      "reason": "准确回答相等过滤，不把实现层、null或管理员例外当作已有文档事实；建议与规则区分。",
+      "attribution": null,
+      "evidence_basis": [
+        {
+          "evidence_id": "2edbb83c-9a23-483e-be41-7859191aec82",
+          "source_key": "doc",
+          "start_line": 1,
+          "end_line": 1,
+          "content_sha256": "0ecccb83e5a0e7a0355fea6e28fd8702bf3f9498e5bb36f16dedfd37df22f675",
+          "actually_read": true
+        }
+      ],
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": []
+    },
+    {
+      "job_id": "qa-null-keyword-1",
+      "case_id": "qa-null",
+      "arm": "keyword",
+      "case_sha256": "276a78eb5831fee220dc24d652a6fab841628cf900e6726016eba28c6e6d5e66",
+      "execution_sha256": "403b982cd6e8860adf40f0e82b00d50aee3b8dd301db58f962dc6612318d3ca7",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "缺省/null为空和非法类型ValueError正确；tuple是非列表且非null，泛化规则已覆盖，unconfirmed称是否允许tuple未知与该规则/验证步骤不一致。",
+      "attribution": "model_precision",
+      "evidence_basis": [
+        {
+          "evidence_id": "76ecc6d9-710e-45c5-8bae-6832e993b84a",
+          "source_key": "doc",
+          "start_line": 1,
+          "end_line": 1,
+          "content_sha256": "ce0fa28dc280611a6cdfef157a5bc19ae9c709704dde820d4470129a5510ec59",
+          "actually_read": true
+        }
+      ],
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": []
+    },
+    {
+      "job_id": "qa-null-hybrid-1",
+      "case_id": "qa-null",
+      "arm": "hybrid",
+      "case_sha256": "276a78eb5831fee220dc24d652a6fab841628cf900e6726016eba28c6e6d5e66",
+      "execution_sha256": "5f72f59fae32941e87d365139eefa965c0d490f941b8fdb5b02ea33fa0e464b9",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "null合法且返回空列表、非列表非null报错有直接引用。可变性和元素校验未知合理，不应凭空暗示额外的null与[]业务差异。",
+      "attribution": "model_precision",
+      "evidence_basis": [
+        {
+          "evidence_id": "76ecc6d9-710e-45c5-8bae-6832e993b84a",
+          "source_key": "doc",
+          "start_line": 1,
+          "end_line": 1,
+          "content_sha256": "ce0fa28dc280611a6cdfef157a5bc19ae9c709704dde820d4470129a5510ec59",
+          "actually_read": true
+        }
+      ],
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": []
+    },
+    {
+      "job_id": "qa-retry-keyword-1",
+      "case_id": "qa-retry",
+      "arm": "keyword",
+      "case_sha256": "6e30fd527233aa9cc122bc87c0593288b91ba4016e1c6d98591b6c4cc56003b3",
+      "execution_sha256": "61df4c635fec35a6c9232c8e8c04e5146ebf0cffe0f78987ca3e4fe40bb9ba54",
+      "verdict": "pass",
+      "core_correct": true,
+      "reason": "一次自动恢复及再次失败needs_attention直接来自doc L1，保留当前代码/计数实现未核对。",
+      "attribution": null,
+      "evidence_basis": [
+        {
+          "evidence_id": "8e6c2eea-eb58-439a-bd55-935c1441f2c0",
+          "source_key": "doc",
+          "start_line": 1,
+          "end_line": 1,
+          "content_sha256": "4edf165fdc49779efa36da2b156c2fbc8c063af8bba0773eb59f391826005bc1",
+          "actually_read": true
+        }
+      ],
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": []
+    },
+    {
+      "job_id": "qa-retry-hybrid-1",
+      "case_id": "qa-retry",
+      "arm": "hybrid",
+      "case_sha256": "6e30fd527233aa9cc122bc87c0593288b91ba4016e1c6d98591b6c4cc56003b3",
+      "execution_sha256": "2c7464cfc643c480f9cb9e62c9fdcbffcc20f78d4e61c08428638c04dd265ca3",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "恢复上限及后续状态正确；“一次重试/两次失败”应限定租约失效恢复路径，不能推广为所有业务错误的重试策略。",
+      "attribution": "model_precision",
+      "evidence_basis": [
+        {
+          "evidence_id": "8e6c2eea-eb58-439a-bd55-935c1441f2c0",
+          "source_key": "doc",
+          "start_line": 1,
+          "end_line": 1,
+          "content_sha256": "4edf165fdc49779efa36da2b156c2fbc8c063af8bba0773eb59f391826005bc1",
+          "actually_read": true
+        }
+      ],
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": []
+    },
+    {
+      "job_id": "qa-citation-keyword-1",
+      "case_id": "qa-citation",
+      "arm": "keyword",
+      "case_sha256": "cd078a04b45f5326025c0c5baa5ebf7756716d1343e725171a849fa548d36b1e",
+      "execution_sha256": "c01523d5cf71618ed4c37f32365aea49e1e6b1ef18f52e1df3ce85cf23cfc94e",
+      "verdict": "pass",
+      "core_correct": true,
+      "reason": "采集提交与行号固定、主分支不改历史、删除后保留引用均有实际引用；派生ID限制正确标记来自任务元数据。",
+      "attribution": null,
+      "evidence_basis": [
+        {
+          "evidence_id": "403b952a-a2bd-420a-bb6f-918753bba144",
+          "source_key": "doc",
+          "start_line": 1,
+          "end_line": 1,
+          "content_sha256": "3f2dc2e14a8ac42f4902c0cd988b60fc7b82f01a57f2bca4662b8ce7be311cec",
+          "actually_read": true
+        }
+      ],
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": []
+    },
+    {
+      "job_id": "qa-citation-hybrid-1",
+      "case_id": "qa-citation",
+      "arm": "hybrid",
+      "case_sha256": "cd078a04b45f5326025c0c5baa5ebf7756716d1343e725171a849fa548d36b1e",
+      "execution_sha256": "4bc225333160a224bf2a4f2e98406f368d76e4d14f33896194d634fef98712c6",
+      "verdict": "pass",
+      "core_correct": true,
+      "reason": "准确区分文档规则与本次派生标识，引用支持版本固定及删除留存，不伪造远端commit。",
+      "attribution": null,
+      "evidence_basis": [
+        {
+          "evidence_id": "403b952a-a2bd-420a-bb6f-918753bba144",
+          "source_key": "doc",
+          "start_line": 1,
+          "end_line": 1,
+          "content_sha256": "3f2dc2e14a8ac42f4902c0cd988b60fc7b82f01a57f2bca4662b8ce7be311cec",
+          "actually_read": true
+        }
+      ],
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": []
+    },
+    {
+      "job_id": "qa-delete-keyword-1",
+      "case_id": "qa-delete",
+      "arm": "keyword",
+      "case_sha256": "d98926bf7cb20b21a037a95df0f72d691d9d2f43ffcc2c360da0bb2df35cf322",
+      "execution_sha256": "b9e95550fd41f73fcc6af378508a14d63fefebb719c1b82bc96ac62b1a7ab875",
+      "verdict": "pass",
+      "core_correct": true,
+      "reason": "区分后续检索排除与历史报告引用保留，不擅自保证正文当前可读或具体删除实现。",
+      "attribution": null,
+      "evidence_basis": [
+        {
+          "evidence_id": "029282de-0032-4dda-ac6c-b93ba516fdf2",
+          "source_key": "doc",
+          "start_line": 1,
+          "end_line": 1,
+          "content_sha256": "96a705f3d553adbf1f5ba5a5584d37b1729e06920323767bb2bca23fb4cdad31",
+          "actually_read": true
+        }
+      ],
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": []
+    },
+    {
+      "job_id": "qa-delete-hybrid-1",
+      "case_id": "qa-delete",
+      "arm": "hybrid",
+      "case_sha256": "d98926bf7cb20b21a037a95df0f72d691d9d2f43ffcc2c360da0bb2df35cf322",
+      "execution_sha256": "d057da20847e939e7b442eb184d766287d880ad4b82cd9f9d9586631dc76653b",
+      "verdict": "pass",
+      "core_correct": true,
+      "reason": "正确保留历史引用，物理清理后的正文可读性仍列未知，未以文档冒充当前实现验证。",
+      "attribution": null,
+      "evidence_basis": [
+        {
+          "evidence_id": "029282de-0032-4dda-ac6c-b93ba516fdf2",
+          "source_key": "doc",
+          "start_line": 1,
+          "end_line": 1,
+          "content_sha256": "96a705f3d553adbf1f5ba5a5584d37b1729e06920323767bb2bca23fb4cdad31",
+          "actually_read": true
+        }
+      ],
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": []
+    },
+    {
+      "job_id": "qa-missing-keyword-1",
+      "case_id": "qa-missing",
+      "arm": "keyword",
+      "case_sha256": "e326b343992ebb582080d1b251dc7460594ecf3d89c340ae06dd319153e5fd0d",
+      "execution_sha256": "dad8ec4c5491f04c08fd50e8b874abb1e3bfa3d07bcb9bf887fc924f4cf4ff15",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "未召回SLA后明确证据不足，不给数值。未召回不能证明整个索引不存在SLA，unconfirmed已正确保留这个范围限制。",
+      "attribution": "model_precision",
+      "evidence_basis": [],
+      "citation_count": 0,
+      "valid_citation_count": 0,
+      "automatic_tags": []
+    },
+    {
+      "job_id": "qa-missing-hybrid-1",
+      "case_id": "qa-missing",
+      "arm": "hybrid",
+      "case_sha256": "e326b343992ebb582080d1b251dc7460594ecf3d89c340ae06dd319153e5fd0d",
+      "execution_sha256": "cfb8060231a4f6929fb7f423f2a4950fcf1a83c00a6e67dac0fa41ba792b783c",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "召回无关资料仍拒绝编造SLA；引用仅支持已读资料内容，不能证明整个索引不存在SLA。回答中已保留未收录/未召回与仓库外来源可能性。",
+      "attribution": "model_precision",
+      "evidence_basis": [],
+      "citation_count": 5,
+      "valid_citation_count": 5,
+      "automatic_tags": []
+    }
+  ]
+}

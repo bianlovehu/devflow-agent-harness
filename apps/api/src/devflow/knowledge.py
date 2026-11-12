@@ -24,6 +24,7 @@ from devflow.models import (
     KnowledgeVersion,
     ResourceSnapshot,
 )
+from devflow.tool_gateway import original_lines
 from devflow.workflows import require_repository
 
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
@@ -322,7 +323,7 @@ def upload_document(
                 path="knowledge/" + filename,
                 version=str(version_id),
                 start_line=1,
-                end_line=len(content.split("\n")),
+                end_line=len(original_lines(content)),
                 retrieved_at=datetime.now(UTC),
             )
             session.add(evidence)

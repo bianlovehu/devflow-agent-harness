@@ -29,6 +29,10 @@ RunFailureCode = Literal[
     "model_network_error",
     "model_format_error",
     "model_configuration_error",
+    "loop_detected",
+    "cost_budget_exceeded",
+    "pricing_not_configured",
+    "budget_unavailable",
 ]
 
 
@@ -62,10 +66,10 @@ class MessageResponse(RecordResponse):
 
 
 class RunBudget(Contract):
-    max_model_calls: int = Field(default=6, ge=1, le=20)
-    max_tool_calls: int = Field(default=12, ge=1, le=60)
-    max_total_tokens: int = Field(default=60000, ge=1000, le=1000000)
-    timeout_seconds: int = Field(default=600, ge=10, le=1800)
+    max_model_calls: int = Field(default=6, ge=1, le=6)
+    max_tool_calls: int = Field(default=12, ge=1, le=12)
+    max_total_tokens: int = Field(default=600000, ge=1000, le=600000)
+    timeout_seconds: int = Field(default=600, ge=10, le=600)
 
 
 class RunCreate(Contract):

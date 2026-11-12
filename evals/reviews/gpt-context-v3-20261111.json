@@ -1,0 +1,188 @@
+{
+  "schema_version": 1,
+  "reviewer": "GPT",
+  "review_mode": "user-authorized semantic review; no claim of independent physical human review",
+  "reviewed_at": "2026-11-11T07:15:50.538559+00:00",
+  "cohort": "data\\baselines\\context-v3-20261111",
+  "status": "complete; 6 reviewed; includes two budget failures, no accepted raw report",
+  "rubric": {
+    "pass": "核心结论、证据和行动建议无实质问题",
+    "pass_with_notes": "核心正确，局部措辞/验证建议仍需限定；不等于无瑕疵",
+    "fail": "漏掉核心问题，或存在实质错误事实/不安全建议",
+    "not_assessable": "无通过运行时校验的最终报告，保留具体执行归因"
+  },
+  "cases": [
+    {
+      "job_id": "ci-lint-budgeted-1",
+      "case_id": "ci-lint",
+      "arm": "budgeted",
+      "case_sha256": "f898256e3434537e1b2ef37969c1672805a2b7dd8ba5f6a4e775a8d22578f882",
+      "execution_sha256": "95a5f1d87b5829fdbda6c78ba64d2dde6634e00876ef1da7a1626add9c36a609",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "ruff/F401阶段根因与L1-L3引用正确，保留退出码/配置未知；调整类型导入须按具体引用方式验证，不能把ignore当通用修复。",
+      "attribution": "model_precision",
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "evidence_basis": [
+        {
+          "evidence_id": "68361e5f-5378-5cb2-b396-dfcfde06ef85",
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 3,
+          "actually_read": true
+        }
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "ci-lint-uncompressed-1",
+      "case_id": "ci-lint",
+      "arm": "uncompressed",
+      "case_sha256": "f898256e3434537e1b2ef37969c1672805a2b7dd8ba5f6a4e775a8d22578f882",
+      "execution_sha256": "e3d06fa3292e80bdbfd8a666152204cdf50cb2337ae9cf760c4d9207fbd7bdfc",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "静态检查与未使用导入正确，不断言后续steps；验证清单中的ruby版本与本输入无关，为建议噪音。",
+      "attribution": "model_precision",
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [
+        "wrong_stage"
+      ],
+      "evidence_basis": [
+        {
+          "evidence_id": "68361e5f-5378-5cb2-b396-dfcfde06ef85",
+          "source_key": "log",
+          "start_line": 1,
+          "end_line": 3,
+          "actually_read": true
+        }
+      ],
+      "stage_correct": true,
+      "root_or_uncertainty_appropriate": true,
+      "stage_proxy_false_failure": true
+    },
+    {
+      "job_id": "pr-owner-removed-budgeted-1",
+      "case_id": "pr-owner-removed",
+      "arm": "budgeted",
+      "case_sha256": "51032714e132824ed1c8f6884e3f9325045ecc9b6b8202edd28b895a2f3dc0a4",
+      "execution_sha256": "aa1bbb027aad481ee0ba61d83fb5d1bd4dc9012724f170157d9e2e755d7a2ef0",
+      "verdict": "not_assessable",
+      "core_correct": null,
+      "reason": "已读到原代码后，模型最终输出前言和Markdown围栏，未满足严格JSON；格式修正所需上下文超过20k估算上限而停止。非漏检或IndexError，不接受未通过校验的raw报告。",
+      "attribution": "model_format_then_context_budget",
+      "citation_count": 0,
+      "valid_citation_count": 0,
+      "automatic_tags": [
+        "execution"
+      ],
+      "evidence_basis": [
+        {
+          "evidence_id": "606afbb6-26e1-5504-bb4a-34f51ed75ac4",
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 2,
+          "actually_read": true
+        },
+        {
+          "evidence_id": "6d774c18-6ee4-5ed6-9e65-2e4e411e7093",
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 2,
+          "actually_read": true
+        }
+      ],
+      "primary_issue_detected": null,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0
+    },
+    {
+      "job_id": "pr-owner-removed-uncompressed-1",
+      "case_id": "pr-owner-removed",
+      "arm": "uncompressed",
+      "case_sha256": "51032714e132824ed1c8f6884e3f9325045ecc9b6b8202edd28b895a2f3dc0a4",
+      "execution_sha256": "71b553a9a8aa7c580a057a0c0f3652d48df478716fb04aa2d65658bf11d5c964",
+      "verdict": "fail",
+      "core_correct": true,
+      "reason": "过滤删除核心正确；无调用链/系统暴露证据却定critical，严重程度过推。两行已包含完整签名，不能在未确认事项中说无法确认签名；空集合行为亦可直接推出。",
+      "attribution": "model_reasoning",
+      "citation_count": 2,
+      "valid_citation_count": 2,
+      "automatic_tags": [],
+      "evidence_basis": [
+        {
+          "evidence_id": "606afbb6-26e1-5504-bb4a-34f51ed75ac4",
+          "source_key": "base",
+          "start_line": 1,
+          "end_line": 2,
+          "actually_read": true
+        },
+        {
+          "evidence_id": "6d774c18-6ee4-5ed6-9e65-2e4e411e7093",
+          "source_key": "head",
+          "start_line": 1,
+          "end_line": 2,
+          "actually_read": true
+        }
+      ],
+      "primary_issue_detected": true,
+      "false_negative_primary": 0,
+      "unsupported_finding_count": 0
+    },
+    {
+      "job_id": "qa-owner-budgeted-1",
+      "case_id": "qa-owner",
+      "arm": "budgeted",
+      "case_sha256": "68702cc6905c4c35780e416296017791d7a3e347b76ce65a47694564603c8010",
+      "execution_sha256": "7a2c3b86a61d6deb0cdf2d0d94c471ccd4145bf296a2a6ebb3285c3f369708c0",
+      "verdict": "not_assessable",
+      "core_correct": null,
+      "reason": "检索已召回owner文档；20k下工具正文仍需裁剪，模型选择再次读取多份证据后下一次请求触及上限。没有最终报告，不计语义通过。",
+      "attribution": "context_budget",
+      "citation_count": 0,
+      "valid_citation_count": 0,
+      "automatic_tags": [
+        "execution"
+      ],
+      "evidence_basis": [
+        {
+          "evidence_id": "cbb5e638-339b-4788-a268-45a689bc0492",
+          "source_key": "doc",
+          "start_line": 1,
+          "end_line": 1,
+          "actually_read": true
+        }
+      ]
+    },
+    {
+      "job_id": "qa-owner-uncompressed-1",
+      "case_id": "qa-owner",
+      "arm": "uncompressed",
+      "case_sha256": "68702cc6905c4c35780e416296017791d7a3e347b76ce65a47694564603c8010",
+      "execution_sha256": "900c7b3bea75e2ca96697f17904398a6de6ee2b0fdf5dc87e7dba8d535e981df",
+      "verdict": "pass_with_notes",
+      "core_correct": true,
+      "reason": "owner=actor、未匹配不得返回有doc L1支持，未把查询实现和例外当文档规则。version_number=1不能证明资料时间较旧，应仅称固定历史约束。",
+      "attribution": "model_precision",
+      "citation_count": 1,
+      "valid_citation_count": 1,
+      "automatic_tags": [],
+      "evidence_basis": [
+        {
+          "evidence_id": "cbb5e638-339b-4788-a268-45a689bc0492",
+          "source_key": "doc",
+          "start_line": 1,
+          "end_line": 1,
+          "actually_read": true
+        }
+      ]
+    }
+  ]
+}

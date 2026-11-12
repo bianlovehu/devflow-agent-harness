@@ -72,45 +72,8 @@ def compress_context(messages, tools, maximum=12000):
         seen.add(content)
     if size() < before:
         stages.append("deduplicate")
-    # 2. 检索结果按原始相关性排序，从低排名向前裁剪，保留来源指针。
-    if size() > maximum:
-        for message in result:
-            if message.get("role") != "tool":
-                continue
-            try:
-                value = json.loads(message["content"])
-            except ValueError:
-                continue
-            data = value.get("data", {})
-            hits = data.get("items", []) if isinstance(data, dict) else []
-            for hit in reversed(hits):
-                if size() <= maximum:
-                    break
-                if "lines" in hit and "version_id" in hit:
-                    hit["source_pointer"] = pointers(hit)
-                    hit.pop("lines")
-                    hit["compressed"] = True
-                    message["content"] = json.dumps(value, ensure_ascii=False)
-                    stages.append("prune_evidence")
-    # 3. 旧工具结果压缩为来源与未解决事项；最近一批结果优先保留。
-    for message in result:
-        if size() <= maximum:
-            break
-        if message.get("role") == "tool":
-            try:
-                value = json.loads(message["content"])
-            except ValueError:
-                value = {}
-            message["content"] = json.dumps(
-                {
-                    "compressed": True,
-                    "sources": pointers(value),
-                    "note": "正文已压缩；可按来源 ID 和原始行号重新读取，原始输入在上下文制品中。",
-                },
-                ensure_ascii=False,
-            )
-            stages.append("compress_tools")
-    # 4. 历史单独封装，当前请求及系统指令不参与摘要。
+    # 2. 先摘要旧历史，避免为保留大段旧对话而清空刚读取的代码正文。
+    # 当前请求及系统指令不参与摘要。
     if size() > maximum:
         for message in result:
             if message.get("role") != "user":
@@ -154,6 +117,44 @@ def compress_context(messages, tools, maximum=12000):
                 {"conversation_summary": summaries, "recent_messages": recent}, ensure_ascii=False
             )
             stages.append("summarize_history")
+    # 3. 检索结果按原始相关性排序，从低排名向前裁剪，保留来源指针。
+    if size() > maximum:
+        for message in result:
+            if message.get("role") != "tool":
+                continue
+            try:
+                value = json.loads(message["content"])
+            except ValueError:
+                continue
+            data = value.get("data", {})
+            hits = data.get("items", []) if isinstance(data, dict) else []
+            for hit in reversed(hits):
+                if size() <= maximum:
+                    break
+                if "lines" in hit and "version_id" in hit:
+                    hit["source_pointer"] = pointers(hit)
+                    hit.pop("lines")
+                    hit["compressed"] = True
+                    message["content"] = json.dumps(value, ensure_ascii=False)
+                    stages.append("prune_evidence")
+    # 4. 旧工具结果压缩为来源与未解决事项；最近一批结果优先保留。
+    for message in result:
+        if size() <= maximum:
+            break
+        if message.get("role") == "tool":
+            try:
+                value = json.loads(message["content"])
+            except ValueError:
+                value = {}
+            message["content"] = json.dumps(
+                {
+                    "compressed": True,
+                    "sources": pointers(value),
+                    "note": "正文已压缩；可按来源 ID 和原始行号重新读取，原始输入在上下文制品中。",
+                },
+                ensure_ascii=False,
+            )
+            stages.append("compress_tools")
     after = size()
     if after > maximum:
         raise DomainError(

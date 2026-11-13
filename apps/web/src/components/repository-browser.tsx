@@ -54,7 +54,8 @@ export function RepositoryList() {
           <Icon name="refresh" />
         </button>
       </div>
-      {runtime.data?.data_source === "github" && (
+      {(runtime.data?.data_source === "github" ||
+        runtime.data?.fixture_storage === "database") && (
         <details className="repository-connect">
           <summary>＋ 添加仓库</summary>
           <GitHubRepositoryForm />

@@ -107,7 +107,7 @@ class MemorySearch(Contract):
 def search(
     data: MemorySearch, session: Database, settings: Configuration, factory: EmbedderFactory
 ):
-    require_repository(session, data.repo_id, settings.data_source)
+    require_repository(session, data.repo_id)
     return {
         "strategy": "semantic",
         "model_key": MODEL_KEY,
@@ -161,7 +161,7 @@ def memories(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ):
-    require_repository(session, repo_id, settings.data_source)
+    require_repository(session, repo_id)
     result = page(
         session,
         select(MemoryRecord)

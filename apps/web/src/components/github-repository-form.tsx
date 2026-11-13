@@ -42,7 +42,12 @@ export function GitHubRepositoryForm() {
       setBusy(false);
     }
   }
-  if (runtime.data?.data_source !== "github") return null;
+  if (
+    !runtime.data ||
+    (runtime.data.data_source !== "github" &&
+      runtime.data.fixture_storage !== "database")
+  )
+    return null;
   return (
     <section
       className="analysis-create github-add"

@@ -433,7 +433,7 @@ def test_github_registration_is_persistent_idempotent_and_separate_from_fixtures
             source.get_pull_request("repo-taskboard", 7)
         assert error.value.code == "not_found" and fake.calls == calls
     fixture_repos = context.client.get("/api/v1/repositories").json()["items"]
-    assert [item["id"] for item in fixture_repos] == ["repo-taskboard"]
+    assert {item["id"] for item in fixture_repos} == {"repo-taskboard", "github-123"}
 
 
 def test_github_refresh_permission_failure_keeps_old_summary_and_fetch_time(context):
@@ -485,3 +485,25 @@ def test_github_http_routes_read_real_shapes_and_return_log_errors(context):
         assert log.headers["X-Request-ID"] == log.json()["detail"]["request_id"]
         refreshed = context.client.post("/api/v1/repositories/github-123/refresh", json={})
         assert refreshed.status_code == 200
+
+
+def test_fixture_remains_usable_in_github_mode(context):
+    from devflow.worker import Worker
+
+    settings = context.settings.model_copy(update={"data_source": "github"})
+    app.dependency_overrides[get_settings] = lambda: settings
+    listing = context.client.get("/api/v1/repositories")
+    assert listing.status_code == 200
+    assert listing.json()["data_source"] == "mixed"
+    assert any(item["id"] == "repo-taskboard" for item in listing.json()["items"])
+    response = context.client.get("/api/v1/repositories/repo-taskboard/pull-requests/102")
+    assert response.status_code == 200
+    assert response.json()["data_source"] == "fixture"
+    body = create_target(context)
+    created = context.client.post("/api/v1/runs", json=body)
+    assert created.status_code == 201, created.text
+    worker = Worker(context.engine, settings, store=context.store)
+    claimed = worker.claim(uuid.UUID(created.json()["id"]))
+    assert claimed is not None
+    assert context.client.get("/api/v1/repositories/repo-taskboard/documents").status_code == 200
+    assert context.client.post("/api/v1/repositories/repo-taskboard/refresh").status_code == 409

@@ -27,9 +27,11 @@ from devflow.security import redact
 from devflow.workflow_contracts import ConversationCreate, MessageCreate, RunCreate
 
 
-def require_repository(session: Session, repo_id: str, source: str) -> RepositoryRecord:
+def require_repository(
+    session: Session, repo_id: str, source: str | None = None
+) -> RepositoryRecord:
     repo = session.get(RepositoryRecord, repo_id)
-    if repo is None or repo.data_source != source:
+    if repo is None or (source is not None and repo.data_source != source):
         raise DomainError(404, "repository_not_found", "仓库未导入或不存在")
     return repo
 
@@ -50,7 +52,7 @@ def require_run(session: Session, run_id: uuid.UUID) -> RunRecord:
 
 def create_conversation(session: Session, data: ConversationCreate, settings: Settings):
     with session.begin():
-        require_repository(session, data.repo_id, settings.data_source)
+        require_repository(session, data.repo_id)
         record = ConversationRecord(repo_id=data.repo_id, title=data.title)
         session.add(record)
         session.flush()
@@ -131,7 +133,7 @@ def create_run(
                 return existing, True
             # Fixture imports take the exclusive form of this transaction lock.
             session.execute(select(func.pg_advisory_xact_lock_shared(48151623)))
-            repo = require_repository(session, data.repo_id, settings.data_source)
+            repo = require_repository(session, data.repo_id)
             conversation = session.scalar(
                 select(ConversationRecord)
                 .where(ConversationRecord.id == data.conversation_id)
@@ -236,6 +238,7 @@ def create_run(
                 evidence = []
             configuration = {
                 "schema_version": 1,
+                "source_routing": "repository",
                 "application_version": __version__,
                 "memory_strategy": settings.memory_recall_strategy,
                 **model_configuration(settings),
@@ -345,7 +348,7 @@ def retry_run(
             )
             if original is None:
                 raise DomainError(404, "run_not_found", "任务不存在")
-            require_repository(session, original.repo_id, settings.data_source)
+            require_repository(session, original.repo_id)
             if original.status not in TERMINAL:
                 raise DomainError(409, "run_not_terminal", "任务结束后才能手动重试")
             evidence = run_evidence(session, original.id)

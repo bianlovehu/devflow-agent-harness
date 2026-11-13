@@ -117,19 +117,67 @@ def fixture_source() -> FixtureDataSource:
     return FixtureDataSource(FixtureDataset.model_validate_json(dataset_path.read_bytes()))
 
 
+class CombinedRepositorySource:
+    """本地单用户仓库目录；每个资源仍按登记来源和所属仓库读取。"""
+
+    mode = "mixed"
+
+    def __init__(self, session, settings):
+        from devflow.github_source import GitHubRepositorySource
+        from devflow.persistent_source import DatabaseRepositorySource
+
+        self.session = session
+        self.sources = {
+            "fixture": DatabaseRepositorySource(session, "fixture"),
+            "github": GitHubRepositorySource(session, settings),
+        }
+
+    def for_repository(self, repo_id):
+        from devflow.models import RepositoryRecord
+
+        record = self.session.get(RepositoryRecord, repo_id)
+        if record is None or record.data_source not in self.sources:
+            raise not_found()
+        return self.sources[record.data_source]
+
+    def list_repositories(self):
+        return sorted(
+            [repo for source in self.sources.values() for repo in source.list_repositories()],
+            key=lambda repo: repo.full_name,
+        )
+
+    def get_repository(self, repo_id):
+        return self.for_repository(repo_id).get_repository(repo_id)
+
+    def collection_metadata(self, repo_id, kind):
+        return self.for_repository(repo_id).collection_metadata(repo_id, kind)
+
+    def list_pull_requests(self, repo_id):
+        return self.for_repository(repo_id).list_pull_requests(repo_id)
+
+    def get_pull_request(self, repo_id, number):
+        return self.for_repository(repo_id).get_pull_request(repo_id, number)
+
+    def list_ci_runs(self, repo_id):
+        return self.for_repository(repo_id).list_ci_runs(repo_id)
+
+    def get_ci_run(self, repo_id, run_id):
+        return self.for_repository(repo_id).get_ci_run(repo_id, run_id)
+
+    def list_documents(self, repo_id):
+        return self.for_repository(repo_id).list_documents(repo_id)
+
+    def get_document(self, repo_id, document_id):
+        return self.for_repository(repo_id).get_document(repo_id, document_id)
+
+
 def get_data_source(
     settings: Annotated[Settings, Depends(get_settings)],
     session: Annotated[Session, Depends(get_session)],
 ) -> RepositoryDataSource:
-    # 按明确配置选择数据源，不在数据库故障时偷偷回退到文件样例。
-    if settings.data_source == "github":
-        from devflow.github_source import GitHubRepositorySource
-
-        return GitHubRepositorySource(session, settings)
-    if settings.fixture_storage == "database":
-        from devflow.persistent_source import DatabaseRepositorySource
-
-        return DatabaseRepositorySource(session, settings.data_source)
+    # 文件样例模式维持只读；数据库目录同时包含样例和已登记的真实仓库。
+    if settings.data_source == "github" or settings.fixture_storage == "database":
+        return CombinedRepositorySource(session, settings)
     try:
         return fixture_source()
     except (OSError, ValidationError) as exc:

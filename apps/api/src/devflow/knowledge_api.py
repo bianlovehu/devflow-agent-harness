@@ -109,7 +109,7 @@ class KnowledgeSearchOutput(Contract):
 
 
 def require_document(session, settings, repo_id, document_id):
-    require_repository(session, repo_id, settings.data_source)
+    require_repository(session, repo_id)
     document = session.get(KnowledgeDocument, document_id)
     if document is None or document.repo_id != repo_id:
         raise DomainError(404, "document_not_found", "此仓库不存在该文档")
@@ -136,7 +136,7 @@ def documents(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ):
-    require_repository(session, repo_id, settings.data_source)
+    require_repository(session, repo_id)
     return page(
         session,
         select(KnowledgeDocument)
@@ -173,7 +173,7 @@ def upload(
 def search(
     data: KnowledgeSearch, session: Database, settings: Configuration, factory: EmbedderFactory
 ):
-    require_repository(session, data.repo_id, settings.data_source)
+    require_repository(session, data.repo_id)
     return search_knowledge(
         session,
         data.repo_id,

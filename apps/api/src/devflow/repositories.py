@@ -18,7 +18,7 @@ from devflow.contracts import (
     RepositoryCreate,
     RuntimeInfo,
 )
-from devflow.data_source import RepositoryDataSource, get_data_source
+from devflow.data_source import CombinedRepositorySource, RepositoryDataSource, get_data_source
 from devflow.database import get_session
 from devflow.errors import DomainError
 from devflow.github_source import GitHubRepositorySource
@@ -72,7 +72,7 @@ def repository(repo_id: str, source: Source):
 @router.get("/repositories/{repo_id}/pull-requests", response_model=Collection[PullRequestSummary])
 def pull_requests(repo_id: str, source: Source):
     return Collection[PullRequestSummary](
-        data_source=source.mode,
+        data_source=source.get_repository(repo_id).data_source,
         items=source.list_pull_requests(repo_id),
         **source.collection_metadata(repo_id, "pull_request"),
     )
@@ -86,7 +86,7 @@ def pull_request(repo_id: str, number: int, source: Source):
 @router.get("/repositories/{repo_id}/ci-runs", response_model=Collection[CIRunSummary])
 def ci_runs(repo_id: str, source: Source):
     return Collection[CIRunSummary](
-        data_source=source.mode,
+        data_source=source.get_repository(repo_id).data_source,
         items=source.list_ci_runs(repo_id),
         **source.collection_metadata(repo_id, "ci_run"),
     )
@@ -100,7 +100,7 @@ def ci_run(repo_id: str, run_id: int, source: Source):
 @router.get("/repositories/{repo_id}/documents", response_model=Collection[DocumentSummary])
 def documents(repo_id: str, source: Source):
     return Collection[DocumentSummary](
-        data_source=source.mode, items=source.list_documents(repo_id)
+        data_source=source.get_repository(repo_id).data_source, items=source.list_documents(repo_id)
     )
 
 
@@ -115,7 +115,7 @@ def add_repository(
     session: Annotated[Session, Depends(get_session)],
     settings: Annotated[Settings, Depends(get_settings)],
 ):
-    if settings.data_source != "github":
+    if settings.data_source != "github" and settings.fixture_storage != "database":
         raise DomainError(409, "github_mode_required", "添加真实仓库需要 GitHub 数据模式")
     # 此 POST 仅登记本地仓库；适配器对 GitHub 的所有请求仍为 GET。
     return GitHubRepositorySource(session, settings).add_repository(data.url)
@@ -123,6 +123,8 @@ def add_repository(
 
 @router.post("/repositories/{repo_id}/refresh", response_model=Repository)
 def refresh_repository(repo_id: str, source: Source):
+    if isinstance(source, CombinedRepositorySource):
+        source = source.for_repository(repo_id)
     if not isinstance(source, GitHubRepositorySource):
         raise DomainError(409, "github_mode_required", "样例数据不需要从 GitHub 刷新")
     return source.refresh(repo_id)
@@ -130,6 +132,8 @@ def refresh_repository(repo_id: str, source: Source):
 
 @router.get("/repositories/{repo_id}/ci-runs/{run_id}/jobs/{job_id}/logs", response_model=JobLog)
 def job_logs(repo_id: str, run_id: int, job_id: int, source: Source):
+    if isinstance(source, CombinedRepositorySource):
+        source = source.for_repository(repo_id)
     if not isinstance(source, GitHubRepositorySource):
         raise DomainError(404, "not_found", "样例 CI 的日志在运行详情中读取")
     return source.get_job_log(repo_id, run_id, job_id)

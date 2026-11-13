@@ -1,6 +1,7 @@
 // 文件用途：设置页面元数据，并挂载共享导航和查询状态。
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { DevTools } from "@/components/dev-tools";
 import { Providers } from "@/components/providers";
 import { WorkspaceShell } from "@/components/workspace-shell";
 import "./globals.css";
@@ -23,6 +24,7 @@ export default function RootLayout({
             <WorkspaceShell>{children}</WorkspaceShell>
           </Suspense>
         </Providers>
+        {process.env.NODE_ENV === "development" && <DevTools />}
       </body>
     </html>
   );

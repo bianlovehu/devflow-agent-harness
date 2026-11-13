@@ -1,0 +1,116 @@
+/* 文件用途：浮动开发入口及中文设置面板的独立样式。 */
+.devflow-dev-tools {
+  --dev-bg: #fff;
+  --dev-fg: #202124;
+  --dev-border: #dedede;
+  --dev-muted: #666;
+}
+.devflow-dev-tools[data-theme="dark"] {
+  --dev-bg: #202124;
+  --dev-fg: #f5f5f5;
+  --dev-border: #555;
+  --dev-muted: #bbb;
+}
+@media (prefers-color-scheme: dark) {
+  .devflow-dev-tools[data-theme="system"] {
+    --dev-bg: #202124;
+    --dev-fg: #f5f5f5;
+    --dev-border: #555;
+    --dev-muted: #bbb;
+  }
+}
+.devflow-dev-orb {
+  position: fixed;
+  z-index: 9998;
+  border-radius: 50%;
+  border: 2px solid #666;
+  background: #202124;
+  color: white;
+  font-size: 22px;
+  font-weight: 500;
+  box-shadow: 0 3px 12px #0003;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+.devflow-dev-orb:active {
+  cursor: grabbing;
+}
+.devflow-dev-orb:focus-visible {
+  outline: 3px solid #388469;
+  outline-offset: 3px;
+}
+.devflow-dev-panel {
+  position: fixed;
+  z-index: 9999;
+  width: min(360px, calc(100vw - 16px));
+  max-height: calc(100dvh - 90px);
+  overflow: auto;
+  background: var(--dev-bg);
+  color: var(--dev-fg);
+  border: 1px solid var(--dev-border);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px #0003;
+  font-size: 14px;
+}
+.devflow-dev-panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--dev-border);
+}
+.devflow-dev-panel header button {
+  font-size: 25px;
+  border: 0;
+  padding: 0 6px;
+}
+.devflow-dev-panel label,
+.devflow-dev-panel section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 18px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--dev-border);
+}
+.devflow-dev-panel section {
+  display: block;
+}
+.devflow-dev-panel strong {
+  font-weight: 600;
+}
+.devflow-dev-panel p,
+.devflow-dev-panel small {
+  display: block;
+  color: var(--dev-muted);
+  margin: 6px 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.devflow-dev-panel select,
+.devflow-dev-panel button {
+  background: var(--dev-bg);
+  color: var(--dev-fg);
+  border: 1px solid var(--dev-border);
+  border-radius: 7px;
+  padding: 6px 9px;
+  cursor: pointer;
+}
+.devflow-dev-panel footer {
+  padding: 14px 18px;
+  color: var(--dev-muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+button.devflow-dev-orb,
+button.devflow-dev-orb:hover {
+  background: #202124;
+  color: #fff;
+}

@@ -88,17 +88,20 @@ def test_runtime_configuration_does_not_expose_secret(client):
     assert "api_key" not in response.text
 
 
-def test_github_mode_never_silently_returns_fixture(client):
+def test_mixed_catalog_never_uses_file_fallback_or_exposes_credentials(client):
     app.dependency_overrides[get_settings] = lambda: Settings(
         _env_file=None, data_source="github", github_token="private-github-test-token"
     )
     with (
         patch("devflow.github_source.GitHubRepositorySource.list_repositories", return_value=[]),
+        patch(
+            "devflow.persistent_source.DatabaseRepositorySource.list_repositories", return_value=[]
+        ),
         patch("devflow.data_source.fixture_source", side_effect=AssertionError("fixture access")),
     ):
         response = client.get("/api/v1/repositories")
         assert response.status_code == 200
-        assert response.json()["data_source"] == "github"
+        assert response.json()["data_source"] == "mixed"
         assert response.json()["items"] == []
     runtime = client.get("/api/v1/runtime")
     assert runtime.json()["repository_adapter_available"] is True

@@ -35,7 +35,7 @@ class RuntimeInfo(Contract):
 
 
 class Collection(Contract, Generic[T]):
-    data_source: DataSource
+    data_source: Literal["fixture", "github", "mixed"]
     items: list[T]
     fetched_at: datetime | None = None
     limited: bool = False

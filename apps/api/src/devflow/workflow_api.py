@@ -108,7 +108,7 @@ def freshness(run_id: UUID, session: Database, settings: Configuration):
     from devflow.memory import run_version
 
     run = require_run(session, run_id)
-    repo = require_repository(session, run.repo_id, settings.data_source)
+    repo = require_repository(session, run.repo_id)
     head = run_version(run.input_version)
     if run.task_type != "pr_review":
         return {
@@ -162,7 +162,7 @@ def conversations(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ):
-    require_repository(session, repo_id, settings.data_source)
+    require_repository(session, repo_id)
     return page(
         session,
         select(ConversationRecord)
@@ -229,7 +229,7 @@ def runs(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ):
-    require_repository(session, repo_id, settings.data_source)
+    require_repository(session, repo_id)
     query = select(RunRecord).where(RunRecord.repo_id == repo_id)
     if conversation_id is not None:
         conversation = require_conversation(session, conversation_id)

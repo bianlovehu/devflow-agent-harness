@@ -39,7 +39,7 @@ class Candidate(BaseModel):
 
 def extract_memory(session, run_id, selection, settings, model=None, ledger=None):
     run = require_run(session, run_id)
-    require_repository(session, run.repo_id, settings.data_source)
+    require_repository(session, run.repo_id)
     report = require_report(run)
     if selection is not None and selection >= len(report.findings):
         raise DomainError(422, "invalid_selection", "报告发现项不存在")
@@ -319,7 +319,7 @@ def require_memory(session, memory_id, repo_id):
 def index_memory(session, memory_id, repo_id, settings, *, embedder_factory=get_embedder):
     # 推理阶段不持有事务；写回时再次比较版本，防止并发编辑/撤销被旧向量覆盖。
     with session.begin():
-        require_repository(session, repo_id, settings.data_source)
+        require_repository(session, repo_id)
         record = require_memory(session, memory_id, repo_id)
         if record.status in {"revoked", "superseded"}:
             raise DomainError(409, "memory_inactive", "已撤销或被替代的记忆不能索引")
@@ -365,7 +365,7 @@ def index_memory(session, memory_id, repo_id, settings, *, embedder_factory=get_
 def revoke_source_memories(session, run_id, settings):
     run = require_run(session, run_id)
     repo_id = run.repo_id
-    require_repository(session, repo_id, settings.data_source)
+    require_repository(session, repo_id)
     repository_lock(session, repo_id)
     records = session.scalars(
         select(MemoryRecord)
@@ -383,7 +383,7 @@ def revoke_source_memories(session, run_id, settings):
 
 def change_memory(session, memory_id, repo_id, action, data, settings):
     with session.begin():
-        require_repository(session, repo_id, settings.data_source)
+        require_repository(session, repo_id)
         repository_lock(session, repo_id)
         record = session.scalar(
             select(MemoryRecord)

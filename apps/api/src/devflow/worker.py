@@ -105,7 +105,8 @@ class Worker:
                 .where(
                     RunRecord.status == "running",
                     RunRecord.lease_expires_at <= func.clock_timestamp(),
-                    RepositoryRecord.data_source == self.settings.data_source,
+                    (RepositoryRecord.data_source == self.settings.data_source)
+                    | (RunRecord.configuration["source_routing"].astext == "repository"),
                 )
                 .with_for_update(of=RunRecord, skip_locked=True)
             ).all()
@@ -159,7 +160,8 @@ class Worker:
                     RunRecord.cancel_requested_at.is_(None),
                     RunRecord.configuration["executor"].astext.in_(["simulation", "agent"]),
                     RunRecord.id == run_id if run_id is not None else True,
-                    RepositoryRecord.data_source == self.settings.data_source,
+                    (RepositoryRecord.data_source == self.settings.data_source)
+                    | (RunRecord.configuration["source_routing"].astext == "repository"),
                 )
                 .order_by(RunRecord.created_at, RunRecord.id)
                 .with_for_update(of=RunRecord, skip_locked=True)
@@ -522,7 +524,7 @@ class Worker:
                 "resources": snapshots,
                 "input_version": input_version,
                 "version_kind": "fixture_snapshot; not a remote Git commit"
-                if self.settings.data_source == "fixture"
+                if source == "fixture"
                 else "git_commit",
             },
             guard=guard,

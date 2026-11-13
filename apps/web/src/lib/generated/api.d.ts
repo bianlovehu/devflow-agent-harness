@@ -1050,7 +1050,7 @@ export interface components {
        * Data Source
        * @enum {string}
        */
-      data_source: "fixture" | "github";
+      data_source: "fixture" | "github" | "mixed";
       /** Fetched At */
       fetched_at?: string | null;
       /** Items */
@@ -1069,7 +1069,7 @@ export interface components {
        * Data Source
        * @enum {string}
        */
-      data_source: "fixture" | "github";
+      data_source: "fixture" | "github" | "mixed";
       /** Fetched At */
       fetched_at?: string | null;
       /** Items */
@@ -1088,7 +1088,7 @@ export interface components {
        * Data Source
        * @enum {string}
        */
-      data_source: "fixture" | "github";
+      data_source: "fixture" | "github" | "mixed";
       /** Fetched At */
       fetched_at?: string | null;
       /** Items */
@@ -1107,7 +1107,7 @@ export interface components {
        * Data Source
        * @enum {string}
        */
-      data_source: "fixture" | "github";
+      data_source: "fixture" | "github" | "mixed";
       /** Fetched At */
       fetched_at?: string | null;
       /** Items */

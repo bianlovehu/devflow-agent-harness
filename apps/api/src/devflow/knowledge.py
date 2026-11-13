@@ -179,7 +179,7 @@ def upload_document(
         raise DomainError(413, "document_size", "单文件最大 5 MiB")
     digest = hashlib.sha256(raw).hexdigest()
     with session.begin():
-        require_repository(session, repo_id, settings.data_source)
+        require_repository(session, repo_id)
         repository_lock(session, repo_id)
         document = session.scalar(
             select(KnowledgeDocument).where(

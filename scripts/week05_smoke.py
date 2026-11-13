@@ -106,6 +106,12 @@ def main():
                     assert not recall_memories(session, run["repo_id"], version)
                 checked(
                     client.post(
+                        f"/api/v1/memories/{candidate['id']}/index?repo_id={run['repo_id']}",
+                        json={},
+                    )
+                )
+                checked(
+                    client.post(
                         f"/api/v1/memories/{candidate['id']}/approve?repo_id={run['repo_id']}",
                         json={},
                     )

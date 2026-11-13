@@ -14,13 +14,14 @@ function queryKeys(path: string[], method: string): string[] | null {
   if (!path.length || path.some((part) => !segment.test(part))) return null;
   const [group, id, child] = path;
   if (group === "memories") {
+    if (method === "POST" && path.length === 2 && id === "search") return [];
     if (method === "GET" && path.length === 1)
       return ["repo_id", "limit", "offset"];
     if (
       method === "POST" &&
       path.length === 3 &&
       uuid.test(id) &&
-      ["edit", "approve", "revoke"].includes(child)
+      ["edit", "approve", "revoke", "index"].includes(child)
     )
       return ["repo_id"];
     return null;
@@ -53,6 +54,14 @@ function queryKeys(path: string[], method: string): string[] | null {
     return null;
   }
   if (method === "POST") {
+    if (
+      group === "runs" &&
+      path.length === 4 &&
+      uuid.test(id) &&
+      child === "memories" &&
+      path[3] === "revoke-source"
+    )
+      return [];
     if (
       path.length === 1 &&
       ["conversations", "runs", "repositories"].includes(group)

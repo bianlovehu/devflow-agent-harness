@@ -50,6 +50,17 @@ def candidate(context, run, index=0):
 
 
 def mutate(context, memory, action, data=None, repo="repo-taskboard"):
+    if action == "approve":
+        indexed = context.client.post(
+            f"/api/v1/memories/{memory['id']}/index?repo_id={repo}", json={}
+        )
+        assert indexed.status_code == 200, indexed.text
+        data = {
+            **(data or {}),
+            "reviewed_conflicts": {
+                c["id"]: c["content_revision"] for c in indexed.json()["conflicts"]
+            },
+        }
     result = context.client.post(
         f"/api/v1/memories/{memory['id']}/{action}?repo_id={repo}", json=data or {}
     )

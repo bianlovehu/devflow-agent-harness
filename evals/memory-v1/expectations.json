@@ -1,0 +1,97 @@
+{
+  "version": "memory-v1",
+  "cases": [
+    {
+      "case_id": "owner-old",
+      "verdicts": {
+        "A": "contradicted",
+        "B": "needs_verification"
+      },
+      "relevant": [
+        "owner"
+      ],
+      "bad": [
+        "bad-owner"
+      ]
+    },
+    {
+      "case_id": "null-conflict",
+      "verdicts": {
+        "A": "contradicted",
+        "B": "supported"
+      },
+      "relevant": [
+        "null"
+      ],
+      "bad": [
+        "bad-null"
+      ]
+    },
+    {
+      "case_id": "cursor-old",
+      "verdicts": {
+        "A": "contradicted",
+        "B": "contradicted"
+      },
+      "relevant": [
+        "cursor"
+      ],
+      "bad": []
+    },
+    {
+      "case_id": "cache-old",
+      "verdicts": {
+        "A": "supported",
+        "B": "contradicted"
+      },
+      "relevant": [
+        "cache"
+      ],
+      "bad": []
+    },
+    {
+      "case_id": "ci-unknown",
+      "verdicts": {
+        "A": "needs_verification",
+        "B": "supported"
+      },
+      "relevant": [
+        "ci"
+      ],
+      "bad": []
+    },
+    {
+      "case_id": "migration-old",
+      "verdicts": {
+        "A": "contradicted",
+        "B": "supported"
+      },
+      "relevant": [
+        "migration"
+      ],
+      "bad": []
+    },
+    {
+      "case_id": "self-contained",
+      "verdicts": {
+        "A": "supported",
+        "B": "contradicted"
+      },
+      "relevant": [],
+      "bad": []
+    },
+    {
+      "case_id": "no-relevant",
+      "verdicts": {
+        "A": "needs_verification",
+        "B": "supported"
+      },
+      "relevant": [],
+      "bad": []
+    }
+  ],
+  "negative_memory_keys": [
+    "bad-owner",
+    "bad-null"
+  ]
+}

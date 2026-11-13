@@ -9,7 +9,17 @@ from sqlalchemy import select
 
 from devflow.budget import BudgetLedger, get_budget_ledger
 from devflow.contracts import Contract
-from devflow.memory import change_memory, extract_memory
+from devflow.embeddings import MODEL_KEY
+from devflow.knowledge_api import EmbedderFactory
+from devflow.memory import (
+    change_memory,
+    extract_memory,
+    index_current,
+    index_memory,
+    memory_conflicts,
+    recall_memories,
+    revoke_source_memories,
+)
 from devflow.models import MemoryRecord
 from devflow.workflow_api import Configuration, Database, Page, page
 from devflow.workflow_contracts import RecordResponse
@@ -32,12 +42,28 @@ class MemoryOutput(RecordResponse):
     replaces_id: UUID | None
     extraction: dict
     created_at: datetime
+    content_revision: int
+    conditions: str
+    index_status: str
+    index_error: str | None
+    embedding_model: str | None
+    embedding_revision: int | None
+    indexed_at: datetime | None
+    conflict_reviews: dict
+    conflicts: list[dict] = Field(default_factory=list)
+    index_current: bool = False
     expired: bool = False
 
     @classmethod
-    def from_record(cls, record):
+    def from_record(cls, record, session=None):
         return cls.model_validate(record).model_copy(
-            update={"expired": record.expires_at <= datetime.now(UTC)}
+            update={
+                "expired": record.expires_at <= datetime.now(UTC),
+                "index_current": index_current(record),
+                "conflicts": memory_conflicts(session, record)
+                if session is not None and record.status == "pending"
+                else [],
+            }
         )
 
 
@@ -46,6 +72,7 @@ class MemoryExtract(Contract):
 
 
 class MemoryEdit(Contract):
+    conditions: str = Field(default="", max_length=1000)
     summary: str = Field(min_length=1, max_length=2000)
     applicable_version: str | None = Field(default=None, pattern=r"^[0-9a-f]{40}$")
     expires_at: datetime | None = None
@@ -67,6 +94,50 @@ class MemoryEdit(Contract):
 
 class MemoryApprove(Contract):
     replaces_id: UUID | None = None
+    reviewed_conflicts: dict[str, int] = Field(default_factory=dict)
+
+
+class MemorySearch(Contract):
+    repo_id: str
+    query: str = Field(min_length=1, max_length=4000)
+    version: str | None = Field(default=None, pattern=r"^[0-9a-f]{40}$")
+
+
+@router.post("/memories/search")
+def search(
+    data: MemorySearch, session: Database, settings: Configuration, factory: EmbedderFactory
+):
+    require_repository(session, data.repo_id, settings.data_source)
+    return {
+        "strategy": "semantic",
+        "model_key": MODEL_KEY,
+        "items": recall_memories(
+            session,
+            data.repo_id,
+            data.version,
+            query=data.query,
+            strategy="semantic",
+            embedder_factory=factory,
+        ),
+        "notice": "最多6条；先审核/仓库/有效期/版本过滤，再混合检索；历史经验仍需当前证据核验",
+    }
+
+
+@router.post("/memories/{memory_id}/index", response_model=MemoryOutput)
+def reindex(
+    memory_id: UUID,
+    repo_id: str,
+    session: Database,
+    settings: Configuration,
+    factory: EmbedderFactory,
+):
+    record = index_memory(session, memory_id, repo_id, settings, embedder_factory=factory)
+    return MemoryOutput.from_record(record, session)
+
+
+@router.post("/runs/{run_id}/memories/revoke-source")
+def revoke_source(run_id: UUID, session: Database, settings: Configuration):
+    return revoke_source_memories(session, run_id, settings)
 
 
 @router.post("/runs/{run_id}/memories", response_model=MemoryOutput, status_code=201)
@@ -78,7 +149,7 @@ def extract(
     ledger: Annotated[BudgetLedger, Depends(get_budget_ledger)],
 ):
     return MemoryOutput.from_record(
-        extract_memory(session, run_id, data.finding_index, settings, ledger=ledger)
+        extract_memory(session, run_id, data.finding_index, settings, ledger=ledger), session
     )
 
 
@@ -99,7 +170,7 @@ def memories(
         limit,
         offset,
     )
-    result["items"] = [MemoryOutput.from_record(m) for m in result["items"]]
+    result["items"] = [MemoryOutput.from_record(m, session) for m in result["items"]]
     return result
 
 
@@ -108,7 +179,7 @@ def edit(
     memory_id: UUID, repo_id: str, data: MemoryEdit, session: Database, settings: Configuration
 ):
     return MemoryOutput.from_record(
-        change_memory(session, memory_id, repo_id, "edit", data, settings)
+        change_memory(session, memory_id, repo_id, "edit", data, settings), session
     )
 
 
@@ -117,7 +188,7 @@ def approve(
     memory_id: UUID, repo_id: str, data: MemoryApprove, session: Database, settings: Configuration
 ):
     return MemoryOutput.from_record(
-        change_memory(session, memory_id, repo_id, "approve", data, settings)
+        change_memory(session, memory_id, repo_id, "approve", data, settings), session
     )
 
 

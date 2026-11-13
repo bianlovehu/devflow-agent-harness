@@ -351,7 +351,15 @@ class Worker:
             ]
             from devflow.memory import recall_memories, run_version
 
-            memories = recall_memories(session, run.repo_id, run_version(run.input_version))
+            memory_strategy = configuration.get("memory_strategy", "recent")
+            memories = recall_memories(
+                session,
+                run.repo_id,
+                run_version(run.input_version),
+                query=question,
+                strategy=memory_strategy,
+                **({"embedder_factory": self.embedder_factory} if self.embedder_factory else {}),
+            )
             recovery_count = run.recovery_count
             repo_id, source = run.repo_id, repo.data_source
             # 采集证据已消耗的时间不能在进入模型循环时被重新分配。
@@ -427,7 +435,16 @@ class Worker:
         def recheck_memories():
             # 恢复与每次发起模型请求前重查审核状态，撤销/过期不会继续随旧消息注入。
             with Session(self.engine) as session:
-                valid = recall_memories(session, repo_id, run_version(input_version))
+                valid = recall_memories(
+                    session,
+                    repo_id,
+                    run_version(input_version),
+                    query=question,
+                    strategy=memory_strategy,
+                    **(
+                        {"embedder_factory": self.embedder_factory} if self.embedder_factory else {}
+                    ),
+                )
             runner.memories = valid
             runner.active_memories = valid
 
@@ -608,6 +625,8 @@ class Worker:
                     1 for call in runner.trace["calls"] if call.get("recovery")
                 ),
                 "recalled_memories": [m["id"] for m in runner.memories],
+                "recalled_memory_details": runner.memories,
+                "memory_strategy": memory_strategy,
                 "unknown_usage_calls": sum(
                     1 for call in runner.trace["calls"] if "usage" not in call
                 ),

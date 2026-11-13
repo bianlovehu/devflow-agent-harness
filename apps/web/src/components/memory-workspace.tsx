@@ -2,12 +2,16 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { fetchData, postData } from "@/lib/api-client";
 import type { components } from "@/lib/generated/api";
 import { useWorkspace } from "@/components/workspace-context";
 import { Icon } from "@/components/icon";
-import type { Page } from "@/lib/workflows";
+import type { Page, Run } from "@/lib/workflows";
 import { QueryState } from "@/components/query-state";
 
 type Memory = components["schemas"]["MemoryOutput"];
@@ -20,6 +24,9 @@ const statuses = {
 
 function MemoryCard({ memory, all }: { memory: Memory; all: Memory[] }) {
   const cache = useQueryClient();
+  const conflicts = memory.conflicts ?? [];
+  const [conditions, setConditions] = useState(memory.conditions);
+  const [reviewed, setReviewed] = useState(false);
   const [summary, setSummary] = useState(memory.summary);
   const [version, setVersion] = useState(memory.applicable_version ?? "");
   const [specific, setSpecific] = useState(Boolean(memory.applicable_version));
@@ -30,26 +37,40 @@ function MemoryCard({ memory, all }: { memory: Memory; all: Memory[] }) {
   const editable =
     !memory.expired && ["pending", "approved"].includes(memory.status);
   const dirty =
+    conditions !== memory.conditions ||
     summary !== memory.summary ||
     version !== (memory.applicable_version ?? "") ||
     expires !== memory.expires_at.slice(0, 10);
   const valid =
     summary.trim() && expires && (!specific || /^[0-9a-f]{40}$/.test(version));
-  async function act(action: "edit" | "approve" | "revoke") {
+  async function act(
+    action: "edit" | "approve" | "revoke" | "index" | "revoke-source",
+  ) {
     if (busy) return;
     setBusy(true);
     setError(null);
     try {
       await postData<Memory>(
-        `memories/${memory.id}/${action}?repo_id=${encodeURIComponent(memory.repo_id)}`,
+        action === "revoke-source"
+          ? `runs/${memory.source_run_id}/memories/revoke-source`
+          : `memories/${memory.id}/${action}?repo_id=${encodeURIComponent(memory.repo_id)}`,
         action === "edit"
           ? {
               summary,
+              conditions,
               applicable_version: version || null,
               expires_at: `${expires}T23:59:59Z`,
             }
           : action === "approve"
-            ? { replaces_id: replacement || null }
+            ? {
+                replaces_id: replacement || null,
+                reviewed_conflicts: Object.fromEntries(
+                  conflicts.map((c) => [
+                    String(c.id),
+                    Number(c.content_revision),
+                  ]),
+                ),
+              }
             : {},
       );
       await cache.invalidateQueries({ queryKey: ["memories", memory.repo_id] });
@@ -72,6 +93,18 @@ function MemoryCard({ memory, all }: { memory: Memory; all: Memory[] }) {
           ? "离线演示候选经验"
           : "模型提出的候选经验"}
       </p>
+      <p className="column-intro">
+        内容版本 {memory.content_revision} · 索引
+        {memory.index_current
+          ? "已就绪"
+          : memory.index_status === "failed"
+            ? "失败"
+            : "待更新"}
+        {memory.embedding_model && <> · {memory.embedding_model}</>}
+        {memory.index_error && <> · {memory.index_error}</>}
+        <br />
+        编辑后需重新索引并审核。历史经验须核对当前代码事实。
+      </p>
       {editable ? (
         <>
           <label>
@@ -81,6 +114,15 @@ function MemoryCard({ memory, all }: { memory: Memory; all: Memory[] }) {
               disabled={busy}
               maxLength={2000}
               onChange={(e) => setSummary(e.target.value)}
+            />
+          </label>
+          <label>
+            适用条件
+            <textarea
+              value={conditions}
+              disabled={busy}
+              maxLength={1000}
+              onChange={(e) => setConditions(e.target.value)}
             />
           </label>
           <div className="memory-field-row">
@@ -125,6 +167,9 @@ function MemoryCard({ memory, all }: { memory: Memory; all: Memory[] }) {
         <>
           <h3>经验内容</h3>
           <p className="memory-summary">{memory.summary}</p>
+          <p>
+            适用条件：{memory.conditions || "同仓库相似问题，须核对当前证据"}
+          </p>
           <p className="column-intro">
             适用版本：{memory.applicable_version ?? "本仓库通用"}
             <br />
@@ -147,6 +192,34 @@ function MemoryCard({ memory, all }: { memory: Memory; all: Memory[] }) {
         <summary>来源引用 · {memory.sources.length} 条</summary>
         <pre>{JSON.stringify(memory.sources, null, 2)}</pre>
       </details>
+      {conflicts.length > 0 && (
+        <section aria-label="潜在冲突审核">
+          <h3>相关旧经验 · 逐条检查差异</h3>
+          <p>
+            相似内容可能同义或冲突。确认后可并存，或明确选择替代一条旧经验。
+          </p>
+          {conflicts.map((c) => (
+            <details key={String(c.id)} open>
+              <summary>{String(c.summary)}</summary>
+              <p>
+                适用条件：{String(c.conditions || "同仓库相似问题")} · 版本：
+                {String(c.applicable_version || "仓库通用")}
+              </p>
+              <Link href={`/runs/${c.source_run_id}`}>查看旧经验来源</Link>
+              <pre>{String(c.diff)}</pre>
+            </details>
+          ))}
+          <label>
+            <input
+              type="checkbox"
+              checked={reviewed}
+              disabled={busy}
+              onChange={(e) => setReviewed(e.target.checked)}
+            />
+            已核对全部差异及适用范围，确认并存或按下方选择替代
+          </label>
+        </section>
+      )}
       {memory.status === "pending" && !memory.expired && (
         <label>
           批准时替代旧经验（可选）
@@ -171,6 +244,14 @@ function MemoryCard({ memory, all }: { memory: Memory; all: Memory[] }) {
       )}
       <div className="memory-detail-actions">
         {editable && (
+          <button disabled={busy || dirty} onClick={() => void act("index")}>
+            {busy ? "处理中…" : "重新索引"}
+          </button>
+        )}
+        <button disabled={busy} onClick={() => void act("revoke-source")}>
+          撤销该报告全部经验
+        </button>
+        {editable && (
           <button
             disabled={busy || !dirty || !valid}
             onClick={() => void act("edit")}
@@ -186,7 +267,13 @@ function MemoryCard({ memory, all }: { memory: Memory; all: Memory[] }) {
         {memory.status === "pending" && !memory.expired && (
           <button
             className="primary-button"
-            disabled={busy || dirty || !valid}
+            disabled={
+              busy ||
+              dirty ||
+              !valid ||
+              !memory.index_current ||
+              (conflicts.length > 0 && !reviewed)
+            }
             onClick={() => void act("approve")}
           >
             批准召回
@@ -251,6 +338,95 @@ export function ExtractMemory({
   );
 }
 
+type MemoryHit = {
+  id: string;
+  summary: string;
+  source_run_id: string;
+  sources: Record<string, unknown>[];
+  conditions: string;
+  applicable_version: string | null;
+  match_reason: string;
+};
+function SemanticSearch({ repoId }: { repoId: string }) {
+  const [query, setQuery] = useState("");
+  const [version, setVersion] = useState("");
+  const [submitted, setSubmitted] = useState<{
+    query: string;
+    version: string;
+  } | null>(null);
+  const found = useQuery({
+    queryKey: ["memories", repoId, "search", submitted],
+    enabled: Boolean(submitted),
+    queryFn: () =>
+      postData<{ items: MemoryHit[] }>("memories/search", {
+        repo_id: repoId,
+        query: submitted!.query,
+        version: submitted!.version || null,
+      }),
+  });
+  return (
+    <section className="memory-detail" aria-label="按问题召回经验">
+      <h2>按问题召回经验</h2>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          setSubmitted({ query, version });
+        }}
+      >
+        <label>
+          当前问题
+          <input
+            value={query}
+            required
+            maxLength={4000}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
+        <label>
+          当前提交（留空只查仓库通用经验）
+          <input
+            value={version}
+            pattern="[0-9a-f]{40}"
+            placeholder="完整40位 SHA"
+            onChange={(e) => setVersion(e.target.value)}
+          />
+        </label>
+        <button disabled={!query.trim() || found.isFetching}>
+          检索相关经验（最多6条）
+        </button>
+      </form>
+      {submitted && (
+        <QueryState
+          pending={found.isPending}
+          error={found.error}
+          retry={() => void found.refetch()}
+        />
+      )}
+      {found.data?.items.map((hit) => (
+        <article key={hit.id}>
+          <h3>{hit.summary}</h3>
+          <p>{hit.match_reason}</p>
+          <p>
+            适用条件：{hit.conditions} · 版本：
+            {hit.applicable_version || "仓库通用"}
+          </p>
+          <Link href={`/runs/${hit.source_run_id}`}>来源报告 ↗</Link>
+          <details>
+            <summary>来源引用</summary>
+            <pre>{JSON.stringify(hit.sources, null, 2)}</pre>
+          </details>
+        </article>
+      ))}
+      {found.isSuccess && !found.data.items.length && (
+        <p>没有足够相关且有效的经验，本次不注入记忆。</p>
+      )}
+      <p>
+        仅检索已批准、未过期且仓库及版本匹配的当前索引。记忆不能替代当前代码事实。
+      </p>
+    </section>
+  );
+}
+
 function RepositoryMemories({ repoId }: { repoId: string }) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
@@ -284,6 +460,7 @@ function RepositoryMemories({ repoId }: { repoId: string }) {
   ];
   return (
     <>
+      <SemanticSearch repoId={repoId} key={repoId} />
       <div className="memory-filter-tabs" aria-label="经验状态筛选">
         {filters.map(([key, label]) => (
           <button
@@ -363,7 +540,7 @@ function RepositoryMemories({ repoId }: { repoId: string }) {
         </aside>
         {active ? (
           <MemoryCard
-            key={`${active.id}:${active.status}:${active.expires_at}:${active.applicable_version}:${active.summary}`}
+            key={`${active.id}:${active.status}:${active.content_revision}:${active.index_status}:${active.expires_at}:${JSON.stringify(active.conflicts)}`}
             memory={active}
             all={items}
           />
@@ -411,5 +588,33 @@ export function MemoryWorkspace({ repoId: initialRepo }: { repoId?: string }) {
         )
       )}
     </section>
+  );
+}
+
+export function RecalledMemories({ run }: { run: Run }) {
+  const hits = Array.isArray(run.result?.recalled_memory_details)
+    ? (run.result.recalled_memory_details as MemoryHit[])
+    : [];
+  return (
+    <details className="memory-sources">
+      <summary>历史经验命中说明 · {hits.length} 条</summary>
+      <p>
+        策略：{String(run.result?.memory_strategy ?? "旧运行未记录")}
+        。这里列出最后一次召回；各次实际输入见下方上下文。历史经验不能替代当前代码事实。
+      </p>
+      {hits.map((hit) => (
+        <article key={hit.id}>
+          <h3>{hit.summary}</h3>
+          <p>{hit.match_reason}</p>
+          <p>
+            适用条件：{hit.conditions} · 版本：
+            {hit.applicable_version || "仓库通用"}
+          </p>
+          <Link href={`/runs/${hit.source_run_id}`}>查看来源报告 ↗</Link>
+          <pre>{JSON.stringify(hit.sources, null, 2)}</pre>
+        </article>
+      ))}
+      {!hits.length && <p>最后一次召回没有有效经验，或旧运行未保存明细。</p>}
+    </details>
   );
 }

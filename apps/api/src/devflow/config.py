@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     deepseek_api_key: SecretStr = SecretStr("")
     deepseek_model: str = "deepseek-flash"
     model_provider: Literal["fake", "deepseek", "aliyun"] = "fake"
+    memory_recall_strategy: Literal["none", "recent", "semantic"] = "recent"
     analysis_executor: Literal["simulation", "agent"] = "agent"
     model_timeout_seconds: int = Field(default=90, ge=5, le=180)
     model_max_output_tokens: int = Field(default=20000, ge=256, le=20000)

@@ -1,0 +1,280 @@
+{
+  "version": "memory-v1",
+  "memories": [
+    {
+      "key": "owner",
+      "summary": "任务列表需要按 owner_id 隔离所有者；历史上可选所有者过滤导致跨用户数据泄漏。",
+      "conditions": "适用于按用户隔离的任务列表；当前产品权限规则须核实"
+    },
+    {
+      "key": "null",
+      "summary": "标签规范化前应处理 None；对空标签直接调用 strip 会触发 AttributeError。",
+      "conditions": "仅适用于标签允许为空的输入接口"
+    },
+    {
+      "key": "cursor",
+      "summary": "游标分页按 created_at 与 id 双字段稳定排序，避免同一时间戳的数据重复或遗漏。",
+      "conditions": "适用于时间戳可能相同的游标分页"
+    },
+    {
+      "key": "cache",
+      "summary": "数据库事务提交成功后再失效缓存；提交前更新缓存可能让回滚留下不一致。",
+      "conditions": "适用于数据库写入与共享缓存同步"
+    },
+    {
+      "key": "ci",
+      "summary": "CI 安装依赖失败先核对 lockfile、Python版本和实际报错，不应无依据归咎网络。",
+      "conditions": "依赖安装失败；只有日志可证明本次根因"
+    },
+    {
+      "key": "migration",
+      "summary": "数据库迁移删除列可能损失旧数据；downgrade 新增同名列并不能恢复已删除内容。",
+      "conditions": "涉及破坏性数据库迁移和回滚"
+    },
+    {
+      "key": "background-01",
+      "summary": "登录会话 cookie 使用 HttpOnly 保护浏览器脚本读取",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-02",
+      "summary": "页面图标缺失应检查静态资源路径",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-03",
+      "summary": "日志轮转需要限制文件大小",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-04",
+      "summary": "邮件模板要对 HTML 特殊字符转义",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-05",
+      "summary": "上传文件限制大小并验证真实媒体类型",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-06",
+      "summary": "容器健康检查使用轻量探针",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-07",
+      "summary": "时间展示遵循用户时区",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-08",
+      "summary": "数据库连接池需设置等待超时",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-09",
+      "summary": "命令行帮助应解释必填参数",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-10",
+      "summary": "文档标题用短语保持层级",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-11",
+      "summary": "表单按钮请求期间显示加载状态",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-12",
+      "summary": "PDF 导出应嵌入中文字体",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-13",
+      "summary": "指标标签不要使用高基数字段",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-14",
+      "summary": "定时任务失败需要记录重试次数",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-15",
+      "summary": "图片缩略图保留原始宽高比",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-16",
+      "summary": "搜索框输入防抖减少查询次数",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-17",
+      "summary": "数据导出记录操作者与导出时间",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-18",
+      "summary": "长列表可用虚拟滚动减少渲染量",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-19",
+      "summary": "前端导航链接保持键盘可访问性",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-20",
+      "summary": "Webhook 先校验签名再处理消息",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-21",
+      "summary": "服务部署先验证存活探针",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-22",
+      "summary": "使用语义化按钮提高无障碍体验",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-23",
+      "summary": "翻译文案避免拼接半句",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "background-24",
+      "summary": "图表颜色要考虑色觉差异",
+      "conditions": "仅对应功能模块；不得扩展为其他模块结论"
+    },
+    {
+      "key": "bad-owner",
+      "summary": "任务列表无需 owner_id 所有者隔离；只要用户已经登录就可以返回所有人的任务。",
+      "conditions": "适用于已经登录的用户访问任务列表"
+    },
+    {
+      "key": "bad-null",
+      "summary": "标签允许 None 时也能直接调用 strip，Python 会自动把 None 变为空字符串。",
+      "conditions": "适用于 Python 标签规范化函数接收空值"
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "owner-old",
+      "repo_id": "repo-taskboard",
+      "version": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "question": "检查不同账号读取待办事项时的数据边界。",
+      "facts": {
+        "F1": "def list_tasks(owner_id=None):\n    rows = db.all_tasks()\n    if owner_id is not None: rows = [r for r in rows if r.owner_id == owner_id]\n    return rows",
+        "F2": "本次材料未提供调用方与权限规则。"
+      },
+      "claims": {
+        "A": "省略 owner_id 时此函数仍过滤任务所有者。",
+        "B": "仅凭此函数就能证明未授权请求在生产环境可读取其他人的数据。"
+      }
+    },
+    {
+      "case_id": "null-conflict",
+      "repo_id": "repo-taskboard",
+      "version": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "question": "标签清理遇到缺失值会发生什么？",
+      "facts": {
+        "F1": "def normalize_tag(tag):\n    return tag.strip().lower()",
+        "F2": "调用输入 tag=None；运行时 Python 3.11。"
+      },
+      "claims": {
+        "A": "输入 None 时会自动转换为空字符串。",
+        "B": "输入 None 会抛出 AttributeError。"
+      }
+    },
+    {
+      "case_id": "cursor-old",
+      "repo_id": "repo-taskboard",
+      "version": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "question": "同一时刻创建的任务翻页会遗漏吗？",
+      "facts": {
+        "F1": "SELECT * FROM tasks WHERE created_at > :cursor ORDER BY created_at LIMIT 10",
+        "F2": "现有20条任务 created_at 完全相同。"
+      },
+      "claims": {
+        "A": "第一页返回10条后以最后一条 created_at 作为 cursor，第二页能取回剩余10条。",
+        "B": "当前SQL包含 id 作为排序和游标的唯一决胜字段。"
+      }
+    },
+    {
+      "case_id": "cache-old",
+      "repo_id": "repo-taskboard",
+      "version": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "question": "写事务失败时，缓存值是否可靠？",
+      "facts": {
+        "F1": "cache.set(key, new_value)\ntry:\n    db.commit()\nexcept Exception:\n    db.rollback()\n    raise",
+        "F2": "缓存为外部服务，db.rollback 不会修改它。"
+      },
+      "claims": {
+        "A": "db.commit 抛错后缓存仍可能保留未提交的新值。",
+        "B": "db.rollback 会同时恢复外部缓存。"
+      }
+    },
+    {
+      "case_id": "ci-unknown",
+      "repo_id": "repo-taskboard",
+      "version": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "question": "持续集成安装失败是否应该直接换镜像？",
+      "facts": {
+        "F1": "日志最后一行：pip install -r requirements.txt exited with code 1",
+        "F2": "缺少前面的错误日志和锁文件。"
+      },
+      "claims": {
+        "A": "现有日志足以证明失败根因是镜像站断网。",
+        "B": "需要补充安装错误日志与依赖锁定版本才能进一步定位。"
+      }
+    },
+    {
+      "case_id": "migration-old",
+      "repo_id": "repo-taskboard",
+      "version": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "question": "数据库回滚能恢复历史记录吗？",
+      "facts": {
+        "F1": "upgrade: ALTER TABLE tasks DROP COLUMN notes;",
+        "F2": "downgrade: ALTER TABLE tasks ADD COLUMN notes TEXT;",
+        "F3": "未提供备份。"
+      },
+      "claims": {
+        "A": "downgrade 可自动恢复 notes 里被删除的历史文本。",
+        "B": "存在永久丢失 notes 历史内容的风险。"
+      }
+    },
+    {
+      "case_id": "self-contained",
+      "repo_id": "repo-taskboard",
+      "version": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "question": "只核对下面计算函数的输出。",
+      "facts": {
+        "F1": "def add(a, b):\n    return a + b",
+        "F2": "输入 a=2, b=3。"
+      },
+      "claims": {
+        "A": "输出值为5。",
+        "B": "输出值为6。"
+      }
+    },
+    {
+      "case_id": "no-relevant",
+      "repo_id": "repo-taskboard",
+      "version": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "question": "查询岩层的年代是否足够确定？",
+      "facts": {
+        "F1": "样本来自未注明地点的地层。",
+        "F2": "未提供同位素测年结果或地层剖面。"
+      },
+      "claims": {
+        "A": "可以确定岩层距今恰好2亿年。",
+        "B": "需要补充测年证据。"
+      }
+    }
+  ]
+}

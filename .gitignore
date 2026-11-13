@@ -31,3 +31,5 @@ Thumbs.db
 /evals/freezes/
 /evals/reviews/
 /evals/regressions/report-review-*.json
+# 各评测集的生成运行记录仅保留在本地
+/evals/**/runs/

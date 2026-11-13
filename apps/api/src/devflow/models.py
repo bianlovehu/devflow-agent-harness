@@ -327,6 +327,18 @@ class MemoryRecord(Base):
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     replaces_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("memories.id"))
     extraction: Mapped[dict] = mapped_column(JSONB)
+    content_revision: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    conditions: Mapped[str] = mapped_column(Text, default="", server_default="")
+    index_status: Mapped[str] = mapped_column(
+        String(16), default="pending", server_default="pending"
+    )
+    index_error: Mapped[str | None] = mapped_column(String(80))
+    embedding: Mapped[list | None] = mapped_column(Vector(384))
+    embedding_model: Mapped[str | None] = mapped_column(Text)
+    embedding_revision: Mapped[int | None] = mapped_column(Integer)
+    embedding_sha256: Mapped[str | None] = mapped_column(String(64))
+    indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    conflict_reviews: Mapped[dict] = mapped_column(JSONB, default=dict, server_default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

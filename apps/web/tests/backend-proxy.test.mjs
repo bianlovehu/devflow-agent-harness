@@ -396,3 +396,41 @@ test("取消和重试仅允许 POST，重试幂等键保持原值", async () => 
     assert.equal(result.status, 200);
   }
 });
+
+test("记忆检索、重新索引与来源撤销受白名单和来源校验约束", async () => {
+  for (const path of [
+    "memories/search",
+    `memories/${id}/index?repo_id=repo-taskboard`,
+    `runs/${id}/memories/revoke-source`,
+  ]) {
+    const parts = path.split("?")[0].split("/");
+    assert.equal(
+      (
+        await forwardBackend(post(path), parts, async () =>
+          Response.json({ ok: true }),
+        )
+      ).status,
+      200,
+    );
+    assert.equal(
+      (
+        await forwardBackend(
+          post(path, "{}", { Origin: "https://evil.example" }),
+          parts,
+          never,
+        )
+      ).status,
+      403,
+    );
+  }
+  assert.equal(
+    (
+      await forwardBackend(
+        post("memories/search/extra"),
+        ["memories", "search", "extra"],
+        never,
+      )
+    ).status,
+    404,
+  );
+});

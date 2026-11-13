@@ -257,6 +257,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/memories/search": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Search */
+    post: operations["search_api_v1_memories_search_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/memories/{memory_id}/approve": {
     parameters: {
       query?: never;
@@ -285,6 +302,23 @@ export interface paths {
     put?: never;
     /** Edit */
     post: operations["edit_api_v1_memories__memory_id__edit_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/memories/{memory_id}/index": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Reindex */
+    post: operations["reindex_api_v1_memories__memory_id__index_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -644,6 +678,23 @@ export interface paths {
     put?: never;
     /** Extract */
     post: operations["extract_api_v1_runs__run_id__memories_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/runs/{run_id}/memories/revoke-source": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Revoke Source */
+    post: operations["revoke_source_api_v1_runs__run_id__memories_revoke_source_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1581,11 +1632,20 @@ export interface components {
     MemoryApprove: {
       /** Replaces Id */
       replaces_id?: string | null;
+      /** Reviewed Conflicts */
+      reviewed_conflicts?: {
+        [key: string]: number;
+      };
     };
     /** MemoryEdit */
     MemoryEdit: {
       /** Applicable Version */
       applicable_version?: string | null;
+      /**
+       * Conditions
+       * @default
+       */
+      conditions: string;
       /** Expires At */
       expires_at?: string | null;
       /** Summary */
@@ -1602,11 +1662,27 @@ export interface components {
       applicable_version: string | null;
       /** Approved At */
       approved_at: string | null;
+      /** Conditions */
+      conditions: string;
+      /** Conflict Reviews */
+      conflict_reviews: {
+        [key: string]: unknown;
+      };
+      /** Conflicts */
+      conflicts?: {
+        [key: string]: unknown;
+      }[];
+      /** Content Revision */
+      content_revision: number;
       /**
        * Created At
        * Format: date-time
        */
       created_at: string;
+      /** Embedding Model */
+      embedding_model: string | null;
+      /** Embedding Revision */
+      embedding_revision: number | null;
       /**
        * Expired
        * @default false
@@ -1626,6 +1702,17 @@ export interface components {
        * Format: uuid
        */
       id: string;
+      /**
+       * Index Current
+       * @default false
+       */
+      index_current: boolean;
+      /** Index Error */
+      index_error: string | null;
+      /** Index Status */
+      index_status: string;
+      /** Indexed At */
+      indexed_at: string | null;
       /** Replaces Id */
       replaces_id: string | null;
       /** Repo Id */
@@ -1648,6 +1735,15 @@ export interface components {
       status: "pending" | "approved" | "revoked" | "superseded";
       /** Summary */
       summary: string;
+    };
+    /** MemorySearch */
+    MemorySearch: {
+      /** Query */
+      query: string;
+      /** Repo Id */
+      repo_id: string;
+      /** Version */
+      version?: string | null;
     };
     /** MessageCreate */
     MessageCreate: {
@@ -2787,6 +2883,39 @@ export interface operations {
       };
     };
   };
+  search_api_v1_memories_search_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MemorySearch"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   approve_api_v1_memories__memory_id__approve_post: {
     parameters: {
       query: {
@@ -2840,6 +2969,39 @@ export interface operations {
         "application/json": components["schemas"]["MemoryEdit"];
       };
     };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MemoryOutput"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  reindex_api_v1_memories__memory_id__index_post: {
+    parameters: {
+      query: {
+        repo_id: string;
+      };
+      header?: never;
+      path: {
+        memory_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
     responses: {
       /** @description Successful Response */
       200: {
@@ -3575,6 +3737,37 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["MemoryOutput"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  revoke_source_api_v1_runs__run_id__memories_revoke_source_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
         };
       };
       /** @description Validation Error */

@@ -237,6 +237,7 @@ def create_run(
             configuration = {
                 "schema_version": 1,
                 "application_version": __version__,
+                "memory_strategy": settings.memory_recall_strategy,
                 **model_configuration(settings),
                 "budget": data.budget.model_dump(),
             }

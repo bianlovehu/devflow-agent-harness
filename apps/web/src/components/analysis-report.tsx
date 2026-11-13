@@ -12,7 +12,7 @@ import {
 import type { components } from "@/lib/generated/api";
 import type { ArtifactContent, Evidence, Page, Run } from "@/lib/workflows";
 import { QueryState } from "@/components/query-state";
-import { ExtractMemory } from "@/components/memory-workspace";
+import { ExtractMemory, RecalledMemories } from "@/components/memory-workspace";
 import { ContextHistory } from "@/components/context-history";
 import { ReportReview } from "@/components/report-review";
 
@@ -486,6 +486,7 @@ export function AnalysisReport({ run }: { run: Run }) {
             <summary>模型用量</summary>
             <pre>{JSON.stringify(run.result?.usage, null, 2)}</pre>
           </details>
+          <RecalledMemories run={run} />
           <ContextHistory runId={run.id} />
         </>
       )}

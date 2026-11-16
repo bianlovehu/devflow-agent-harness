@@ -73,6 +73,9 @@ def create(api):
             }
         )
     memory = request(api, f"/api/v1/runs/{runs[0]['id']}/memories", {"finding_index": 0})
+    memory = request(api, f"/api/v1/memories/{memory['id']}/index?repo_id=repo-taskboard", {})
+    if not memory["index_current"]:
+        raise RuntimeError(f"记忆索引未就绪：{memory.get('index_error') or memory['index_status']}")
     memory = request(api, f"/api/v1/memories/{memory['id']}/approve?repo_id=repo-taskboard", {})
     content = "# 发布验收文档\n发布验收标签 release-proof：文档、报告与记忆必须在恢复后保留。\n"
     document = request(

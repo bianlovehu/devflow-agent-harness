@@ -31,6 +31,7 @@ class RuntimeInfo(Contract):
     task_execution_available: bool
     repository_adapter_available: bool
     github_configured: bool = False
+    code_search_available: bool = False
     model: ModelInfo
 
 

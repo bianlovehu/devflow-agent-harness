@@ -49,10 +49,29 @@ class SearchArgs(ToolArgs):
     query: str = Field(min_length=1, max_length=500)
 
 
+class CodeTreeArgs(ToolArgs):
+    commit: str = Field(pattern=r"^[0-9a-f]{40}$")
+    path: str = Field(default="", max_length=480)
+    offset: int = Field(default=0, ge=0, le=20000)
+    limit: int = Field(default=20, ge=1, le=20)
+
+
+class CodeSearchArgs(ToolArgs):
+    commit: str = Field(pattern=r"^[0-9a-f]{40}$")
+    query: str = Field(min_length=1, max_length=500)
+    limit: int = Field(default=20, ge=1, le=20)
+    mode: Literal["snippets", "paths"] = "snippets"
+
+
 TOOLS = {
+    "list_code_tree": (CodeTreeArgs, "浏览本任务允许提交的代码目录及跳过原因；目录不是已读正文。"),
+    "search_code": (
+        CodeSearchArgs,
+        "在本任务固定提交中做字面量搜索，返回最多20个片段或路径；命中不证明调用关系。",
+    ),
     "get_pr": (OverviewArgs, "获取固定版本 PR 元数据及证据目录，offset/limit 分页。"),
     "read_evidence": (ReadArgs, "按证据 ID 和原始行号读取 diff、资料或日志片段。"),
-    "read_file": (FileArgs, "读取任务已采集的指定提交文件片段，必须使用完整 commit。"),
+    "read_file": (FileArgs, "读取任务允许提交的代码片段，支持未修改文件；必须使用完整 commit。"),
     "get_ci": (OverviewArgs, "获取固定 CI 状态和日志目录；PR 仅返回相同 head 的已采集 CI。"),
     "read_log": (LogArgs, "提取日志错误块及前后文，或按原始行号分页；保留全文制品指针。"),
     "get_linked_issues": (OverviewArgs, "读取采集时保存的同仓库关联 Issue。"),
@@ -112,7 +131,13 @@ def log_windows(content, context=3, maximum=4, *, start_line=1):
 
 
 def original_lines(content):
-    return content.replace("\r\n", "\n").replace("\r", "\n").removesuffix("\n").split("\n")
+    return (
+        content.removeprefix("\ufeff")
+        .replace("\r\n", "\n")
+        .replace("\r", "\n")
+        .removesuffix("\n")
+        .split("\n")
+    )
 
 
 def evidence_signature(item):
@@ -135,6 +160,7 @@ class ToolGateway:
         guard=lambda: None,
         emit=lambda *_: None,
         knowledge_search=None,
+        code_access=None,
     ):
         self.repo_id = repo_id
         self.evidence = {item["id"]: item for item in evidence}
@@ -144,6 +170,7 @@ class ToolGateway:
         self.observed = {}
         self.cache = {}
         self.knowledge_search = knowledge_search
+        self.code_access = code_access
 
     def _descriptor(self, item):
         return {
@@ -191,7 +218,22 @@ class ToolGateway:
             "range_note": "next_line 仅表示保存材料的续读位置，不证明原始材料是否截断。",
         }
 
+    def _code_result(self, name, args):
+        if self.code_access is None:
+            raise DomainError(409, "code_snapshot_not_ready", "此任务没有可用代码快照")
+        result = self.code_access(name, args)
+        for item in result.pop("_evidence", []):
+            if item["id"] in self.bindings and self.bindings[item["id"]] != evidence_signature(
+                item
+            ):
+                raise DomainError(409, "evidence_binding_changed", "代码证据关联发生变化")
+            self.evidence[item["id"]] = item
+            self.bindings[item["id"]] = evidence_signature(item)
+        return result
+
     def _dispatch(self, name, args):
+        if name in {"list_code_tree", "search_code"}:
+            return self._code_result(name, args)
         if name == "search_knowledge":
             if self.metadata.get("input_version", {}).get("use_knowledge") is False:
                 return {"available": False, "code": "knowledge_disabled", "items": []}
@@ -232,6 +274,9 @@ class ToolGateway:
                 "note": "目录不是证据正文；请读取片段后引用。仅覆盖已采集材料。",
             }
         if name == "read_file":
+            access = self.metadata.get("input_version", {}).get("code_access")
+            if access and args.commit not in access.get("allowed_commits", []):
+                raise DomainError(403, "code_commit_denied", "只能访问本任务允许的提交")
             safe_path(args.path)
             item = next(
                 (
@@ -247,6 +292,8 @@ class ToolGateway:
             )
         else:
             item = self.evidence.get(args.evidence_id)
+        if item is None and name == "read_file" and self.code_access is not None:
+            return self._code_result(name, args)
         if item is None:
             raise DomainError(404, "tool_evidence_not_found", "当前任务未采集此版本的证据")
         if name == "read_log":

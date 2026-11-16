@@ -289,6 +289,64 @@ class GitHubClient:
             raise DomainError(502, "github_invalid_response", "GitHub 未返回有效的日志内容")
         return reply.body
 
+    def code_archive(self, full_name, commit, guard=lambda: None):
+        """仅固定 API → codeload 跳转；归档流与普通 JSON 的 4MiB 限额分开。"""
+        import tempfile
+
+        if not re.fullmatch(r"[0-9a-f]{40}", commit):
+            raise DomainError(422, "invalid_commit", "必须使用完整提交 SHA")
+        url = API_ROOT + repo_path(full_name) + "/tarball/" + commit
+        archive = tempfile.SpooledTemporaryFile(max_size=1024 * 1024)
+        try:
+            for _ in range(3):
+                guard()
+                host = urlsplit(url)
+                if (
+                    host.scheme != "https"
+                    or host.hostname not in {"api.github.com", "codeload.github.com"}
+                    or host.username
+                    or host.password
+                    or host.port not in {None, 443}
+                ):
+                    raise DomainError(502, "github_archive_redirect", "归档下载地址不受支持")
+                headers = {"User-Agent": "DevFlow/0.1", "Accept": "application/vnd.github+json"}
+                if host.hostname == "api.github.com" and self.token:
+                    headers["Authorization"] = "Bearer " + self.token
+                try:
+                    response = self.opener.open(
+                        Request(url, headers=headers),
+                        timeout=min(self.timeout, max(0.1, self.deadline - self.clock())),
+                    )
+                except HTTPError as error:
+                    if error.code not in {301, 302, 303, 307, 308}:
+                        raise DomainError(
+                            error.code if error.code in {403, 404, 429} else 502,
+                            "github_archive_failed",
+                            "GitHub 归档下载失败，请检查权限或限流",
+                        ) from None
+                    url = error.headers.get("Location", "")
+                    error.close()
+                    continue
+                with response:
+                    total = 0
+                    while True:
+                        guard()
+                        if self.clock() >= self.deadline:
+                            raise DomainError(504, "github_timeout", "归档下载超时")
+                        chunk = response.read(64 * 1024)
+                        if not chunk:
+                            break
+                        total += len(chunk)
+                        if total > 50 * 1024 * 1024:
+                            raise DomainError(413, "code_archive_too_large", "归档下载超过 50 MiB")
+                        archive.write(chunk)
+                archive.seek(0)
+                return archive
+            raise DomainError(502, "github_archive_redirect", "归档重定向次数过多")
+        except BaseException:
+            archive.close()
+            raise
+
 
 def repo_path(full_name: str) -> str:
     return "/repos/" + parse_repository_url(full_name)

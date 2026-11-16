@@ -329,3 +329,21 @@ uv run --locked python scripts/week05_smoke.py --real
 开发环境的 N 入口为项目自有的中文辅助面板：按住小球可在窗口内自由拖动，位置、主题和大小自动保存在本机浏览器；窗口缩小时入口会限制在可见区域。支持恢复左下角和本次会话隐藏，使用 Alt + Shift + N 重新显示或切换面板。主题只影响开发面板。
 
 原 Next.js 开发指示器已通过 devIndicators=false 关闭；这不是对 Next.js 原生设置的翻译，也不包含原生路由检查等功能。编译和运行错误提示仍由 Next.js 提供。生产环境不显示本辅助面板。
+
+
+### 固定提交代码工作台与跨文件补查
+
+仓库页新增「代码」页签。首次打开会排队准备默认提交的代码快照，页面给出实际完整 SHA；浏览、搜索、复制链接都固定在该提交。后续同步不会修改旧快照。PR 分析准备 base/head，CI 分析准备对应 attempt 的 head；准备最多 180 秒并计入原任务总时限，失败会明确降级到已有证据，不触发额外模型请求。
+
+- 后台沿用 `python -m devflow.workflows.worker`，新增表需先运行 `uv run --locked alembic upgrade head`。导入或同步仓库不自动下载全部代码，也不把代码和 README 自动写入知识库。
+- 本地需要 ripgrep（支持 13+），可在服务端 `.env` 中设置 `CODE_RG_PATH=C:/tools/rg.exe`，否则从 PATH 查找；`scripts/env.ps1` 会识别现有 rg。镜像固定安装 Debian Bookworm 的 `ripgrep=13.0.0-4+b2`。`/api/v1/runtime` 的 `code_search_available` 表示可执行文件是否可发现；缺失时仍能浏览文件，搜索报明确错误。
+- 默认单文件 256 KiB、清单 20000 条、文本 5000 个、已保存文本 50 MiB。归档下载上限 50 MiB、展开扫描 250 MiB。`CODE_MAX_ENTRIES`、`CODE_MAX_FILES`、`CODE_MAX_BYTES` 和 `CODE_PREPARE_SECONDS` 可调低；策略版本为 `code-text-v1`。改变内容采集规则时必须升级策略版本，不能原地改写已发布清单。
+- `ready` 表示当前策略完成，`partial` 表示有采集缺口；清单完整和支持范围内文本完整分开显示。跳过项保留原因，符号链接、子模块、二进制、敏感凭据、依赖及构建目录不进入正文。快照已准备不等于模型已阅读。
+- 原始文件保存到 `data/artifacts`，保持外部原始字节；搜索只使用临时 UTF-8/LF 投影。搜索固定为区分大小写的字面量，单次最多 20 个匹配行片段，每片段前后各 3 行，最多 5 秒；截断、超时和覆盖缺口不会被显示为「没有匹配」。正文脱敏，返回的文件 SHA256 对应原始制品。
+- 新工具 `list_code_tree`、`search_code` 和扩展的 `read_file` 只能访问任务允许提交；搜索正文先绑定为证据，再保存返回片段。目录和仅路径结果不计为已读。关键词命中不能证明调用关系。调用和结果长度沿用现有预算。
+- 快照绑定单独保存到任务 journal，不修改创建时的任务输入版本。恢复使用任务绑定的快照、证据与工具 journal，不读取最新分支；原始制品缺失或损坏会明确失败。临时搜索投影可从校验通过的本地制品重建。无 `code_access` 的历史任务维持原行为。
+- 首版不自动清理快照。代码制品与其他任务证据共用内容存储，维护时应整体备份 PostgreSQL 和 `data/artifacts`；不要单独删除仍被任务引用的制品。检查 `code_snapshots.coverage` 的 `saved_bytes` 和服务日志监控磁盘增长。清理需另行设计引用计数和保留策略。
+
+接口位于 `/api/v1/repositories/{repo_id}/code`：`POST snapshots`（可选完整 commit、失败快照 retry）、`GET snapshots/{id}`、`GET tree`、`GET file`、`POST search`。tree/file 使用 `snapshot_id`，search 支持 `mode=snippets|paths`。响应包含实际提交、清单哈希、覆盖范围；片段还包含文件哈希与原始行号。失败快照可显式重试，ready/partial 的同一策略快照不会原地重建。
+
+验证：`scripts/check.ps1 -Integration -Build` 包含隔离 PostgreSQL、快照和跨文件补查测试；`test_code_integration.py` 包含真实进程在证据提交前及提交后、checkpoint 前退出的恢复验证。GitHub 冒烟只下载只读材料，不运行付费模型。

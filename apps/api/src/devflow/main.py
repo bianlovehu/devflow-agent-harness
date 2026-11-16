@@ -11,6 +11,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from devflow import __version__
 from devflow.budget.api import router as budget_router
+from devflow.code.api import router as code_router
 from devflow.core.config import get_settings, validate_service_configuration
 from devflow.core.errors import (
     DomainError,
@@ -83,6 +84,7 @@ app.include_router(workflows_router)
 app.include_router(knowledge_router)
 app.include_router(memory_router)
 app.include_router(budget_router)
+app.include_router(code_router)
 app.add_exception_handler(DomainError, domain_error_handler)
 app.add_exception_handler(StarletteHTTPException, http_error_handler)
 app.add_exception_handler(RequestValidationError, validation_error_handler)

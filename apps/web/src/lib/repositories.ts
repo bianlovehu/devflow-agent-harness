@@ -16,4 +16,4 @@ export type CIRunSummary = Schema["CIRunSummary"];
 export type CIRunDetail = Schema["CIRunDetail"];
 export type DocumentSummary = Schema["DocumentSummary"];
 export type DocumentDetail = Schema["DocumentDetail"];
-export type RepositoryTab = "prs" | "ci" | "docs";
+export type RepositoryTab = "prs" | "ci" | "docs" | "code";

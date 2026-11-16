@@ -77,6 +77,7 @@ class EvidenceFacts(ReportContract):
     knowledge_enabled: bool | None
     current_versions: list[dict]
     reads: list[ReadState]
+    code_snapshots: list[dict] = Field(default_factory=list)
 
 
 class SemanticReview(ReportContract):
@@ -163,6 +164,7 @@ def evidence_facts(gateway):
         knowledge_enabled=enabled if isinstance(enabled, bool) else None,
         current_versions=versions,
         reads=reads,
+        code_snapshots=version.get("code_access", {}).get("snapshots", []),
     )
 
 
@@ -295,8 +297,17 @@ def finalize_report(report, gateway, task_type):
                 **primary.model_dump(), citation_check="passed", semantic_support=SemanticReview()
             )
         )
+    scope = list(report.scope)
+    for item in (
+        gateway.metadata.get("input_version", {}).get("code_access", {}).get("snapshots", [])
+    ):
+        if item["status"] != "ready" or not item.get("coverage", {}).get("eligible_complete"):
+            scope.append(
+                f"提交 {item['commit']} 的代码快照受限（{item['status']}）；"
+                "跨文件检查仅覆盖已保存且实际读取的材料。"
+            )
     return ReportV2(
-        **{**report.model_dump(), "findings": merged},
+        **{**report.model_dump(), "findings": merged, "scope": _unique(scope)[:30]},
         evidence_facts=evidence_facts(gateway),
         citation_check="passed",
         semantic_support=SemanticReview(),

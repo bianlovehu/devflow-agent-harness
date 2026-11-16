@@ -54,7 +54,7 @@ class ResourceSnapshot(Base):
     __table_args__ = (
         UniqueConstraint("repo_id", "kind", "external_id", "content_sha256"),
         UniqueConstraint("id", "repo_id"),
-        CheckConstraint("kind IN ('pull_request', 'ci_run', 'document')"),
+        CheckConstraint("kind IN ('pull_request', 'ci_run', 'document', 'code_snapshot')"),
         Index(
             "uq_current_repository_resource",
             "repo_id",
@@ -373,3 +373,47 @@ class ModelCharge(Base):
     usage: Mapped[dict | None] = mapped_column(JSONB)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CodeSnapshot(Base):
+    """固定提交的代码清单；发布后不原地修改内容。"""
+
+    __tablename__ = "code_snapshots"
+    __table_args__ = (
+        UniqueConstraint("repo_id", "commit_sha", "policy_version"),
+        UniqueConstraint("id", "repo_id"),
+        CheckConstraint("status IN ('queued','preparing','ready','partial','failed')"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    repo_id: Mapped[str] = mapped_column(ForeignKey("repositories.id"), index=True)
+    commit_sha: Mapped[str] = mapped_column(String(40))
+    policy_version: Mapped[str] = mapped_column(String(80))
+    status: Mapped[str] = mapped_column(String(16), default="queued")
+    manifest_sha256: Mapped[str | None] = mapped_column(String(64))
+    coverage: Mapped[dict] = mapped_column(JSONB, default=dict)
+    error_code: Mapped[str | None] = mapped_column(String(80))
+    error_message: Mapped[str | None] = mapped_column(Text)
+    lease_token: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CodeFile(Base):
+    __tablename__ = "code_files"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["snapshot_id", "repo_id"], ["code_snapshots.id", "code_snapshots.repo_id"]
+        ),
+        ForeignKeyConstraint(["artifact_id", "repo_id"], ["artifacts.id", "artifacts.repo_id"]),
+    )
+    snapshot_id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
+    path: Mapped[str] = mapped_column(Text, primary_key=True)
+    repo_id: Mapped[str] = mapped_column(String(80))
+    kind: Mapped[str] = mapped_column(String(24))
+    blob_sha: Mapped[str | None] = mapped_column(String(40))
+    content_sha256: Mapped[str | None] = mapped_column(String(64))
+    size_bytes: Mapped[int] = mapped_column(BigInteger, default=0)
+    line_count: Mapped[int] = mapped_column(Integer, default=0)
+    artifact_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    skip_reason: Mapped[str | None] = mapped_column(String(80))

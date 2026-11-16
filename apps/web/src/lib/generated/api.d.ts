@@ -428,6 +428,91 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/repositories/{repo_id}/code/file": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** File */
+    get: operations["file_api_v1_repositories__repo_id__code_file_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/repositories/{repo_id}/code/search": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Search */
+    post: operations["search_api_v1_repositories__repo_id__code_search_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/repositories/{repo_id}/code/snapshots": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Prepare */
+    post: operations["prepare_api_v1_repositories__repo_id__code_snapshots_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/repositories/{repo_id}/code/snapshots/{snapshot_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Status */
+    get: operations["status_api_v1_repositories__repo_id__code_snapshots__snapshot_id__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/repositories/{repo_id}/code/tree": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Tree */
+    get: operations["tree_api_v1_repositories__repo_id__code_tree_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/repositories/{repo_id}/documents": {
     parameters: {
       query?: never;
@@ -1044,6 +1129,257 @@ export interface components {
       /** Start Line */
       start_line: number;
     };
+    /** CodeEntry */
+    CodeEntry: {
+      /** Blob Sha */
+      blob_sha?: string | null;
+      /** Content Sha256 */
+      content_sha256?: string | null;
+      /** Kind */
+      kind: string;
+      /**
+       * Line Count
+       * @default 0
+       */
+      line_count: number;
+      /** Path */
+      path: string;
+      /**
+       * Size Bytes
+       * @default 0
+       */
+      size_bytes: number;
+      /** Skip Reason */
+      skip_reason?: string | null;
+    };
+    /** CodeFileResponse */
+    CodeFileResponse: {
+      /** Blob Sha */
+      blob_sha?: string | null;
+      /** Commit */
+      commit: string;
+      /** Content Sha256 */
+      content_sha256?: string | null;
+      /** Coverage */
+      coverage: {
+        [key: string]: unknown;
+      };
+      /** End Line */
+      end_line: number;
+      /** Error Code */
+      error_code: string | null;
+      /** Error Message */
+      error_message: string | null;
+      /** Kind */
+      kind: string;
+      /**
+       * Line Count
+       * @default 0
+       */
+      line_count: number;
+      /** Lines */
+      lines: components["schemas"]["CodeLine"][];
+      /** Manifest Sha256 */
+      manifest_sha256: string | null;
+      /** Next Line */
+      next_line: number | null;
+      /** Path */
+      path: string;
+      /** Policy Version */
+      policy_version: string;
+      /** Redaction Note */
+      redaction_note: string;
+      /** Repo Id */
+      repo_id: string;
+      /**
+       * Size Bytes
+       * @default 0
+       */
+      size_bytes: number;
+      /** Skip Reason */
+      skip_reason?: string | null;
+      /**
+       * Snapshot Id
+       * Format: uuid
+       */
+      snapshot_id: string;
+      /** Start Line */
+      start_line: number;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "queued" | "preparing" | "ready" | "partial" | "failed";
+    };
+    /** CodeLine */
+    CodeLine: {
+      /** Line */
+      line: number;
+      /** Text */
+      text: string;
+    };
+    /** CodeSearchHit */
+    CodeSearchHit: {
+      /** Blob Sha */
+      blob_sha?: string | null;
+      /** Content Sha256 */
+      content_sha256?: string | null;
+      /** End Line */
+      end_line?: number | null;
+      /** Kind */
+      kind: string;
+      /**
+       * Line Count
+       * @default 0
+       */
+      line_count: number;
+      /** Lines */
+      lines?: components["schemas"]["CodeLine"][] | null;
+      /** Match Line */
+      match_line: number;
+      /** Path */
+      path: string;
+      /**
+       * Size Bytes
+       * @default 0
+       */
+      size_bytes: number;
+      /** Skip Reason */
+      skip_reason?: string | null;
+      /** Start Line */
+      start_line?: number | null;
+    };
+    /** CodeSearchRequest */
+    CodeSearchRequest: {
+      /**
+       * Limit
+       * @default 20
+       */
+      limit: number;
+      /**
+       * Mode
+       * @default snippets
+       * @enum {string}
+       */
+      mode: "snippets" | "paths";
+      /** Query */
+      query: string;
+      /**
+       * Snapshot Id
+       * Format: uuid
+       */
+      snapshot_id: string;
+    };
+    /** CodeSearchResponse */
+    CodeSearchResponse: {
+      /** Commit */
+      commit: string;
+      /** Coverage */
+      coverage: {
+        [key: string]: unknown;
+      };
+      /** Error Code */
+      error_code: string | null;
+      /** Error Message */
+      error_message: string | null;
+      /** Items */
+      items: components["schemas"]["CodeSearchHit"][];
+      /** Manifest Sha256 */
+      manifest_sha256: string | null;
+      /**
+       * Mode
+       * @enum {string}
+       */
+      mode: "snippets" | "paths";
+      /** Path */
+      path: string;
+      /** Policy Version */
+      policy_version: string;
+      /** Query */
+      query: string;
+      /** Repo Id */
+      repo_id: string;
+      /** Search Complete */
+      search_complete: boolean;
+      /**
+       * Snapshot Id
+       * Format: uuid
+       */
+      snapshot_id: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "queued" | "preparing" | "ready" | "partial" | "failed";
+      /** Truncated */
+      truncated: boolean;
+      /** Truncation Reason */
+      truncation_reason: string | null;
+    };
+    /** CodeSnapshotResponse */
+    CodeSnapshotResponse: {
+      /** Commit */
+      commit: string;
+      /** Coverage */
+      coverage: {
+        [key: string]: unknown;
+      };
+      /** Error Code */
+      error_code: string | null;
+      /** Error Message */
+      error_message: string | null;
+      /** Manifest Sha256 */
+      manifest_sha256: string | null;
+      /** Policy Version */
+      policy_version: string;
+      /** Repo Id */
+      repo_id: string;
+      /**
+       * Snapshot Id
+       * Format: uuid
+       */
+      snapshot_id: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "queued" | "preparing" | "ready" | "partial" | "failed";
+    };
+    /** CodeTreeResponse */
+    CodeTreeResponse: {
+      /** Commit */
+      commit: string;
+      /** Coverage */
+      coverage: {
+        [key: string]: unknown;
+      };
+      /** Error Code */
+      error_code: string | null;
+      /** Error Message */
+      error_message: string | null;
+      /** Items */
+      items: components["schemas"]["CodeEntry"][];
+      /** Manifest Sha256 */
+      manifest_sha256: string | null;
+      /** Next Offset */
+      next_offset: number | null;
+      /** Path */
+      path: string;
+      /** Policy Version */
+      policy_version: string;
+      /** Repo Id */
+      repo_id: string;
+      /**
+       * Snapshot Id
+       * Format: uuid
+       */
+      snapshot_id: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "queued" | "preparing" | "ready" | "partial" | "failed";
+    };
     /** Collection[CIRunSummary] */
     Collection_CIRunSummary_: {
       /**
@@ -1255,6 +1591,10 @@ export interface components {
     };
     /** EvidenceFacts */
     EvidenceFacts: {
+      /** Code Snapshots */
+      code_snapshots?: {
+        [key: string]: unknown;
+      }[];
       /** Collection Complete */
       collection_complete: boolean | null;
       /** Current Versions */
@@ -2297,6 +2637,11 @@ export interface components {
     /** RuntimeInfo */
     RuntimeInfo: {
       /**
+       * Code Search Available
+       * @default false
+       */
+      code_search_available: boolean;
+      /**
        * Data Source
        * @enum {string}
        */
@@ -2329,6 +2674,16 @@ export interface components {
        * @enum {string}
        */
       status: "not_reviewed" | "supported" | "partial" | "unsupported";
+    };
+    /** SnapshotRequest */
+    SnapshotRequest: {
+      /** Commit */
+      commit?: string | null;
+      /**
+       * Retry
+       * @default false
+       */
+      retry: boolean;
     };
     /** SourceNotice */
     SourceNotice: {
@@ -3223,6 +3578,180 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["JobLog"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  file_api_v1_repositories__repo_id__code_file_get: {
+    parameters: {
+      query: {
+        snapshot_id: string;
+        path: string;
+        start_line?: number;
+        limit?: number;
+      };
+      header?: never;
+      path: {
+        repo_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CodeFileResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  search_api_v1_repositories__repo_id__code_search_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        repo_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CodeSearchRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CodeSearchResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  prepare_api_v1_repositories__repo_id__code_snapshots_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        repo_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SnapshotRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CodeSnapshotResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  status_api_v1_repositories__repo_id__code_snapshots__snapshot_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        repo_id: string;
+        snapshot_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CodeSnapshotResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  tree_api_v1_repositories__repo_id__code_tree_get: {
+    parameters: {
+      query: {
+        snapshot_id: string;
+        path?: string;
+        offset?: number;
+        limit?: number;
+      };
+      header?: never;
+      path: {
+        repo_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CodeTreeResponse"];
         };
       };
       /** @description Validation Error */

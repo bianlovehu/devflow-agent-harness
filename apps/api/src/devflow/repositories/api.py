@@ -34,6 +34,8 @@ Source = Annotated[RepositoryDataSource, Depends(get_data_source)]
 @router.get("/runtime", response_model=RuntimeInfo)
 def runtime(settings: Annotated[Settings, Depends(get_settings)]) -> dict[str, object]:
     # Reading configuration never contacts the model or exposes the key.
+    from devflow.code.service import rg_path
+
     return {
         "data_source": settings.data_source,
         "fixture_storage": settings.fixture_storage,
@@ -41,6 +43,7 @@ def runtime(settings: Annotated[Settings, Depends(get_settings)]) -> dict[str, o
         or settings.fixture_storage == "database",
         "repository_adapter_available": True,
         "github_configured": bool(settings.github_token.get_secret_value().strip()),
+        "code_search_available": rg_path(settings) is not None,
         "model": {
             "provider": settings.model_provider,
             "name": settings.dashscope_model

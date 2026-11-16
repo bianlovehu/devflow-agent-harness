@@ -79,6 +79,8 @@ class ReadRequest(ReportContract):
         "read_file",
         "read_log",
         "search_knowledge",
+        "list_code_tree",
+        "search_code",
     ]
     arguments: dict
     reason: str = Field(min_length=1, max_length=1500)

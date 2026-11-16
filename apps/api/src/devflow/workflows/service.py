@@ -236,6 +236,21 @@ def create_run(
                     }
                 ]
                 evidence = []
+            if data.task_type in {"pr_review", "ci_debug"}:
+                from devflow.code.service import POLICY
+
+                commits = sorted(
+                    {
+                        resource[key]
+                        for resource in input_version["resources"]
+                        for key in ("base_sha", "head_sha")
+                        if isinstance(resource.get(key), str) and len(resource[key]) == 40
+                    }
+                )
+                input_version["code_access"] = {
+                    "policy_version": POLICY,
+                    "allowed_commits": commits,
+                }
             configuration = {
                 "schema_version": 1,
                 "source_routing": "repository",

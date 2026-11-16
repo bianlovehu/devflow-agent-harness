@@ -219,7 +219,13 @@ def test_context_material_usage_error_and_stale_report_are_reviewable(context):
     run = completed(context)
     endpoint = f"/api/v1/runs/{run['id']}"
     calls = context.client.get(endpoint + "/context").json()["calls"]
-    assert calls and all(call["context"]["estimated_input"] <= 12000 for call in calls)
+    input_limit = min(
+        context.settings.context_input_tokens, run["configuration"]["context_input_tokens"]
+    )
+    assert calls and all(
+        call["context"]["estimated_input"] <= call["context"]["input_limit"] <= input_limit
+        for call in calls
+    )
     detail = context.client.get(endpoint + "/context?call=1").json()["calls"][0]
     assert detail["original_request"] and detail["request"]
     assert "estimation_error" in detail["context"]

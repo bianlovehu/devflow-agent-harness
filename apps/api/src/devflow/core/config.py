@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     github_token: SecretStr = SecretStr("")
     github_timeout_seconds: int = Field(default=30, ge=1, le=60)
 
+    code_rg_path: str = "rg"
+    code_max_entries: int = Field(default=20000, ge=1, le=20000)
+    code_max_files: int = Field(default=5000, ge=1, le=5000)
+    code_max_bytes: int = Field(default=50 * 1024 * 1024, ge=1, le=50 * 1024 * 1024)
+    code_prepare_seconds: int = Field(default=180, ge=1, le=180)
+
     worker_lease_seconds: int = Field(default=30, ge=10, le=300)
     worker_poll_seconds: float = Field(default=1, ge=0.1, le=30)
     simulation_step_seconds: float = Field(default=3, ge=0, le=30)

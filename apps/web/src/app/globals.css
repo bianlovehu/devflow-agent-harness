@@ -4029,3 +4029,8 @@ svg {
 .report-scope > summary {
   cursor: pointer;
 }
+
+/* 仓库页签保持相同字重，选中态只改变颜色和下划线，避免英文标签宽度变化。 */
+.repository-workspace .resource-tabs > a {
+  font-weight: 600;
+}

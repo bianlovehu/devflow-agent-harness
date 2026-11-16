@@ -12,7 +12,9 @@ export default async function RepositoryPage({
   const { repoId } = await params;
   const query = await searchParams;
   const tab: RepositoryTab =
-    query.tab === "ci" || query.tab === "docs" ? query.tab : "prs";
+    query.tab === "ci" || query.tab === "docs" || query.tab === "code"
+      ? query.tab
+      : "prs";
   const selected =
     typeof query.item === "string" && /^[a-zA-Z0-9_-]+$/.test(query.item)
       ? query.item

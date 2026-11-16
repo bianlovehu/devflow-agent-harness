@@ -1,14 +1,13 @@
 // 文件用途：浏览仓库、PR diff、CI 日志和项目资料原文。
 "use client";
+import { RepositoryHeader } from "@/components/repository-header";
+import { CodeWorkspace } from "@/components/code-workspace";
 
 import Link from "next/link";
 import { useState } from "react";
 import { useWorkspace } from "@/components/workspace-context";
 import { Icon } from "@/components/icon";
-import {
-  GitHubRepositoryForm,
-  RepositoryRefresh,
-} from "@/components/github-repository-form";
+import { GitHubRepositoryForm } from "@/components/github-repository-form";
 import { GitHubJobLogs } from "@/components/github-job-logs";
 import { SourceNotices, FetchInfo } from "@/components/source-notices";
 import { ciStatus } from "@/lib/ci-status";
@@ -356,13 +355,51 @@ function stageName(stage: CIRunSummary["stage"]) {
   ];
 }
 
-export function RepositoryWorkspace({
+export function RepositoryWorkspace(props: {
+  repoId: string;
+  tab: RepositoryTab;
+  selected?: string;
+}) {
+  const repo = useQuery({
+    queryKey: ["repository", props.repoId],
+    queryFn: ({ signal }) =>
+      fetchData<Repository>(
+        `repositories/${encodeURIComponent(props.repoId)}`,
+        { signal },
+      ),
+  });
+  if (!repo.data)
+    return (
+      <div className="management-page">
+        <Link className="back-link" href="/repositories">
+          ← 所有仓库
+        </Link>
+        <QueryMessage
+          pending={repo.isPending}
+          error={repo.error}
+          retry={() => void repo.refetch()}
+        />
+      </div>
+    );
+  return (
+    <div className="management-page repository-workspace">
+      <RepositoryHeader repo={repo.data} tab={props.tab} />
+      {props.tab === "code" ? (
+        <CodeWorkspace repoId={props.repoId} />
+      ) : (
+        <ResourceWorkspace {...props} tab={props.tab} />
+      )}
+    </div>
+  );
+}
+
+function ResourceWorkspace({
   repoId,
   tab,
   selected,
 }: {
   repoId: string;
-  tab: RepositoryTab;
+  tab: Exclude<RepositoryTab, "code">;
   selected?: string;
 }) {
   const [search, setSearch] = useState("");
@@ -426,57 +463,7 @@ export function RepositoryWorkspace({
       </div>
     );
   return (
-    <div className="management-page repository-workspace">
-      <Link className="back-link" href="/repositories">
-        ← 所有仓库
-      </Link>
-      <div className="page-heading">
-        <div>
-          <h1>
-            {repo.data.full_name}
-            <span className="source-badge">
-              {repo.data.data_source === "fixture" ? "人工样例" : "GitHub"}
-            </span>
-          </h1>
-          <p className="intro">
-            {repo.data.description} · {repo.data.language} ·{" "}
-            {repo.data.default_branch}
-          </p>
-        </div>
-        <div className="heading-actions">
-          <Link
-            className="secondary-link"
-            href={`/runs?repo=${encodeURIComponent(repoId)}`}
-          >
-            打开分析工作台 <Icon name="external" size={16} />
-          </Link>
-          <RepositoryRefresh repo={repo.data} />
-        </div>
-      </div>
-      <SourceNotices notices={repo.data.sync_warnings} />
-      <div className="resource-tabs" role="navigation" aria-label="仓库资源">
-        <Link
-          className={tab === "prs" ? "tab-active" : ""}
-          href={`/repositories/${repoId}?tab=prs`}
-          scroll={false}
-        >
-          Pull requests <span>{repo.data.pull_request_count}</span>
-        </Link>
-        <Link
-          className={tab === "ci" ? "tab-active" : ""}
-          href={`/repositories/${repoId}?tab=ci`}
-          scroll={false}
-        >
-          CI 运行 <span>{repo.data.ci_run_count}</span>
-        </Link>
-        <Link
-          className={tab === "docs" ? "tab-active" : ""}
-          href={`/repositories/${repoId}?tab=docs`}
-          scroll={false}
-        >
-          项目资料 <span>{repo.data.document_count}</span>
-        </Link>
-      </div>
+    <div className="repository-resource-content">
       <SourceNotices notices={activeList.data?.warnings} />
       <FetchInfo
         at={activeList.data?.fetched_at}

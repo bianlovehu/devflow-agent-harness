@@ -4,6 +4,8 @@ ENV PYTHONUNBUFFERED=1 PYTHONUTF8=1 PYTHONDONTWRITEBYTECODE=1 \
     DEVFLOW_PROJECT_ROOT=/app DEVFLOW_MODEL_ROOT=/opt/devflow-models \
     PATH=/app/.venv/bin:$PATH UV_LINK_MODE=copy
 WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends ripgrep=13.0.0-4+b2 \
+    && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir uv==0.11.3
 COPY pyproject.toml uv.lock README.md ./
 RUN uv sync --frozen --no-dev --no-install-project

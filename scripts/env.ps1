@@ -7,6 +7,11 @@ $env:UV_PYTHON_INSTALL_DIR = Join-Path $ProjectRoot '.tools\python'
 $env:UV_PYTHON_DOWNLOADS_JSON_URL = Join-Path $ProjectRoot 'infra\python-downloads.json'
 $env:npm_config_cache = Join-Path $ProjectRoot '.cache\npm'
 $env:npm_config_registry = 'https://registry.npmjs.org/'
+# 可显式设置服务端 CODE_RG_PATH；否则使用 PATH 中的 ripgrep。
+if (-not $env:CODE_RG_PATH) {
+    $CodeRgCommand = Get-Command rg -ErrorAction SilentlyContinue
+    if ($CodeRgCommand) { $env:CODE_RG_PATH = $CodeRgCommand.Source }
+}
 $env:NEXT_TELEMETRY_DISABLED = '1'
 $env:PYTHONUTF8 = '1'
 $NodeVersion = (Get-Content -LiteralPath (Join-Path $ProjectRoot '.node-version') -Raw).Trim()

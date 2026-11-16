@@ -1,6 +1,7 @@
 // 文件用途：按会话展示指令与分析时间线，支持指令目录跳转和固定版本证据抽屉。
 "use client";
 import Link from "next/link";
+import { codeLocation } from "@/lib/code-location";
 import {
   useContext,
   useEffect,
@@ -187,6 +188,20 @@ function EvidencePanel({
       {selected && (
         <section className="evidence-preview" key={selected.id}>
           <h3>{selected.path}</h3>
+          {selected.source_type === "file" &&
+            /^[0-9a-f]{40}$/.test(selected.version) && (
+              <Link
+                href={codeLocation(
+                  run.repo_id,
+                  selected.version,
+                  selected.path,
+                  selectedRange.start,
+                  selectedRange.end,
+                )}
+              >
+                打开对应代码
+              </Link>
+            )}
           <p className="evidence-location">
             第 {selectedRange.start}–{selectedRange.end} 行
           </p>

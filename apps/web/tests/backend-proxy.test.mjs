@@ -24,6 +24,9 @@ for (const path of [
   "repositories/repo-taskboard/pull-requests/101",
   "repositories/repo-taskboard/ci-runs/201",
   "repositories/repo-taskboard/documents/architecture",
+  `repositories/repo-taskboard/code/snapshots/${id}`,
+  `repositories/repo-taskboard/code/tree?snapshot_id=${id}&path=src&offset=0&limit=20`,
+  `repositories/repo-taskboard/code/file?snapshot_id=${id}&path=src%2Ftest.py&start_line=2&limit=60`,
   `runs/${id}`,
   `runs/${id}/events?after=1&limit=20`,
   `runs/${id}/evidence`,
@@ -433,4 +436,30 @@ test("记忆检索、重新索引与来源撤销受白名单和来源校验约�
     ).status,
     404,
   );
+});
+
+test("代码快照和搜索 POST 只允许登记的服务路径", async () => {
+  for (const action of ["snapshots", "search"]) {
+    const path = `repositories/repo-taskboard/code/${action}`;
+    let called = 0;
+    const response = await forwardBackend(
+      post(path),
+      path.split("/"),
+      async () => {
+        called++;
+        return Response.json({});
+      },
+    );
+    assert.equal(response.status, 200);
+    assert.equal(called, 1);
+  }
+  const path = "repositories/repo-taskboard/code/execute";
+  const response = await forwardBackend(
+    post(path),
+    path.split("/"),
+    async () => {
+      throw new Error("禁止转发");
+    },
+  );
+  assert.equal(response.status, 404);
 });

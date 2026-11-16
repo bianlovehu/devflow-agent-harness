@@ -1,0 +1,131 @@
+/* 文件用途：代码工作台的目录、搜索片段和阅读器布局。 */
+.code-workspace code {
+  overflow-wrap: anywhere;
+}
+.code-status {
+  padding: 16px;
+  border: 1px solid var(--border, #ddd);
+  border-radius: 10px;
+  margin: 16px 0;
+}
+.code-status p {
+  margin: 8px 0;
+}
+.code-columns {
+  display: grid;
+  grid-template-columns: minmax(200px, 28%) minmax(0, 1fr);
+  border: 1px solid #ddd;
+  border-radius: 10px;
+}
+.code-columns > aside {
+  padding: 16px;
+  border-right: 1px solid #ddd;
+  overflow: auto;
+}
+.code-columns > section {
+  min-width: 0;
+  padding: 16px;
+}
+.code-columns h2,
+.code-results h2 {
+  font-size: 16px;
+  margin-bottom: 12px;
+  overflow-wrap: anywhere;
+}
+.code-directory .code-directory {
+  margin-left: 14px;
+}
+.code-directory button {
+  display: block;
+  text-align: left;
+  overflow-wrap: anywhere;
+  width: 100%;
+  padding: 6px;
+  border: 0;
+  background: transparent;
+}
+.code-directory button.code-selected {
+  background: #e7f2ec;
+}
+.code-search-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 20px 0;
+}
+.code-search-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+.code-results {
+  margin: 16px 0;
+}
+.code-results > button {
+  display: block;
+  text-align: left;
+  width: 100%;
+  margin: 8px 0;
+  padding: 12px;
+  border: 1px solid #ddd;
+}
+.code-results pre {
+  overflow: auto;
+  margin-top: 8px;
+  font-size: 12px;
+}
+.code-source {
+  list-style: decimal outside;
+  overflow: auto;
+  padding: 12px 12px 12px 64px;
+  background: #fafafa;
+  font:
+    13px/1.7 Consolas,
+    monospace;
+  tab-size: 4;
+}
+.code-source li {
+  white-space: pre;
+  padding-left: 10px;
+}
+.code-source code {
+  white-space: pre;
+  overflow-wrap: normal;
+}
+.code-paging {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+.code-file-meta {
+  font-size: 12px;
+  color: #666;
+}
+@media (max-width: 850px) {
+  .code-columns {
+    grid-template-columns: 1fr;
+  }
+  .code-columns > aside {
+    max-height: 320px;
+    border-right: 0;
+    border-bottom: 1px solid #ddd;
+  }
+  .code-search-form {
+    flex-wrap: wrap;
+  }
+}
+
+.code-source li::marker {
+  color: #777;
+}
+.code-source li.evidence-highlight {
+  background: #fff1bd;
+}
+
+.code-intro {
+  margin: 18px 0;
+  color: #666;
+  font-size: 13px;
+}

@@ -222,6 +222,15 @@ export function AnalysisReport({ run }: { run: Run }) {
               {value.evidence_facts.current_versions.some((v) =>
                 String(v.version_kind).includes("snapshot"),
               ) && <p>这些是测试生成的版本编号，不能用于远端取代码。</p>}
+              {(value.evidence_facts.code_snapshots ?? []).map(
+                (snapshot, index) => (
+                  <p key={index}>
+                    跨文件代码：{String(snapshot.commit).slice(0, 12)} ·{" "}
+                    {String(snapshot.status)}
+                    ；仅代表已保存范围，实际阅读见下方记录。
+                  </p>
+                ),
+              )}
               <details>
                 <summary>查看实际读取范围</summary>
                 <ul>

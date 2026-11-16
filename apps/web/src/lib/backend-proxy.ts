@@ -53,6 +53,26 @@ function queryKeys(path: string[], method: string): string[] | null {
       return ["repo_id"];
     return null;
   }
+  if (group === "repositories" && child === "code") {
+    if (
+      method === "POST" &&
+      path.length === 4 &&
+      ["snapshots", "search"].includes(path[3])
+    )
+      return [];
+    if (
+      method === "GET" &&
+      path.length === 5 &&
+      path[3] === "snapshots" &&
+      uuid.test(path[4])
+    )
+      return [];
+    if (method === "GET" && path.length === 4 && path[3] === "tree")
+      return ["snapshot_id", "path", "offset", "limit"];
+    if (method === "GET" && path.length === 4 && path[3] === "file")
+      return ["snapshot_id", "path", "start_line", "limit"];
+    return null;
+  }
   if (method === "POST") {
     if (
       group === "runs" &&
@@ -153,11 +173,22 @@ export async function forwardBackend(
     if (
       key === "repo_id"
         ? !/^[a-zA-Z0-9_-]{1,80}$/.test(value)
-        : key === "conversation_id"
+        : key === "conversation_id" || key === "snapshot_id"
           ? !uuid.test(value)
-          : !/^\d{1,9}$/.test(value) ||
-            (key === "limit" && (Number(value) < 1 || Number(value) > 100)) ||
-            (key === "call" && Number(value) < 1)
+          : key === "path"
+            ? value.length > 480 ||
+              Array.from(value).some(
+                (character) =>
+                  character === "\\" ||
+                  character.charCodeAt(0) < 32 ||
+                  character.charCodeAt(0) === 127,
+              ) ||
+              value.startsWith("/") ||
+              (value !== "" &&
+                value.split("/").some((part) => ["", ".", ".."].includes(part)))
+            : !/^\d{1,9}$/.test(value) ||
+              (key === "limit" && (Number(value) < 1 || Number(value) > 100)) ||
+              (key === "call" && Number(value) < 1)
     )
       return failure(400, "invalid_query", "查询参数格式不正确");
   }

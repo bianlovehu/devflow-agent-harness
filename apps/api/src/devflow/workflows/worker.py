@@ -337,7 +337,9 @@ class Worker:
                         }
                     )
             task_type = run.task_type
-            input_version = run.input_version
+            from devflow.code.tasks import analysis_version
+
+            input_version = analysis_version(session, run)
             question = session.get(MessageRecord, run.message_id).content
             current_message = session.get(MessageRecord, run.message_id)
             history = [
@@ -517,6 +519,8 @@ class Worker:
                     session.add(RunJournal(run_id=run_id, key=event_key, payload={"emitted": True}))
                 return found
 
+        from devflow.code.tasks import operation
+
         gateway = ToolGateway(
             repo_id,
             items,
@@ -530,6 +534,7 @@ class Worker:
             guard=guard,
             emit=emit,
             knowledge_search=knowledge_search,
+            code_access=lambda name, args: operation(self, run_id, token, name, args),
         )
         runner = AnalysisRunner(
             model,
@@ -729,6 +734,9 @@ class Worker:
                 {"tool": "verify_artifacts", "evidence_count": count},
             )
             if executor == "agent":
+                from devflow.code.tasks import prepare_run
+
+                prepare_run(self, run_id, token)
                 if missing_logs:
                     self._finish(
                         run_id,
@@ -822,7 +830,25 @@ class Worker:
     def run_once(self):
         claimed = self.claim()
         if claimed is None:
-            return False
+            from devflow.code.service import prepare
+
+            last_heartbeat = 0
+
+            def code_guard():
+                nonlocal last_heartbeat
+                if self.stop.is_set():
+                    raise LeaseLost()
+                if time.monotonic() - last_heartbeat >= 2:
+                    worker_heartbeat()
+                    last_heartbeat = time.monotonic()
+
+            return prepare(
+                self.engine,
+                self.settings,
+                self.store,
+                client_factory=self.client_factory,
+                guard=code_guard,
+            )
         try:
             self.execute(*claimed)
         except LeaseLost:

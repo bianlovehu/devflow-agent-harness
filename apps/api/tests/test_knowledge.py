@@ -3,8 +3,8 @@ import io
 from types import SimpleNamespace
 
 import pytest
-from devflow.errors import DomainError
-from devflow.knowledge import lexical_terms, parse_document, split_chunks
+from devflow.core.errors import DomainError
+from devflow.knowledge.service import lexical_terms, parse_document, split_chunks
 from pypdf import PdfWriter
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 

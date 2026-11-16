@@ -115,7 +115,7 @@ uv run --locked python scripts/report_review_comparison.py --directory data/revi
 新的真实对照使用新目录，显式分批执行并沿用共享账本：
 
 ```powershell
-uv run --locked python -m devflow.review_eval_cli --real --directory data/review-evals/my-new-run --limit 3
+uv run --locked python -m devflow.evaluation.review_eval_cli --real --directory data/review-evals/my-new-run --limit 3
 ```
 
 再次执行只处理尚未运行的题。发现网络、认证、费用或限流异常时当批停止，先核对记录与余额；已记录的超时题不自动重试。代码、配置或输入改变后必须使用新目录，GPT复核也须绑定新的结果编号。

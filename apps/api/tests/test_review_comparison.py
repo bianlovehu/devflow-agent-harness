@@ -3,10 +3,10 @@ import importlib.util
 from copy import deepcopy
 
 import pytest
-from devflow.config import PROJECT_ROOT, Settings
-from devflow.eval_runner import execute_case
-from devflow.evaluation import digest, load_dataset, write_json
-from devflow.review_eval_cli import initial_execution
+from devflow.core.config import PROJECT_ROOT, Settings
+from devflow.evaluation.eval_runner import execute_case
+from devflow.evaluation.evaluation import digest, load_dataset, write_json
+from devflow.evaluation.review_eval_cli import initial_execution
 
 
 def test_initial_snapshot_preserves_original_usage_reads_and_tool_count():

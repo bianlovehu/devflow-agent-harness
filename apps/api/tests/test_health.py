@@ -2,8 +2,8 @@
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
-from devflow.health import ComponentHealth, HealthResponse, inspect_health
 from devflow.main import app
+from devflow.ops.health import ComponentHealth, HealthResponse, inspect_health
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import OperationalError
 
@@ -39,7 +39,7 @@ def test_readiness_http_status_matches_dependency_failure() -> None:
 
 
 def test_health_migration_head_tracks_new_version_files(tmp_path, monkeypatch):
-    import devflow.health as health_module
+    import devflow.ops.health as health_module
 
     versions = tmp_path / "migrations" / "versions"
     versions.mkdir(parents=True)

@@ -12,7 +12,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def model_spec():
-    tree = ast.parse((ROOT / "apps/api/src/devflow/embeddings.py").read_text(encoding="utf-8"))
+    tree = ast.parse(
+        (ROOT / "apps/api/src/devflow/knowledge/embeddings.py").read_text(encoding="utf-8")
+    )
     wanted = {"MODEL_REPO", "MODEL_REVISION", "MODEL_FILES"}
     return {
         node.targets[0].id: ast.literal_eval(node.value)

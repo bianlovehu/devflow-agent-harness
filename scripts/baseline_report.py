@@ -5,7 +5,7 @@ from decimal import Decimal
 from pathlib import Path
 from statistics import mean, median
 
-from devflow.evaluation import digest, read_json, write_json
+from devflow.evaluation.evaluation import digest, read_json, write_json
 
 
 def summarize(directory, review_file=None):

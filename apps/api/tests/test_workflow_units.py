@@ -4,11 +4,11 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from devflow.artifact_store import ArtifactStore
-from devflow.database import get_session
-from devflow.errors import DomainError
+from devflow.core.errors import DomainError
 from devflow.main import app
-from devflow.workflow_contracts import RunCreate
+from devflow.storage.artifact_store import ArtifactStore
+from devflow.storage.database import get_session
+from devflow.workflows.schemas import RunCreate
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 from sqlalchemy.exc import OperationalError
@@ -53,7 +53,10 @@ def test_task_target_and_budget_validation():
 
 
 def test_cross_origin_write_rejected_before_database():
-    with patch("devflow.workflows.create_conversation") as create, TestClient(app) as client:
+    with (
+        patch("devflow.workflows.service.create_conversation") as create,
+        TestClient(app) as client,
+    ):
         response = client.post(
             "/api/v1/conversations",
             json={"repo_id": "repo-taskboard", "title": "test"},

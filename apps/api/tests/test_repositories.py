@@ -4,9 +4,9 @@ import json
 from unittest.mock import patch
 
 import pytest
-from devflow.config import PROJECT_ROOT, Settings, get_settings
-from devflow.data_source import fixture_source
+from devflow.core.config import PROJECT_ROOT, Settings, get_settings
 from devflow.main import app
+from devflow.repositories.data_source import fixture_source
 from fastapi.testclient import TestClient
 
 
@@ -22,7 +22,7 @@ def client():
 
 
 def test_fixture_browsing_needs_no_credentials_and_never_calls_model(client):
-    with patch("devflow.model_gateway.DeepSeekModel.complete") as request:
+    with patch("devflow.analysis.model_gateway.DeepSeekModel.complete") as request:
         repositories = client.get("/api/v1/repositories")
         assert repositories.status_code == 200
         assert repositories.json()["data_source"] == "fixture"
@@ -93,11 +93,18 @@ def test_mixed_catalog_never_uses_file_fallback_or_exposes_credentials(client):
         _env_file=None, data_source="github", github_token="private-github-test-token"
     )
     with (
-        patch("devflow.github_source.GitHubRepositorySource.list_repositories", return_value=[]),
         patch(
-            "devflow.persistent_source.DatabaseRepositorySource.list_repositories", return_value=[]
+            "devflow.repositories.github_source.GitHubRepositorySource.list_repositories",
+            return_value=[],
         ),
-        patch("devflow.data_source.fixture_source", side_effect=AssertionError("fixture access")),
+        patch(
+            "devflow.repositories.persistent_source.DatabaseRepositorySource.list_repositories",
+            return_value=[],
+        ),
+        patch(
+            "devflow.repositories.data_source.fixture_source",
+            side_effect=AssertionError("fixture access"),
+        ),
     ):
         response = client.get("/api/v1/repositories")
         assert response.status_code == 200

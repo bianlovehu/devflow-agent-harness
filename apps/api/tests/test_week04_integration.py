@@ -5,11 +5,11 @@ from uuid import UUID
 
 import pytest
 import test_persistence_integration as persistence
-from devflow.embeddings import MODEL_KEY
-from devflow.knowledge_api import embedding_factory
+from devflow.knowledge.api import embedding_factory
+from devflow.knowledge.embeddings import MODEL_KEY
 from devflow.main import app
-from devflow.models import KnowledgeChunk, KnowledgeVersion, RepositoryRecord, RunRecord
-from devflow.worker import Worker
+from devflow.storage.models import KnowledgeChunk, KnowledgeVersion, RepositoryRecord, RunRecord
+from devflow.workflows.worker import Worker
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from test_knowledge import CharacterTokenizer
@@ -118,7 +118,7 @@ def test_embedding_cache_reuses_identical_chunks(context):
 
 @pytest.mark.parametrize("change", ["update", "delete"])
 def test_index_completion_cannot_restore_deleted_or_overwrite_newer_document(context, change):
-    from devflow.knowledge import upload_document
+    from devflow.knowledge.service import upload_document
 
     def during_indexing():
         if change == "update":
@@ -147,7 +147,7 @@ def test_index_completion_cannot_restore_deleted_or_overwrite_newer_document(con
 
 def test_queued_question_does_not_switch_to_later_document_version(context):
     first = upload(context)
-    from devflow.config import get_settings
+    from devflow.core.config import get_settings
 
     settings = context.settings.model_copy(
         update={"analysis_executor": "agent", "simulation_step_seconds": 0}
@@ -212,7 +212,7 @@ def test_knowledge_qa_reports_citations_or_insufficient_evidence(context, has_do
     settings = context.settings.model_copy(
         update={"analysis_executor": "agent", "simulation_step_seconds": 0}
     )
-    from devflow.config import get_settings
+    from devflow.core.config import get_settings
 
     app.dependency_overrides[get_settings] = lambda: settings
     conversation = context.client.post(

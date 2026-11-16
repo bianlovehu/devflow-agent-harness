@@ -6,11 +6,9 @@ from uuid import uuid4
 
 import pytest
 from budget_samples import StubLedger
-from devflow.agent import AnalysisRunner, model_configuration
-from devflow.config import Settings
-from devflow.errors import DomainError
-from devflow.fake_model import FixtureModel
-from devflow.model_gateway import (
+from devflow.analysis.agent import AnalysisRunner, model_configuration
+from devflow.analysis.fake_model import FixtureModel
+from devflow.analysis.model_gateway import (
     DeepSeekModel,
     ModelError,
     ModelReply,
@@ -18,8 +16,10 @@ from devflow.model_gateway import (
     Usage,
     tool_call,
 )
-from devflow.reports import AnalysisReport, report_markdown
-from devflow.tool_gateway import ToolGateway, log_windows
+from devflow.analysis.reports import AnalysisReport, report_markdown
+from devflow.analysis.tool_gateway import ToolGateway, log_windows
+from devflow.core.config import Settings
+from devflow.core.errors import DomainError
 
 
 def evidence(content="return list(tasks)\n", source_type="file", **updates):

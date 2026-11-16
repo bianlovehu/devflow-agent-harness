@@ -4,8 +4,8 @@ import json
 from urllib.error import HTTPError
 
 from budget_samples import StubLedger
-from devflow.config import Settings
-from devflow.model_probe import probe_deepseek
+from devflow.core.config import Settings
+from devflow.ops.model_probe import probe_deepseek
 
 
 class Opener:

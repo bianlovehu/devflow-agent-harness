@@ -56,8 +56,8 @@ GPT按预先保存的标准逐题核查，报告目标错误、误报、漏报�
 
 相关入口：
 
-- `apps/api/src/devflow/report_review.py`：规则、一次复核、一轮补查及一次修改。
-- `apps/api/src/devflow/review_eval_cli.py`：真实对比，分批运行并沿用共享账本。
+- `apps/api/src/devflow/analysis/report_review.py`：规则、一次复核、一轮补查及一次修改。
+- `apps/api/src/devflow/evaluation/review_eval_cli.py`：真实对比，分批运行并沿用共享账本。
 - `scripts/report_review_comparison.py`：核对GPT记录与原输出是否对应，再汇总结果。
 - `evals/report-review-criteria.json`：提前保存的判断标准与验收要求。
 - `apps/api/tests/test_report_review.py`：预算、权限、次数、中断恢复和内容编号检查。

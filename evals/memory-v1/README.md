@@ -5,9 +5,9 @@
 ```powershell
 . .\scripts\env.ps1
 # 只测真实本地E5和生产召回，不调用付费模型
-uv run --locked python -m devflow.eval_memory --output data/memory-retrieval-new
+uv run --locked python -m devflow.evaluation.eval_memory --output data/memory-retrieval-new
 # 三组同一真实回答模型，所有请求经过主库共享预算账本
-uv run --locked python -m devflow.eval_memory --real --output data/memory-comparison-new
+uv run --locked python -m devflow.evaluation.eval_memory --real --output data/memory-comparison-new
 ```
 
 先准备本地E5模型并升级主库预算账本；输出目录必须为空。每组相同输入上限12,000、输出上限1,800、单次90秒，固定种子73轮换执行顺序，不填充输入、不自动重试失败调用。每个问题每组一次，共24次真实调用；模型、阈值、代码哈希和数据哈希记录在 results.json。语料建索引与检索都用生产代码和固定E5权重，关键词/向量仅对审核、仓库、有效期及版本过滤后的集合评分。来源UUID和到期时间因隔离库运行而变化，不影响排序；相关性同分按固定记忆UUID排序。

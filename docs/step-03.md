@@ -41,7 +41,7 @@ flowchart LR
 ```powershell
 . .\scripts\env.ps1
 uv run --locked alembic upgrade head
-uv run --locked python -m devflow.import_fixtures
+uv run --locked python -m devflow.repositories.import_fixtures
 uv run --locked alembic check
 ```
 
@@ -133,9 +133,9 @@ POST /runs 可带 Idempotency-Key：首次返回 201，相同有效参数重放�
 复验命令：
 
 ```powershell
-uv run --locked python -m devflow.persistence_smoke create
+uv run --locked python -m devflow.ops.persistence_smoke create
 # 重启 API 后
-uv run --locked python -m devflow.persistence_smoke verify
+uv run --locked python -m devflow.ops.persistence_smoke verify
 ```
 
 create 在验收记录已存在时仅验证，不重复创建；这些任务不会在本步骤调用模型。

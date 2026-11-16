@@ -10,10 +10,9 @@ from sqlalchemy.exc import SQLAlchemyError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from devflow import __version__
-from devflow.budget_api import router as budget_router
-from devflow.config import get_settings, validate_service_configuration
-from devflow.database import create_database_engine
-from devflow.errors import (
+from devflow.budget.api import router as budget_router
+from devflow.core.config import get_settings, validate_service_configuration
+from devflow.core.errors import (
     DomainError,
     database_error_handler,
     domain_error_handler,
@@ -21,12 +20,13 @@ from devflow.errors import (
     http_error_handler,
     validation_error_handler,
 )
-from devflow.health import HealthResponse, inspect_health
-from devflow.knowledge_api import router as knowledge_router
-from devflow.memory_api import router as memory_router
-from devflow.repositories import router as repositories_router
-from devflow.security import RedactedJSONResponse
-from devflow.workflow_api import router as workflows_router
+from devflow.core.security import RedactedJSONResponse
+from devflow.knowledge.api import router as knowledge_router
+from devflow.memory.api import router as memory_router
+from devflow.ops.health import HealthResponse, inspect_health
+from devflow.repositories.api import router as repositories_router
+from devflow.storage.database import create_database_engine
+from devflow.workflows.api import router as workflows_router
 
 
 @asynccontextmanager

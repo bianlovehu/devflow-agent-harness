@@ -1,6 +1,23 @@
 <!-- 文件用途：说明项目各文件的职责及关键入口。 -->
 # 项目文件用途索引
 
+后端根目录只保留 `main.py`（FastAPI 应用入口）和 `__init__.py`（版本号）。其余实现按功能归入以下 10 组；同组接口使用 `api.py`，主要业务实现使用 `service.py`，仓库和任务的数据契约使用 `schemas.py`。各组 `__init__.py` 只说明用途，不集中导入业务模块。
+
+| 后端功能组 | 职责与阅读入口 |
+| --- | --- |
+| [core/](../apps/api/src/devflow/core/) | `config.py` 配置与项目根目录；`errors.py` 错误响应；`security.py` 脱敏。 |
+| [storage/](../apps/api/src/devflow/storage/) | `database.py` 连接与会话；`models.py` 业务表；`artifact_store.py` 制品存储。 |
+| [repositories/](../apps/api/src/devflow/repositories/) | `api.py` 仓库资源接口；`schemas.py` 数据契约；其他模块负责 GitHub、固定版本文件、样例和数据库数据源。 |
+| [workflows/](../apps/api/src/devflow/workflows/) | `api.py`、`service.py`、`schemas.py` 管理会话和任务；`worker.py` 执行任务；其他模块负责 checkpoint、SSE 和证据采集。 |
+| [analysis/](../apps/api/src/devflow/analysis/) | `agent.py` 分析循环；模型与工具网关；报告定义、引用校验、Markdown 和有界复核。 |
+| [knowledge/](../apps/api/src/devflow/knowledge/) | `api.py` 知识库接口；`service.py` 文档管理和检索；`embeddings.py` 本地向量。 |
+| [memory/](../apps/api/src/devflow/memory/) | `api.py` 记忆接口；`service.py` 提取、审核、撤销和召回。 |
+| [budget/](../apps/api/src/devflow/budget/) | `api.py` 费用接口；`service.py` 预算账本；`runtime_policy.py` 运行上限与报价。 |
+| [evaluation/](../apps/api/src/devflow/evaluation/) | 数据集校验、评分、Agent 评测、真实检索、基线、记忆和报告复核对照及命令入口。 |
+| [ops/](../apps/api/src/devflow/ops/) | 显式初始化、健康检查、模型探测、数据归档辅助和重启持久性验证命令。 |
+
+应用启动仍使用 `devflow.main:app`；worker 使用 `python -m devflow.workflows.worker`；初始化使用 `python -m devflow.ops.bootstrap`。旧的平铺模块路径不再提供转发入口。
+
 源码和支持注释的配置文件含一句用途说明；关键事务和调用处另有实现注释。
 JSON、版本 pin、锁文件、diff 与日志保持标准原格式，避免破坏解析、补丁或证据行号。Alembic ini 使用 ASCII 注释，兼容 Windows 系统编码读取。
 依赖目录、工具链、构建结果、运行制品和密钥文件不属于源码索引。
@@ -20,23 +37,23 @@ JSON、版本 pin、锁文件、diff 与日志保持标准原格式，避免破�
 | [apps/api/migrations/versions/0001_enable_pgvector.py](../apps/api/migrations/versions/0001_enable_pgvector.py) | 通过初始迁移启用 PostgreSQL 向量扩展。 |
 | [apps/api/migrations/versions/0002_business_models_add_business_persistence_models.py](../apps/api/migrations/versions/0002_business_models_add_business_persistence_models.py) | 通过第二次迁移创建业务表、索引和关联约束。 |
 | [apps/api/src/devflow/__init__.py](../apps/api/src/devflow/__init__.py) | 提供 DevFlow 应用版本号。 |
-| [apps/api/src/devflow/artifact_store.py](../apps/api/src/devflow/artifact_store.py) | 按内容哈希保存及校验不可变的本地文本制品。 |
-| [apps/api/src/devflow/config.py](../apps/api/src/devflow/config.py) | 读取服务端环境配置，并隐藏密钥等敏感字段。 |
-| [apps/api/src/devflow/contracts.py](../apps/api/src/devflow/contracts.py) | 定义样例和 GitHub 共用的仓库、资源及来源状态契约。 |
-| [apps/api/src/devflow/data_source.py](../apps/api/src/devflow/data_source.py) | 定义仓库读取协议，并选择文件或数据库数据源。 |
-| [apps/api/src/devflow/database.py](../apps/api/src/devflow/database.py) | 创建数据库连接池，并为每个请求提供独立会话。 |
-| [apps/api/src/devflow/errors.py](../apps/api/src/devflow/errors.py) | 统一业务错误响应，并避免暴露敏感输入和数据库详情。 |
-| [apps/api/src/devflow/health.py](../apps/api/src/devflow/health.py) | 检测 API、数据库、向量扩展和迁移状态。 |
-| [apps/api/src/devflow/import_fixtures.py](../apps/api/src/devflow/import_fixtures.py) | 校验并幂等导入样例仓库、资源快照及证据。 |
+| [apps/api/src/devflow/storage/artifact_store.py](../apps/api/src/devflow/storage/artifact_store.py) | 按内容哈希保存及校验不可变的本地文本制品。 |
+| [apps/api/src/devflow/core/config.py](../apps/api/src/devflow/core/config.py) | 读取服务端环境配置，并隐藏密钥等敏感字段。 |
+| [apps/api/src/devflow/repositories/schemas.py](../apps/api/src/devflow/repositories/schemas.py) | 定义样例和 GitHub 共用的仓库、资源及来源状态契约。 |
+| [apps/api/src/devflow/repositories/data_source.py](../apps/api/src/devflow/repositories/data_source.py) | 定义仓库读取协议，并选择文件或数据库数据源。 |
+| [apps/api/src/devflow/storage/database.py](../apps/api/src/devflow/storage/database.py) | 创建数据库连接池，并为每个请求提供独立会话。 |
+| [apps/api/src/devflow/core/errors.py](../apps/api/src/devflow/core/errors.py) | 统一业务错误响应，并避免暴露敏感输入和数据库详情。 |
+| [apps/api/src/devflow/ops/health.py](../apps/api/src/devflow/ops/health.py) | 检测 API、数据库、向量扩展和迁移状态。 |
+| [apps/api/src/devflow/repositories/import_fixtures.py](../apps/api/src/devflow/repositories/import_fixtures.py) | 校验并幂等导入样例仓库、资源快照及证据。 |
 | [apps/api/src/devflow/main.py](../apps/api/src/devflow/main.py) | 组装 FastAPI 服务、业务路由及统一请求处理。 |
-| [apps/api/src/devflow/model_probe.py](../apps/api/src/devflow/model_probe.py) | 显式执行一次最小 DeepSeek 连通测试，不参与日常轮询。 |
-| [apps/api/src/devflow/models.py](../apps/api/src/devflow/models.py) | 定义业务数据库表、唯一约束与跨仓库关联约束。 |
-| [apps/api/src/devflow/persistence_smoke.py](../apps/api/src/devflow/persistence_smoke.py) | 记录并核对真实 API 重启前后的会话、任务和证据。 |
-| [apps/api/src/devflow/persistent_source.py](../apps/api/src/devflow/persistent_source.py) | 通过数据库读取仓库与当前有效的资源快照。 |
-| [apps/api/src/devflow/repositories.py](../apps/api/src/devflow/repositories.py) | 提供运行配置和仓库资源的只读 HTTP 接口。 |
-| [apps/api/src/devflow/workflow_api.py](../apps/api/src/devflow/workflow_api.py) | 提供会话、任务、事件和制品的 HTTP 接口。 |
-| [apps/api/src/devflow/workflow_contracts.py](../apps/api/src/devflow/workflow_contracts.py) | 定义会话、消息、任务及证据接口的输入输出结构。 |
-| [apps/api/src/devflow/workflows.py](../apps/api/src/devflow/workflows.py) | 以事务保存会话、消息、任务和固定版本的证据引用。 |
+| [apps/api/src/devflow/ops/model_probe.py](../apps/api/src/devflow/ops/model_probe.py) | 显式执行一次最小 DeepSeek 连通测试，不参与日常轮询。 |
+| [apps/api/src/devflow/storage/models.py](../apps/api/src/devflow/storage/models.py) | 定义业务数据库表、唯一约束与跨仓库关联约束。 |
+| [apps/api/src/devflow/ops/persistence_smoke.py](../apps/api/src/devflow/ops/persistence_smoke.py) | 记录并核对真实 API 重启前后的会话、任务和证据。 |
+| [apps/api/src/devflow/repositories/persistent_source.py](../apps/api/src/devflow/repositories/persistent_source.py) | 通过数据库读取仓库与当前有效的资源快照。 |
+| [apps/api/src/devflow/repositories/api.py](../apps/api/src/devflow/repositories/api.py) | 提供运行配置和仓库资源的只读 HTTP 接口。 |
+| [apps/api/src/devflow/workflows/api.py](../apps/api/src/devflow/workflows/api.py) | 提供会话、任务、事件和制品的 HTTP 接口。 |
+| [apps/api/src/devflow/workflows/schemas.py](../apps/api/src/devflow/workflows/schemas.py) | 定义会话、消息、任务及证据接口的输入输出结构。 |
+| [apps/api/src/devflow/workflows/service.py](../apps/api/src/devflow/workflows/service.py) | 以事务保存会话、消息、任务和固定版本的证据引用。 |
 | [apps/api/tests/test_database_integration.py](../apps/api/tests/test_database_integration.py) | 使用真实 PostgreSQL 验证数据库就绪与向量运算。 |
 | [apps/api/tests/test_health.py](../apps/api/tests/test_health.py) | 验证健康检查、依赖不可用状态和错误脱敏。 |
 | [apps/api/tests/test_model_probe.py](../apps/api/tests/test_model_probe.py) | 用模拟响应验证模型探测次数、用量输出和密钥脱敏。 |
@@ -154,8 +171,8 @@ JSON、版本 pin、锁文件、diff 与日志保持标准原格式，避免破�
 | [docs/step-04.md](../docs/step-04.md) | 记录前端主框架、任务创建和固定版本证据工作台的验收结果。 |
 | [scripts/export_openapi.py](../scripts/export_openapi.py) | 离线导出 FastAPI 的 OpenAPI 契约，不启动服务或连接数据库。 |
 | [apps/api/migrations/versions/0003_github_sync_state.py](../apps/api/migrations/versions/0003_github_sync_state.py) | 为仓库增加 GitHub 摘要同步状态，保留现有样例与历史任务。 |
-| [apps/api/src/devflow/github_client.py](../apps/api/src/devflow/github_client.py) | 封装 GitHub 只读 HTTP、有限分页、限流退避和无令牌日志下载。 |
-| [apps/api/src/devflow/github_source.py](../apps/api/src/devflow/github_source.py) | 持久化 GitHub 仓库摘要，并按登记范围读取 PR、Issue、CI 与 job 日志。 |
+| [apps/api/src/devflow/repositories/github_client.py](../apps/api/src/devflow/repositories/github_client.py) | 封装 GitHub 只读 HTTP、有限分页、限流退避和无令牌日志下载。 |
+| [apps/api/src/devflow/repositories/github_source.py](../apps/api/src/devflow/repositories/github_source.py) | 持久化 GitHub 仓库摘要，并按登记范围读取 PR、Issue、CI 与 job 日志。 |
 | [apps/api/tests/github_samples.py](../apps/api/tests/github_samples.py) | 提供可控的 GitHub API 响应，供只读适配器和数据库集成测试使用。 |
 | [apps/api/tests/test_github_client.py](../apps/api/tests/test_github_client.py) | 验证 GitHub 只读请求、输入范围、有限分页、错误分类及令牌隔离。 |
 | [apps/web/src/app/api/backend/[...path]/route.ts](../apps/web/src/app/api/backend/[...path]/route.ts) | 将受限的业务读取与任务创建请求交给统一后端代理。 |
@@ -174,10 +191,10 @@ JSON、版本 pin、锁文件、diff 与日志保持标准原格式，避免破�
 | 文件 | 用途 |
 |---|---|
 | `apps/api/migrations/versions/0004_worker_leases.py` | 任务租约、取消和结果字段迁移 |
-| `apps/api/src/devflow/fixed_files.py` | 固定SHA的普通文本blob读取、路径和完整性检查 |
-| `apps/api/src/devflow/evidence_capture.py` | PR/CI固定证据采集、范围缺口与数据库绑定 |
-| `apps/api/src/devflow/worker.py` | 持久化分析/模拟worker、心跳、所有权隔离、取消与超时调用留痕 |
-| `apps/api/src/devflow/event_stream.py` | 持久化事件到SSE的续传服务 |
+| `apps/api/src/devflow/repositories/fixed_files.py` | 固定SHA的普通文本blob读取、路径和完整性检查 |
+| `apps/api/src/devflow/workflows/evidence_capture.py` | PR/CI固定证据采集、范围缺口与数据库绑定 |
+| `apps/api/src/devflow/workflows/worker.py` | 持久化分析/模拟worker、心跳、所有权隔离、取消与超时调用留痕 |
+| `apps/api/src/devflow/workflows/event_stream.py` | 持久化事件到SSE的续传服务 |
 | `apps/api/tests/test_fixed_files.py` | 固定文件、diff和原始日志字节测试 |
 | `apps/api/tests/test_week02_integration.py` | 真实数据库的worker、证据与SSE故障测试 |
 | `apps/web/src/components/run-progress.tsx` | 任务控制、SSE连接和时间线 |
@@ -192,11 +209,11 @@ JSON、版本 pin、锁文件、diff 与日志保持标准原格式，避免破�
 
 | 文件 | 用途 |
 |---|---|
-| `apps/api/src/devflow/model_gateway.py` | 阿里云/DeepSeek 模型入口、错误分类、usage 与测试假模型 |
-| `apps/api/src/devflow/tool_gateway.py` | 当前任务范围内的只读工具、分页、日志错误块和重复调用检测 |
-| `apps/api/src/devflow/agent.py` | LangGraph 循环、业务预算、一次修正与引用校验 |
-| `apps/api/src/devflow/reports.py` | 报告 Pydantic schema、引用范围检查及安全 Markdown 草稿 |
-| `apps/api/src/devflow/fake_model.py` | 仅使用可见工具片段的离线演示假模型 |
+| `apps/api/src/devflow/analysis/model_gateway.py` | 阿里云/DeepSeek 模型入口、错误分类、usage 与测试假模型 |
+| `apps/api/src/devflow/analysis/tool_gateway.py` | 当前任务范围内的只读工具、分页、日志错误块和重复调用检测 |
+| `apps/api/src/devflow/analysis/agent.py` | LangGraph 循环、业务预算、一次修正与引用校验 |
+| `apps/api/src/devflow/analysis/reports.py` | 报告 Pydantic schema、引用范围检查及安全 Markdown 草稿 |
+| `apps/api/src/devflow/analysis/fake_model.py` | 仅使用可见工具片段的离线演示假模型 |
 | `apps/api/tests/test_agent.py` | 模型参数、权限边界、引用、预算与图执行单元验证 |
 | `apps/api/tests/test_week03_integration.py` | 六个样例、报告持久化/导出及失败/取消集成验证 |
 | `apps/web/src/components/analysis-report.tsx` | 风险卡片、日志/代码引用展开、复制和下载草稿 |
@@ -210,9 +227,9 @@ JSON、版本 pin、锁文件、diff 与日志保持标准原格式，避免破�
 | 文件 | 用途 |
 |---|---|
 | `apps/api/migrations/versions/0005_knowledge_rag_add_versioned_knowledge_and_hybrid_.py` | 文档、版本、向量块、GIN 关键词索引与内容向量缓存 |
-| `apps/api/src/devflow/embeddings.py` | 固定模型/tokenizer 校验、本地 CPU ONNX 推理与归一化 |
-| `apps/api/src/devflow/knowledge.py` | 文档解析、token 分块、事务版本切换、删除与混合检索 |
-| `apps/api/src/devflow/knowledge_api.py` | 知识库上传、状态、版本、预览、删除与检索调试 API |
+| `apps/api/src/devflow/knowledge/embeddings.py` | 固定模型/tokenizer 校验、本地 CPU ONNX 推理与归一化 |
+| `apps/api/src/devflow/knowledge/service.py` | 文档解析、token 分块、事务版本切换、删除与混合检索 |
+| `apps/api/src/devflow/knowledge/api.py` | 知识库上传、状态、版本、预览、删除与检索调试 API |
 | `apps/api/tests/test_knowledge.py` | PDF/文本边界、分块完整性与分词规则 |
 | `apps/api/tests/test_week04_integration.py` | 版本/去重/删除、仓库隔离、缓存、并发与问答证据 |
 | `apps/web/src/app/knowledge/page.tsx` | 知识库页面入口与仓库参数 |
@@ -227,11 +244,11 @@ JSON、版本 pin、锁文件、diff 与日志保持标准原格式，避免破�
 | 文件 | 用途 |
 |---|---|
 | `apps/api/migrations/versions/0006_context_memory_add_reviewed_memories_and_recovery_.py` | 记忆、恢复 journal、恢复次数和 checkpoint schema |
-| `apps/api/src/devflow/context_budget.py` | 分层输入预算、按次序压缩与来源/约束保留 |
-| `apps/api/src/devflow/memory.py` | 模型候选提取、人工审核、版本/有效期过滤与替代事务 |
-| `apps/api/src/devflow/memory_api.py` | 长期记忆本地提取、列表、编辑、批准和撤销接口 |
-| `apps/api/src/devflow/checkpoint.py` | PostgreSQL checkpointer 与持有租约的写入校验 |
-| `apps/api/src/devflow/security.py` | 已知令牌脱敏与统一 API JSON 展示边界 |
+| `apps/api/src/devflow/analysis/context_budget.py` | 分层输入预算、按次序压缩与来源/约束保留 |
+| `apps/api/src/devflow/memory/service.py` | 模型候选提取、人工审核、版本/有效期过滤与替代事务 |
+| `apps/api/src/devflow/memory/api.py` | 长期记忆本地提取、列表、编辑、批准和撤销接口 |
+| `apps/api/src/devflow/workflows/checkpoint.py` | PostgreSQL checkpointer 与持有租约的写入校验 |
+| `apps/api/src/devflow/core/security.py` | 已知令牌脱敏与统一 API JSON 展示边界 |
 | `apps/api/tests/test_context_budget.py` | 压缩顺序、工具配对、约束与来源、权限和脱敏验证 |
 | `apps/api/tests/test_week05_integration.py` | 记忆、长对话、恢复、版本变化和原始制品验证 |
 | `apps/api/tests/crash_worker.py` | 三个持久化边界强制退出的独立验收进程 |
@@ -245,9 +262,9 @@ JSON、版本 pin、锁文件、diff 与日志保持标准原格式，避免破�
 
 | 文件 | 用途 |
 |---|---|
-| `apps/api/src/devflow/runtime_policy.py` | 服务端限额、带来源与版本的保守报价及 Decimal 计费 |
-| `apps/api/src/devflow/budget.py` | 主库预算账户、并发预留、幂等结算与未知用量保留 |
-| `apps/api/src/devflow/budget_api.py` | 只读预算摘要和运行关联费用接口 |
+| `apps/api/src/devflow/budget/runtime_policy.py` | 服务端限额、带来源与版本的保守报价及 Decimal 计费 |
+| `apps/api/src/devflow/budget/service.py` | 主库预算账户、并发预留、幂等结算与未知用量保留 |
+| `apps/api/src/devflow/budget/api.py` | 只读预算摘要和运行关联费用接口 |
 | `apps/api/migrations/versions/0007_runtime_budget_add_shared_model_cost_ledger.py` | 项目预算账户及逐请求账本迁移 |
 | `apps/api/tests/test_runtime_policy.py` | 配置上限、工具指纹、连续循环及恢复计数 |
 | `apps/api/tests/test_budget_integration.py` | 金额边界、并发、异常、跨入口计费及进程恢复 |
@@ -263,9 +280,9 @@ JSON、版本 pin、锁文件、diff 与日志保持标准原格式，避免破�
 | `evals/devflow-v1/inputs.json` | 按来源分组的30题固定输入，仅此部分可进入模型 |
 | `evals/devflow-v1/expectations.json` | 预期结论、参考证据、禁止结论与不确定边界 |
 | `scripts/build_eval_dataset.py` | 可复现生成固定评测集 |
-| `apps/api/src/devflow/eval_runner.py` | 固定快照、关键词适配器和实际Agent执行，无参考答案输入 |
-| `apps/api/src/devflow/evaluation.py` | 数据校验、自动诊断、人工复核绑定、报告与逐题回归 |
-| `apps/api/src/devflow/eval_cli.py` | 评测、失败题重跑、复核与基线比较命令 |
+| `apps/api/src/devflow/evaluation/eval_runner.py` | 固定快照、关键词适配器和实际Agent执行，无参考答案输入 |
+| `apps/api/src/devflow/evaluation/evaluation.py` | 数据校验、自动诊断、人工复核绑定、报告与逐题回归 |
+| `apps/api/src/devflow/evaluation/eval_cli.py` | 评测、失败题重跑、复核与基线比较命令 |
 | `apps/api/tests/test_evaluation.py` | 来源与答案隔离、诊断、复核、版本和回归门禁测试 |
 | `evals/regressions/2026-11-05.json` | 首轮闭环的配置摘要、逐题结果与改善记录 |
 | `docs/evaluation-loop.md` | 复现步骤、退出码、实际结果和未验收边界 |
@@ -284,7 +301,7 @@ JSON、版本 pin、锁文件、diff 与日志保持标准原格式，避免破�
 
 ### 第2版报告：事实、推测和建议
 
-- `apps/api/src/devflow/report_v2.py`：新报告格式、工具记录的读取范围、同因合并，以及历史线索与当前问题的区分。
+- `apps/api/src/devflow/analysis/report_v2.py`：新报告格式、工具记录的读取范围、同因合并，以及历史线索与当前问题的区分。
 - `apps/api/tests/test_report_v2.py`：四类历史结论错误、直接引用、建议计数和旧报告兼容检查。
 - `apps/web/src/lib/report-presentation.ts`：按三类分组，保留每项在原报告中的位置。
 - `docs/report-rules.md`：用直白说法说明报告内容、证据限制，以及引用检查与结论复核的区别。

@@ -3,7 +3,13 @@ import hashlib
 import os
 import urllib.request
 
-from devflow.embeddings import MODEL_DIR, MODEL_FILES, MODEL_REPO, MODEL_REVISION, get_embedder
+from devflow.knowledge.embeddings import (
+    MODEL_DIR,
+    MODEL_FILES,
+    MODEL_REPO,
+    MODEL_REVISION,
+    get_embedder,
+)
 
 
 def main():

@@ -15,7 +15,7 @@ COPY fixtures ./fixtures
 COPY scripts/prepare_rag.py ./scripts/prepare_rag.py
 # 来自显式prepare_model_assets.py步骤；构建与普通请求均不隐式下载权重。
 COPY --from=model_weights / /opt/devflow-models/
-RUN python -c "from devflow.embeddings import get_embedder; get_embedder()"
+RUN python -c "from devflow.knowledge.embeddings import get_embedder; get_embedder()"
 RUN groupadd --gid 10001 devflow && useradd --uid 10001 --gid 10001 --no-create-home devflow \
     && mkdir -p /app/data && chown -R devflow:devflow /app/data
 USER devflow

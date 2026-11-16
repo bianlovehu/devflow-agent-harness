@@ -5,11 +5,11 @@ from uuid import UUID
 
 import pytest
 import test_persistence_integration as persistence
-from devflow.embeddings import MODEL_KEY
-from devflow.knowledge_api import embedding_factory
+from devflow.knowledge.api import embedding_factory
+from devflow.knowledge.embeddings import MODEL_KEY
 from devflow.main import app
-from devflow.memory import content_digest, index_memory, recall_memories
-from devflow.models import MemoryRecord, RepositoryRecord
+from devflow.memory.service import content_digest, index_memory, recall_memories
+from devflow.storage.models import MemoryRecord, RepositoryRecord
 from sqlalchemy.orm import Session
 from test_week05_integration import candidate, completed, create_agent_run
 
@@ -111,7 +111,7 @@ def test_thirty_older_semantic_hit_filters_before_ranking_and_source_revoke(cont
                 record.embedding_sha256 = "0" * 64
         session.flush()
         # 跨仓库条目通过另一个来源run构建，不能违反来源复合外键。
-        from devflow.models import ConversationRecord, MessageRecord, RunRecord
+        from devflow.storage.models import ConversationRecord, MessageRecord, RunRecord
 
         conversation = ConversationRecord(repo_id="other", title="other")
         session.add(conversation)
@@ -218,7 +218,7 @@ def test_index_failure_and_edit_during_inference_do_not_restore_stale_content(co
             return super().encode(texts, **kwargs)
 
     with Session(context.engine, expire_on_commit=False) as session:
-        from devflow.errors import DomainError
+        from devflow.core.errors import DomainError
 
         with pytest.raises(DomainError, match="索引期间经验已变化"):
             index_memory(
@@ -233,7 +233,7 @@ def test_index_failure_and_edit_during_inference_do_not_restore_stale_content(co
 
 
 def test_semantic_worker_records_explanations_and_rechecks_revocation(context):
-    from devflow.fake_model import FixtureModel
+    from devflow.analysis.fake_model import FixtureModel
 
     memory = index(context, candidate(context, completed(context)))
     assert action(context, memory, "approve").status_code == 200

@@ -7,14 +7,14 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from devflow.artifact_store import ArtifactStore, get_artifact_store
-from devflow.config import PROJECT_ROOT, get_settings
-from devflow.data_source import fixture_source
-from devflow.database import create_database_engine, get_session
-from devflow.import_fixtures import import_dataset
+from devflow.core.config import PROJECT_ROOT, get_settings
 from devflow.main import app
-from devflow.memory import recall_memories
-from devflow.worker import Worker
+from devflow.memory.service import recall_memories
+from devflow.repositories.data_source import fixture_source
+from devflow.repositories.import_fixtures import import_dataset
+from devflow.storage.artifact_store import ArtifactStore, get_artifact_store
+from devflow.storage.database import create_database_engine, get_session
+from devflow.workflows.worker import Worker
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlalchemy.orm import Session

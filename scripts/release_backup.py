@@ -46,7 +46,7 @@ def main():
                     "api",
                     "python",
                     "-m",
-                    "devflow.data_archive",
+                    "devflow.ops.data_archive",
                     "pack",
                     stdout=output,
                 )
@@ -99,7 +99,7 @@ def main():
         )
         if result.stdout.strip() != "0":
             raise ValueError("恢复数据库不是空白，操作已拒绝")
-        run("run", "--rm", "--no-deps", "api", "python", "-m", "devflow.data_archive", "empty")
+        run("run", "--rm", "--no-deps", "api", "python", "-m", "devflow.ops.data_archive", "empty")
         with (directory / "database.dump").open("rb") as source:
             run(
                 "exec",
@@ -120,7 +120,7 @@ def main():
                 "api",
                 "python",
                 "-m",
-                "devflow.data_archive",
+                "devflow.ops.data_archive",
                 "unpack",
                 stdin=source,
             )

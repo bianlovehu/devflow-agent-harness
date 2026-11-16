@@ -7,6 +7,26 @@
 
 当前范围（2026-11-11）：完善本地运行及真实评测闭环；发布封装和跨机器部署验收已取消。启动/排障见[本地运行手册](docs/local-runbook.md)，第22—24步状态见[核对表](docs/release-checklist.md)。 第22步两组真实对照、开发/新留出及GPT复核结果见[真实基线报告](docs/real-baseline-report.md)，其中保留未通过结果与限制。任务4的[报告复核与补查](docs/report-review.md)沿用原任务和费用限制，模型意见不等于认证正确。[20题对照结果](docs/report-review-baseline.md)保留目标错误9份→7份、1处新退步以及费用和耗时增加。
 
+## 后端代码分组
+
+`apps/api/src/devflow` 按功能划分为 10 组，根目录只保留应用入口 `main.py` 和版本入口 `__init__.py`：
+
+```text
+devflow/
+├── core/           # 配置、错误处理、脱敏
+├── storage/        # 数据库、业务表、制品存储
+├── repositories/   # 仓库浏览、GitHub、样例数据源
+├── workflows/      # 会话任务、worker、事件、证据采集
+├── analysis/       # Agent、模型、工具、报告生成与复核
+├── knowledge/      # 知识文档、向量、混合检索
+├── memory/         # 经验提取、审核、记忆召回
+├── budget/         # 费用账本、预算、运行策略
+├── evaluation/     # 固定评测、基线、效果对照
+└── ops/            # 初始化、健康检查、运维命令
+```
+
+同一功能的 HTTP 接口和业务实现放在同一组，分别使用 `api.py`、`service.py`；仓库和任务的数据契约使用 `schemas.py`。其他文件保留具体职责名称，详见[文件用途索引](docs/file-guide.md)。API 入口仍为 `devflow.main:app`，后台执行入口为 `python -m devflow.workflows.worker`，初始化入口为 `python -m devflow.ops.bootstrap`。
+
 ## 环境
 
 - Windows x64，PowerShell 5.1 或 PowerShell 7。
@@ -70,7 +90,7 @@ docker compose ps
 docker compose stop db
 
 # 迁移：应用、查看、生成下一步业务迁移
-uv run --locked python -m devflow.bootstrap
+uv run --locked python -m devflow.ops.bootstrap
 uv run --locked alembic current
 uv run --locked alembic revision --autogenerate -m "add business tables"
 
@@ -114,7 +134,7 @@ pyproject.toml          Python 项目配置与 Ruff/pytest 配置
 
 - **Docker named pipe 不存在：** 启动 Docker Desktop，确认使用 Linux containers，然后执行 `docker info`。
 - **端口 5432 已占用：** 修改根目录 `.env` 中 `POSTGRES_PORT`，重新创建 db 容器并重启 API。
-- **数据库已连接但扩展/迁移待配置：** 执行 `uv run --locked python -m devflow.bootstrap`。
+- **数据库已连接但扩展/迁移待配置：** 执行 `uv run --locked python -m devflow.ops.bootstrap`。
 - **修改数据库密码后连接失败：** 既有数据卷保留原密码，修改 `.env` 不会自动变更数据库内的用户密码。
 - **后端地址变化：** 修改 `apps/web/.env.local` 中的 `BACKEND_URL`，重启前端。
 - **初始化下载失败：** 确认上述发布源可访问后重跑脚本；已有配置和数据库卷会保留。
@@ -130,7 +150,7 @@ pyproject.toml          Python 项目配置与 Ruff/pytest 配置
 ```powershell
 . .\scripts\env.ps1
 uv run --locked python scripts/build_fixtures.py
-# 重新生成或编辑资料后执行 python -m devflow.import_fixtures；文件模式需重启 API 重新载入缓存。
+# 重新生成或编辑资料后执行 python -m devflow.repositories.import_fixtures；文件模式需重启 API 重新载入缓存。
 ```
 
 生成器仅在 .cache 中的自建临时仓库执行 Git；固定的提交和文本哈希可复现。参考标注单独放在 evals/fixtures，不进入业务 API。示例工程基础测试：
@@ -174,14 +194,14 @@ uv run --locked python scripts/week03_smoke.py
 
 ```powershell
 . .\scripts\env.ps1
-uv run --locked python -m devflow.bootstrap
-uv run --locked python -m devflow.import_fixtures
+uv run --locked python -m devflow.ops.bootstrap
+uv run --locked python -m devflow.repositories.import_fixtures
 uv run --locked alembic check
 ```
 
 会话、消息、任务及其固定版本证据使用 PostgreSQL 保存；大文本制品位于被 Git 忽略的 data/artifacts。验收写入接口可在 API 文档中查看。创建任务后立即返回 queued 记录，独立 worker 按所选供应商分析；fake 是离线演示，aliyun/deepseek 会产生真实 API 用量。
 
-代码阅读入口：[文件用途索引](docs/file-guide.md)、[业务模型](apps/api/src/devflow/models.py)、[事务服务](apps/api/src/devflow/workflows.py)、[第 3 步验收](docs/step-03.md)。源码与可注释配置含用途说明，关键实现处另有中文注释。
+代码阅读入口：[文件用途索引](docs/file-guide.md)、[业务模型](apps/api/src/devflow/storage/models.py)、[事务服务](apps/api/src/devflow/workflows/service.py)、[第 3 步验收](docs/step-03.md)。源码与可注释配置含用途说明，关键实现处另有中文注释。
 
 
 ## 分析工作台与接口契约
@@ -240,7 +260,7 @@ GITHUB_TIMEOUT_SECONDS=30
 ```powershell
 . .\scripts\env.ps1
 # 只执行一个排队任务；常驻 worker 使用上面的 dev.ps1 worker
-uv run --locked python -m devflow.worker --once
+uv run --locked python -m devflow.workflows.worker --once
 # 保存样例任务与证据验收摘要，写入本地 data/（请勿与常驻 worker 同时执行）
 uv run --locked python scripts/week02_smoke.py
 # 显式读取公开真实仓库，不调用模型
@@ -255,7 +275,7 @@ uv run --locked python scripts/week02_smoke.py --github pallets/flask --output d
 
 ```powershell
 . .\scripts\env.ps1
-uv run --locked python -m devflow.bootstrap
+uv run --locked python -m devflow.ops.bootstrap
 uv run --locked python scripts/prepare_rag.py
 uv run --locked python scripts/week04_smoke.py --import-only
 # 使用真实本地向量与离线假模型生成问答、PR 对照、CI 报告
@@ -275,7 +295,7 @@ uv run --locked python scripts/week04_smoke.py
 ```powershell
 . .\scripts\env.ps1
 uv sync --locked
-uv run --locked python -m devflow.bootstrap
+uv run --locked python -m devflow.ops.bootstrap
 uv run --locked python scripts/week05_smoke.py
 # 真实供应商的报告与候选提取验收，临时数据库不影响业务数据
 uv run --locked python scripts/week05_smoke.py --real
@@ -285,7 +305,7 @@ uv run --locked python scripts/week05_smoke.py --real
 
 ## 评测与回归
 
-评测与改进入口：`uv run --locked python -m devflow.eval_cli run`，默认运行 20 题开发集和离线假模型，输出逐题报告、失败诊断和人工复核模板；支持失败题重跑与基线回归比较。完整用法、30 题数据集及首轮 12/20 → 14/20 的离线验证见 [评测与回归闭环](docs/evaluation-loop.md)。自动通过仍需语义复核；真实模型和两组检索/压缩效果实验尚未验收。
+评测与改进入口：`uv run --locked python -m devflow.evaluation.eval_cli run`，默认运行 20 题开发集和离线假模型，输出逐题报告、失败诊断和人工复核模板；支持失败题重跑与基线回归比较。完整用法、30 题数据集及首轮 12/20 → 14/20 的离线验证见 [评测与回归闭环](docs/evaluation-loop.md)。自动通过仍需语义复核；真实模型和两组检索/压缩效果实验尚未验收。
 
 ## 项目预算与运行限制
 

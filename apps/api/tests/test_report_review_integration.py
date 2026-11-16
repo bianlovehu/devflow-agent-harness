@@ -8,9 +8,9 @@ from uuid import UUID
 
 import pytest
 import test_persistence_integration as persistence
-from devflow.config import PROJECT_ROOT
-from devflow.models import RunRecord
-from devflow.report_review import digest
+from devflow.analysis.report_review import digest
+from devflow.core.config import PROJECT_ROOT
+from devflow.storage.models import RunRecord
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from test_week03_integration import agent_run

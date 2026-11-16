@@ -1,7 +1,7 @@
 # 文件用途：提供可控的 GitHub API 响应，供只读适配器和数据库集成测试使用。
 from copy import deepcopy
 
-from devflow.errors import DomainError
+from devflow.core.errors import DomainError
 
 STAMP = "2026-10-28T08:00:00Z"
 PR = {

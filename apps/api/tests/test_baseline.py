@@ -1,8 +1,8 @@
 # 文件用途：验证对照计划、未压缩对照和费用保护；测试仅用fake模型，不发真实请求。
-from devflow.baseline_cli import plan_jobs
-from devflow.config import Settings
-from devflow.eval_runner import build_gateway, execute_case
-from devflow.evaluation import load_dataset
+from devflow.core.config import Settings
+from devflow.evaluation.baseline_cli import plan_jobs
+from devflow.evaluation.eval_runner import build_gateway, execute_case
+from devflow.evaluation.evaluation import load_dataset
 
 
 def test_production_knowledge_trailing_newline_can_be_read_again(tmp_path):
@@ -10,8 +10,8 @@ def test_production_knowledge_trailing_newline_can_be_read_again(tmp_path):
     import os
 
     import pytest
-    from devflow.config import get_settings
-    from devflow.eval_retrieval import ProductionRetrieval
+    from devflow.core.config import get_settings
+    from devflow.evaluation.eval_retrieval import ProductionRetrieval
 
     if os.getenv("DEVFLOW_TEST_DATABASE") != "1":
         pytest.skip("isolated PostgreSQL required")

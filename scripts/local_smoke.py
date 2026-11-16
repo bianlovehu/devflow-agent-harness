@@ -12,12 +12,12 @@ from urllib.error import URLError
 from urllib.request import urlopen
 from uuid import uuid4
 
-from devflow.budget import get_budget_ledger
-from devflow.config import PROJECT_ROOT, get_settings
-from devflow.database import create_database_engine
-from devflow.eval_cli import provenance
-from devflow.evaluation import write_json
-from devflow.models import ModelCharge
+from devflow.budget.service import get_budget_ledger
+from devflow.core.config import PROJECT_ROOT, get_settings
+from devflow.evaluation.eval_cli import provenance
+from devflow.evaluation.evaluation import write_json
+from devflow.storage.database import create_database_engine
+from devflow.storage.models import ModelCharge
 from sqlalchemy import func, select, text
 
 
@@ -116,7 +116,7 @@ def main():
                 "--port",
                 str(args.api_port),
             ],
-            "worker": [sys.executable, "-m", "devflow.worker"],
+            "worker": [sys.executable, "-m", "devflow.workflows.worker"],
             "web": [
                 node,
                 str(PROJECT_ROOT / "apps/web/node_modules/next/dist/bin/next"),
@@ -149,14 +149,14 @@ def main():
                 if heartbeat["pid"] == processes["worker"].pid and heartbeat["at"] >= started_at:
                     break
             time.sleep(0.5)
-        run([sys.executable, "-m", "devflow.healthcheck", "worker"])
+        run([sys.executable, "-m", "devflow.ops.healthcheck", "worker"])
         stages.append({"pids": {n: p.pid for n, p in processes.items()}, "health": health})
 
     try:
         with admin.connect() as connection:
             connection.execute(text(f'CREATE DATABASE "{database}"'))
         created = True
-        run([sys.executable, "-m", "devflow.bootstrap", "--seed", "--knowledge"])
+        run([sys.executable, "-m", "devflow.ops.bootstrap", "--seed", "--knowledge"])
         start()
         common = [
             sys.executable,

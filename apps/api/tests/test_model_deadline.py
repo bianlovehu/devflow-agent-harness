@@ -6,8 +6,8 @@ import time
 
 import pytest
 from budget_samples import StubLedger
-from devflow.config import Settings
-from devflow.model_gateway import DeepSeekModel, ModelError
+from devflow.analysis.model_gateway import DeepSeekModel, ModelError
+from devflow.core.config import Settings
 
 
 @pytest.mark.parametrize("where", ["connect", "body"])

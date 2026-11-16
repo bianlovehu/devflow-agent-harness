@@ -3,11 +3,11 @@ import os
 import time
 
 import pytest
-from devflow.healthcheck import check_worker, worker_heartbeat
+from devflow.ops.healthcheck import check_worker, worker_heartbeat
 
 
 def test_local_artifact_directory_isolated_without_changing_project_root(tmp_path, monkeypatch):
-    from devflow.artifact_store import ArtifactStore, get_artifact_store
+    from devflow.storage.artifact_store import ArtifactStore, get_artifact_store
 
     monkeypatch.setenv("DEVFLOW_ARTIFACT_ROOT", str(tmp_path / "isolated"))
     store = get_artifact_store()
@@ -27,8 +27,8 @@ def test_worker_health_tracks_polling_and_rejects_stale_heartbeat(tmp_path, monk
 
 
 def test_missing_local_embeddings_fail_before_network(tmp_path, monkeypatch):
-    import devflow.embeddings as embeddings
-    from devflow.errors import DomainError
+    import devflow.knowledge.embeddings as embeddings
+    from devflow.core.errors import DomainError
 
     monkeypatch.setattr(embeddings, "MODEL_DIR", tmp_path)
     monkeypatch.setattr("urllib.request.urlopen", lambda *a, **kw: pytest.fail("runtime download"))
@@ -44,7 +44,7 @@ def test_explicit_migration_initializes_checkpoint_and_worker_never_calls_setup(
     tmp_path, monkeypatch
 ):
     import test_persistence_integration as persistence
-    from devflow.worker import Worker
+    from devflow.workflows.worker import Worker
     from langgraph.checkpoint.postgres import PostgresSaver
     from sqlalchemy import text
 

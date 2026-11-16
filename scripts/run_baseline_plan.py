@@ -41,7 +41,7 @@ def main():
         command = [
             sys.executable,
             "-m",
-            "devflow.baseline_cli",
+            "devflow.evaluation.baseline_cli",
             "--real",
             "--suite",
             args.suite,

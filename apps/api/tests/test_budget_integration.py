@@ -12,14 +12,20 @@ from uuid import UUID, uuid4
 
 import pytest
 import test_persistence_integration as persistence
-from devflow.budget import BudgetLedger
-from devflow.config import PROJECT_ROOT, get_settings
-from devflow.errors import DomainError
-from devflow.fake_model import FixtureModel
+from devflow.analysis.fake_model import FixtureModel
+from devflow.analysis.model_gateway import (
+    DeepSeekModel,
+    ModelError,
+    ScriptedModel,
+    Usage,
+    tool_call,
+)
+from devflow.budget.service import BudgetLedger
+from devflow.core.config import PROJECT_ROOT, get_settings
+from devflow.core.errors import DomainError
 from devflow.main import app
-from devflow.model_gateway import DeepSeekModel, ModelError, ScriptedModel, Usage, tool_call
-from devflow.models import BudgetAccount, MemoryRecord, ModelCharge, RunRecord
-from devflow.worker import Worker
+from devflow.storage.models import BudgetAccount, MemoryRecord, ModelCharge, RunRecord
+from devflow.workflows.worker import Worker
 from sqlalchemy import func, select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
@@ -194,7 +200,7 @@ def test_gateway_accounts_for_success_format_timeout_and_cancel(context, kind):
 
 def test_all_model_purposes_and_temporary_analysis_settings_share_primary_ledger(context):
     book, opener = ledger(context), Opener()
-    with patch("devflow.model_gateway.get_budget_ledger", return_value=book):
+    with patch("devflow.analysis.model_gateway.get_budget_ledger", return_value=book):
         for purpose in ["analysis", "memory", "probe"]:
             settings = real_settings(context).model_copy(
                 update={"postgres_db": "temporary_analysis_database"}

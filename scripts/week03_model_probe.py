@@ -1,8 +1,8 @@
 # 文件用途：显式验证所选供应商的真实工具调用与 JSON 输出，仅打印状态和用量。
 import json
 
-from devflow.config import get_settings
-from devflow.model_gateway import DeepSeekModel, ModelError
+from devflow.analysis.model_gateway import DeepSeekModel, ModelError
+from devflow.core.config import get_settings
 from pydantic import BaseModel, ConfigDict
 
 

@@ -8,14 +8,14 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 import test_persistence_integration as persistence
-from devflow.config import get_settings
-from devflow.errors import DomainError
-from devflow.event_stream import stream_events
-from devflow.github_source import GitHubRepositorySource
+from devflow.core.config import get_settings
+from devflow.core.errors import DomainError
 from devflow.main import app
-from devflow.models import ArtifactRecord, ResourceSnapshot, RunEventRecord, RunRecord
-from devflow.worker import LeaseLost, Worker
-from devflow.workflows import append_run_event
+from devflow.repositories.github_source import GitHubRepositorySource
+from devflow.storage.models import ArtifactRecord, ResourceSnapshot, RunEventRecord, RunRecord
+from devflow.workflows.event_stream import stream_events
+from devflow.workflows.service import append_run_event
+from devflow.workflows.worker import LeaseLost, Worker
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from test_fixed_files import EvidenceGitHub
@@ -349,8 +349,8 @@ def test_github_expired_logs_preserve_metadata_and_require_attention(context):
 
 
 def test_terminal_commit_between_stream_queries_cannot_drop_final_events(context, monkeypatch):
-    from devflow.event_stream import event_batch
-    from devflow.workflows import cancel_run
+    from devflow.workflows.event_stream import event_batch
+    from devflow.workflows.service import cancel_run
 
     run_id = make_run(context)
     raced = False
@@ -366,7 +366,7 @@ def test_terminal_commit_between_stream_queries_cannot_drop_final_events(context
                     cancel_run(writer, run_id)
             return result
 
-    monkeypatch.setattr("devflow.event_stream.Session", RacingSession)
+    monkeypatch.setattr("devflow.workflows.event_stream.Session", RacingSession)
     first, status = event_batch(context.engine, run_id, 0)
     assert [row["sequence"] for row in first] == [1]
     assert status == "queued"  # 仍须继续取下一批，不能过早发送 end。

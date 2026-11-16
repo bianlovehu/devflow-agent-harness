@@ -5,10 +5,11 @@ from collections import Counter
 from copy import deepcopy
 
 import pytest
-from devflow.config import PROJECT_ROOT, Settings
-from devflow.eval_cli import main
-from devflow.eval_runner import build_gateway, execute_case
-from devflow.evaluation import (
+from devflow.analysis.model_gateway import ModelError, Usage
+from devflow.core.config import PROJECT_ROOT, Settings
+from devflow.evaluation.eval_cli import main
+from devflow.evaluation.eval_runner import build_gateway, execute_case
+from devflow.evaluation.evaluation import (
     EVALUATOR_VERSION,
     aggregate,
     apply_reviews,
@@ -21,7 +22,6 @@ from devflow.evaluation import (
     review_template,
     write_json,
 )
-from devflow.model_gateway import ModelError, Usage
 
 DATASET = PROJECT_ROOT / "evals/devflow-v1"
 
@@ -146,7 +146,7 @@ def test_missing_root_cause_has_actionable_failure_not_false_success(dataset):
 
 
 def test_failed_call_preserves_known_usage_and_unknown_is_explicit(dataset, monkeypatch):
-    from devflow import eval_runner
+    from devflow.evaluation import eval_runner
 
     class ErrorModel:
         provider, name = "fake", "error-test"
@@ -221,7 +221,7 @@ def test_cli_defaults_fake_never_loads_real_settings_and_preserves_outputs(tmp_p
     def forbidden():
         raise AssertionError("default eval must not load configured credentials")
 
-    monkeypatch.setattr("devflow.eval_cli.get_settings", forbidden)
+    monkeypatch.setattr("devflow.evaluation.eval_cli.get_settings", forbidden)
     output = tmp_path / "run"
     assert main(["run", "--case", "pr-owner-fixed", "--output", str(output)]) == 3
     result = read_json(output / "results.json")
@@ -238,7 +238,7 @@ def test_cli_defaults_fake_never_loads_real_settings_and_preserves_outputs(tmp_p
 
 
 def test_fake_refuses_to_compare_incomplete_file_fragments(dataset):
-    from devflow.fake_model import FixtureModel
+    from devflow.analysis.fake_model import FixtureModel
 
     case = next(c for c in dataset[0] if c.case_id == "pr-owner-removed")
     gateway, _ = build_gateway(case)

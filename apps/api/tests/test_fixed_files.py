@@ -3,10 +3,10 @@ import base64
 import hashlib
 
 import pytest
-from devflow.artifact_store import ArtifactStore
-from devflow.errors import DomainError
-from devflow.evidence_capture import capture_github, patch_complete
-from devflow.fixed_files import FixedFileReader, safe_path
+from devflow.core.errors import DomainError
+from devflow.repositories.fixed_files import FixedFileReader, safe_path
+from devflow.storage.artifact_store import ArtifactStore
+from devflow.workflows.evidence_capture import capture_github, patch_complete
 from github_samples import JOB, PR, RUN, FakeGitHub
 
 
@@ -195,7 +195,7 @@ def test_capture_add_remove_and_rename_use_correct_sides(status):
 
 
 def test_metadata_is_included_in_total_evidence_budget(monkeypatch):
-    monkeypatch.setattr("devflow.evidence_capture.MAX_CAPTURE_BYTES", 1)
+    monkeypatch.setattr("devflow.workflows.evidence_capture.MAX_CAPTURE_BYTES", 1)
     with pytest.raises(DomainError) as error:
         capture_github(
             "owner/project",

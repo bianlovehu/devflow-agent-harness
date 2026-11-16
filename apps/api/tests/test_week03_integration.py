@@ -5,10 +5,10 @@ from uuid import UUID
 
 import pytest
 import test_persistence_integration as persistence
-from devflow.config import get_settings
-from devflow.model_gateway import ModelError, ScriptedModel
-from devflow.models import ArtifactRecord, RunRecord
-from devflow.worker import Worker
+from devflow.analysis.model_gateway import ModelError, ScriptedModel
+from devflow.core.config import get_settings
+from devflow.storage.models import ArtifactRecord, RunRecord
+from devflow.workflows.worker import Worker
 from sqlalchemy.orm import Session
 from test_persistence_integration import create_target
 
@@ -94,8 +94,8 @@ def test_auth_failure_finishes_once_with_trace_and_no_report(context):
 
 
 def test_cancel_after_model_response_never_executes_requested_tool(context):
-    from devflow.model_gateway import tool_call
-    from devflow.workflows import cancel_run
+    from devflow.analysis.model_gateway import tool_call
+    from devflow.workflows.service import cancel_run
 
     class CancellingModel:
         provider, name = "fake", "cancel-test"
@@ -117,7 +117,7 @@ def test_cancel_after_model_response_never_executes_requested_tool(context):
 def test_task_timeout_keeps_last_model_trace_and_usage(context):
     from datetime import timedelta
 
-    from devflow.model_gateway import ModelReply, Usage, tool_call
+    from devflow.analysis.model_gateway import ModelReply, Usage, tool_call
     from sqlalchemy import func, select
 
     class ExpiringModel:
@@ -148,7 +148,7 @@ def test_task_timeout_keeps_last_model_trace_and_usage(context):
 def test_worker_subtracts_evidence_time_from_model_timeout(context):
     from datetime import timedelta
 
-    from devflow.fake_model import FixtureModel
+    from devflow.analysis.fake_model import FixtureModel
     from sqlalchemy import func, select
 
     class RecordingModel(FixtureModel):
@@ -174,7 +174,7 @@ def test_worker_subtracts_evidence_time_from_model_timeout(context):
 
 
 def test_directory_only_report_always_discloses_unread_evidence(context):
-    from devflow.model_gateway import ModelReply, tool_call
+    from devflow.analysis.model_gateway import ModelReply, tool_call
 
     class DirectoryOnlyModel:
         provider, name = "fake", "directory-test"
@@ -210,7 +210,7 @@ def test_directory_only_report_always_discloses_unread_evidence(context):
 
 
 def test_old_frozen_task_and_persisted_report_are_still_readable(context):
-    from devflow.reports import AnalysisReport
+    from devflow.analysis.reports import AnalysisReport
 
     run_id, worker = agent_run(context)
     with Session(context.engine) as session, session.begin():

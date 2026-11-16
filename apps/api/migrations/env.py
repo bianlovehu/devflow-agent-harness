@@ -1,8 +1,8 @@
 # 文件用途：加载业务模型，并配置在线与离线数据库迁移。
 from alembic import context
-from devflow import models  # noqa: F401
-from devflow.config import get_settings
-from devflow.database import Base, create_database_engine
+from devflow.core.config import get_settings
+from devflow.storage import models  # noqa: F401
+from devflow.storage.database import Base, create_database_engine
 
 target_metadata = Base.metadata
 

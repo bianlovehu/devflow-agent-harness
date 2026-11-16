@@ -51,7 +51,7 @@ services:
   init:
     <<: *app
     restart: "no"
-    command: ["python", "-m", "devflow.bootstrap", "--seed", "--knowledge"]
+    command: ["python", "-m", "devflow.ops.bootstrap", "--seed", "--knowledge"]
     depends_on:
       db:
         condition: service_healthy
@@ -70,7 +70,7 @@ services:
       init:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "python", "-m", "devflow.healthcheck", "api"]
+      test: ["CMD", "python", "-m", "devflow.ops.healthcheck", "api"]
       interval: 10s
       timeout: 8s
       retries: 12
@@ -79,7 +79,7 @@ services:
   worker:
     <<: *app
     restart: unless-stopped
-    command: ["python", "-m", "devflow.worker"]
+    command: ["python", "-m", "devflow.workflows.worker"]
     environment:
       <<: *app-environment
       DEVFLOW_WORKER_HEARTBEAT: /tmp/devflow-worker-heartbeat.json
@@ -87,7 +87,7 @@ services:
       init:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "python", "-m", "devflow.healthcheck", "worker"]
+      test: ["CMD", "python", "-m", "devflow.ops.healthcheck", "worker"]
       interval: 10s
       timeout: 8s
       retries: 6

@@ -4,10 +4,10 @@ import sys
 from pathlib import Path
 from uuid import UUID
 
-from devflow.artifact_store import ArtifactStore
-from devflow.config import get_settings
-from devflow.database import create_database_engine
-from devflow.worker import Worker
+from devflow.core.config import get_settings
+from devflow.storage.artifact_store import ArtifactStore
+from devflow.storage.database import create_database_engine
+from devflow.workflows.worker import Worker
 
 
 def main():

@@ -2,9 +2,9 @@
 import os
 
 import pytest
-from devflow.config import get_settings
-from devflow.database import create_database_engine
-from devflow.health import inspect_health
+from devflow.core.config import get_settings
+from devflow.ops.health import inspect_health
+from devflow.storage.database import create_database_engine
 from sqlalchemy import text
 
 pytestmark = pytest.mark.skipif(

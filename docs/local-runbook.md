@@ -14,7 +14,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup.ps1
 # 显式准备固定版本、SHA256的本地E5权重，已有文件只校验。
 uv run --locked python scripts/prepare_rag.py
 # 日常迁移和幂等初始化的统一入口。
-uv run --locked python -m devflow.bootstrap --seed --knowledge
+uv run --locked python -m devflow.ops.bootstrap --seed --knowledge
 ```
 
 setup保留已有配置并安装锁定依赖，只启动db服务。bootstrap串行迁移、幂等导入样例，`--knowledge`建立向量索引；API/worker不迁移。开发新迁移可用Alembic生成命令，应用迁移统一用bootstrap。

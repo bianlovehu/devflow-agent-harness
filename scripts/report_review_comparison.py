@@ -5,7 +5,7 @@ from decimal import Decimal
 from pathlib import Path
 from statistics import median
 
-from devflow.evaluation import digest, read_json, write_json
+from devflow.evaluation.evaluation import digest, read_json, write_json
 
 CATEGORIES = {
     "metadata_conflict",

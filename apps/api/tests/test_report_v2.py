@@ -4,14 +4,14 @@ from copy import deepcopy
 from types import SimpleNamespace
 
 import pytest
-from devflow.agent import AnalysisRunner, model_configuration
-from devflow.config import Settings
-from devflow.eval_runner import execute_case
-from devflow.evaluation import grade, load_dataset
-from devflow.model_gateway import ModelReply, ScriptedModel, tool_call
-from devflow.report_v2 import ReportDraftV2, evidence_facts, finalize_report, parse_report
-from devflow.reports import AnalysisReport, report_markdown, require_report
-from devflow.tool_gateway import ToolGateway
+from devflow.analysis.agent import AnalysisRunner, model_configuration
+from devflow.analysis.model_gateway import ModelReply, ScriptedModel, tool_call
+from devflow.analysis.report_v2 import ReportDraftV2, evidence_facts, finalize_report, parse_report
+from devflow.analysis.reports import AnalysisReport, report_markdown, require_report
+from devflow.analysis.tool_gateway import ToolGateway
+from devflow.core.config import Settings
+from devflow.evaluation.eval_runner import execute_case
+from devflow.evaluation.evaluation import grade, load_dataset
 from test_agent import answer, evidence
 
 

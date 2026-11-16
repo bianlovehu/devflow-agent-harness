@@ -2,4 +2,4 @@
 . "$PSScriptRoot\env.ps1"
 
 # Explicitly performs a small, billable request to the configured provider.
-Invoke-Checked { uv run --locked python -m devflow.model_probe }
+Invoke-Checked { uv run --locked python -m devflow.ops.model_probe }

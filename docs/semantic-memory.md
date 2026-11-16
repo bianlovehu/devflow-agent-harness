@@ -6,7 +6,7 @@
 
 ```powershell
 . .\scripts\env.ps1
-uv run --locked python -m devflow.bootstrap
+uv run --locked python -m devflow.ops.bootstrap
 # 尚未准备本地模型时执行；请求期间不会自动联网下载
 uv run --locked python scripts/prepare_rag.py
 ```

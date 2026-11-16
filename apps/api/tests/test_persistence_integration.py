@@ -8,16 +8,16 @@ from unittest.mock import patch
 import pytest
 from alembic import command
 from alembic.config import Config
-from devflow.artifact_store import ArtifactStore, get_artifact_store
-from devflow.budget import BudgetLedger, get_budget_ledger
-from devflow.config import PROJECT_ROOT, get_settings
-from devflow.data_source import fixture_source
-from devflow.database import Base, create_database_engine, get_session
-from devflow.errors import DomainError
-from devflow.health import inspect_health
-from devflow.import_fixtures import import_dataset
+from devflow.budget.service import BudgetLedger, get_budget_ledger
+from devflow.core.config import PROJECT_ROOT, get_settings
+from devflow.core.errors import DomainError
 from devflow.main import app
-from devflow.models import (
+from devflow.ops.health import inspect_health
+from devflow.repositories.data_source import fixture_source
+from devflow.repositories.import_fixtures import import_dataset
+from devflow.storage.artifact_store import ArtifactStore, get_artifact_store
+from devflow.storage.database import Base, create_database_engine, get_session
+from devflow.storage.models import (
     ArtifactRecord,
     EvidenceRecord,
     MessageRecord,
@@ -27,8 +27,8 @@ from devflow.models import (
     RunEvidenceRecord,
     RunRecord,
 )
-from devflow.workflow_contracts import ConversationCreate, RunCreate
-from devflow.workflows import append_run_event, create_conversation, create_run
+from devflow.workflows.schemas import ConversationCreate, RunCreate
+from devflow.workflows.service import append_run_event, create_conversation, create_run
 from fastapi.testclient import TestClient
 from sqlalchemy import func, inspect, select, text
 from sqlalchemy.exc import IntegrityError
@@ -136,7 +136,9 @@ def test_import_is_idempotent_and_repository_reads_use_database(context):
     assert all(value == 0 for value in result["created"].values())
     assert database_ids(context.engine) == before
     # Removing access to the file provider must not affect database-backed reads.
-    with patch("devflow.data_source.fixture_source", side_effect=AssertionError("file access")):
+    with patch(
+        "devflow.repositories.data_source.fixture_source", side_effect=AssertionError("file access")
+    ):
         response = context.client.get("/api/v1/repositories/repo-taskboard/pull-requests/102")
     assert response.status_code == 200
     assert response.json()["files"][0]["head_content"].startswith("def list_tasks") or (
@@ -409,7 +411,7 @@ def test_invalid_fixture_metadata_is_rejected_without_writes(context, invalid):
 
 
 def test_github_registration_is_persistent_idempotent_and_separate_from_fixtures(context):
-    from devflow.github_source import GitHubRepositorySource
+    from devflow.repositories.github_source import GitHubRepositorySource
     from github_samples import FakeGitHub
 
     settings = context.settings.model_copy(update={"data_source": "github"})
@@ -437,7 +439,7 @@ def test_github_registration_is_persistent_idempotent_and_separate_from_fixtures
 
 
 def test_github_refresh_permission_failure_keeps_old_summary_and_fetch_time(context):
-    from devflow.github_source import GitHubRepositorySource
+    from devflow.repositories.github_source import GitHubRepositorySource
     from github_samples import FakeGitHub
 
     fake = FakeGitHub()
@@ -464,7 +466,7 @@ def test_github_http_routes_read_real_shapes_and_return_log_errors(context):
     fake = FakeGitHub()
     settings = context.settings.model_copy(update={"data_source": "github"})
     app.dependency_overrides[get_settings] = lambda: settings
-    with patch("devflow.github_source.GitHubClient", return_value=fake):
+    with patch("devflow.repositories.github_source.GitHubClient", return_value=fake):
         response = context.client.post("/api/v1/repositories", json={"url": "owner/project"})
         assert response.status_code == 201, response.text
         pr = context.client.get("/api/v1/repositories/github-123/pull-requests/7")
@@ -488,7 +490,7 @@ def test_github_http_routes_read_real_shapes_and_return_log_errors(context):
 
 
 def test_fixture_remains_usable_in_github_mode(context):
-    from devflow.worker import Worker
+    from devflow.workflows.worker import Worker
 
     settings = context.settings.model_copy(update={"data_source": "github"})
     app.dependency_overrides[get_settings] = lambda: settings

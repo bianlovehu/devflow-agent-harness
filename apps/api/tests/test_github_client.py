@@ -6,10 +6,15 @@ from urllib.error import URLError
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
-from devflow.config import Settings
-from devflow.errors import DomainError
-from devflow.github_client import MAX_RESPONSE_BYTES, GitHubClient, NoRedirect, parse_repository_url
-from devflow.github_source import issue_references
+from devflow.core.config import Settings
+from devflow.core.errors import DomainError
+from devflow.repositories.github_client import (
+    MAX_RESPONSE_BYTES,
+    GitHubClient,
+    NoRedirect,
+    parse_repository_url,
+)
+from devflow.repositories.github_source import issue_references
 
 
 class Response(io.BytesIO):

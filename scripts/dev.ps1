@@ -14,7 +14,7 @@ switch ($Target) {
             $env:DEVFLOW_WORKER_HEARTBEAT = Join-Path $ProjectRoot 'data\worker-heartbeat.json'
         }
         [System.IO.Directory]::CreateDirectory((Split-Path -Parent $env:DEVFLOW_WORKER_HEARTBEAT)) | Out-Null
-        Invoke-Checked { uv run --locked python -m devflow.worker }
+        Invoke-Checked { uv run --locked python -m devflow.workflows.worker }
     }
     'web' {
         Push-Location -LiteralPath 'apps\web'
@@ -28,6 +28,6 @@ switch ($Target) {
         if (-not $env:DEVFLOW_WORKER_HEARTBEAT) {
             $env:DEVFLOW_WORKER_HEARTBEAT = Join-Path $ProjectRoot 'data\worker-heartbeat.json'
         }
-        Invoke-Checked { uv run --locked python -m devflow.healthcheck worker }
+        Invoke-Checked { uv run --locked python -m devflow.ops.healthcheck worker }
     }
 }

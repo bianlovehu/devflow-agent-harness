@@ -3,7 +3,7 @@
 
 2026-11-11更新：本轮已授权真实分层基线和GPT语义复核，当前结果、失败归因及版本边界见[真实基线记录](real-baseline-report.md)。原已查看留出只作回归；发布封装已取消。
 
-入口是 `python -m devflow.eval_cli`。它运行现有的 `AnalysisRunner`、只读 `ToolGateway` 和报告校验，保存逐题输出、实际读取区间、模型/工具 trace、失败原因和人工复核模板。默认使用离线假模型，不读取 `.env` 中的模型密钥，也不连接业务数据库。
+入口是 `python -m devflow.evaluation.eval_cli`。它运行现有的 `AnalysisRunner`、只读 `ToolGateway` 和报告校验，保存逐题输出、实际读取区间、模型/工具 trace、失败原因和人工复核模板。默认使用离线假模型，不读取 `.env` 中的模型密钥，也不连接业务数据库。
 
 固定集位于 `evals/devflow-v1/`：PR、CI、知识问答各 10 题。20 题开发集用于定位和改进，10 题留出集用于冻结改进后的检查。同一来源的变体，以及相互关联的 PR/CI/知识契约，都放在同一组。案例来自人工构造的独立小场景，不代表真实业务流量分布。
 
@@ -15,7 +15,7 @@
 
 ```powershell
 . .\scripts\env.ps1
-uv run --locked python -m devflow.eval_cli run --split dev --output data/evals/baseline
+uv run --locked python -m devflow.evaluation.eval_cli run --split dev --output data/evals/baseline
 ```
 
 每个结果目录包含：
@@ -41,15 +41,15 @@ uv run --locked python -m devflow.eval_cli run --split dev --output data/evals/b
 
 ```powershell
 # 快速验证失败题，保留原始结果。
-uv run --locked python -m devflow.eval_cli run --cases-from data/evals/baseline/failures.json --output data/evals/failure-rerun
+uv run --locked python -m devflow.evaluation.eval_cli run --cases-from data/evals/baseline/failures.json --output data/evals/failure-rerun
 
 # 同一组完整开发集：逐题比较，改善不能掩盖另一题的退步。
-uv run --locked python -m devflow.eval_cli run --split dev --baseline data/evals/baseline --output data/evals/candidate
-uv run --locked python -m devflow.eval_cli compare --baseline data/evals/baseline --current data/evals/candidate --output data/evals/comparison.json
+uv run --locked python -m devflow.evaluation.eval_cli run --split dev --baseline data/evals/baseline --output data/evals/candidate
+uv run --locked python -m devflow.evaluation.eval_cli compare --baseline data/evals/baseline --current data/evals/candidate --output data/evals/comparison.json
 
 # 开发改进冻结后，再看留出集；也可以显式运行全部 30 题。
-uv run --locked python -m devflow.eval_cli run --split holdout --output data/evals/holdout
-uv run --locked python -m devflow.eval_cli run --split all --output data/evals/all
+uv run --locked python -m devflow.evaluation.eval_cli run --split holdout --output data/evals/holdout
+uv run --locked python -m devflow.evaluation.eval_cli run --split all --output data/evals/all
 ```
 
 指定题可重复使用 `--case`，例如 `--case pr-owner-fixed --case pr-null-unchanged`。基线与候选必须使用相同数据内容、评分器、模型/供应商、检索适配器和整组题目；不兼容的基线会在请求模型前拒绝。工作树代码、提示词、上下文配置可以变化，并分别记录。输出目录必须为空或尚不存在。
@@ -65,7 +65,7 @@ uv run --locked python -m devflow.eval_cli run --split all --output data/evals/a
 人工逐题对照原文和参考标注，在 `reviews.json` 填写 `verdict`（`pass` / `fail`）、`reviewer`、`notes`。失败时还需选择 `failure_tags`：`missed_issue`、`false_positive`、`wrong_root_cause`、`unsupported_claim`、`bad_answer` 或 `other`。未完成的题保留 `pending`。然后生成单独的已复核结果：
 
 ```powershell
-uv run --locked python -m devflow.eval_cli review --run data/evals/candidate --reviews data/evals/candidate/reviews.json --output data/evals/candidate-reviewed
+uv run --locked python -m devflow.evaluation.eval_cli review --run data/evals/candidate --reviews data/evals/candidate/reviews.json --output data/evals/candidate-reviewed
 ```
 
 复核不覆盖原始运行，也不抹掉自动失败。新输出必须重新复核；旧运行人工通过、新运行待复核，会在比较中标为 `semantic_review_lost`，避免误称质量继续达标。即使不改输出，复核也只能绑定模板指定的运行和 SHA256。

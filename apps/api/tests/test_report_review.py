@@ -3,18 +3,18 @@ import json
 from copy import deepcopy
 
 import pytest
-from devflow.agent import AnalysisRunner, model_configuration
-from devflow.config import Settings
-from devflow.errors import DomainError
-from devflow.model_gateway import ModelError, ModelReply, ScriptedModel, tool_call
-from devflow.report_review import (
+from devflow.analysis.agent import AnalysisRunner, model_configuration
+from devflow.analysis.model_gateway import ModelError, ModelReply, ScriptedModel, tool_call
+from devflow.analysis.report_review import (
     BoundedReportReview,
     ReviewDraft,
     digest,
     observed_packets,
     targets,
 )
-from devflow.report_v2 import ReportDraftV2, finalize_report
+from devflow.analysis.report_v2 import ReportDraftV2, finalize_report
+from devflow.core.config import Settings
+from devflow.core.errors import DomainError
 from test_report_v2 import setup
 
 
@@ -107,7 +107,7 @@ def test_deterministic_failure_prevents_review_spending(mutation):
     elif mutation == "metadata":
         report.evidence_facts.knowledge_enabled = True
     else:
-        from devflow.report_v2 import BoundaryClaim
+        from devflow.analysis.report_v2 import BoundaryClaim
 
         report.boundary_claims = [BoundaryClaim(kind="source_truncated", evidence_id=item["id"])]
     model = ScriptedModel([])

@@ -138,7 +138,7 @@
 
 ## 七、资料与边界
 
-本地依据：README.md、docs/evaluation-loop.md、docs/gpt-semantic-review-2026-11-09.md、docs/week-05.md、compose.yaml、apps/api/src/devflow/memory.py、apps/api/src/devflow/eval_runner.py。
+本地依据：README.md、docs/evaluation-loop.md、docs/gpt-semantic-review-2026-11-09.md、docs/week-05.md、compose.yaml、apps/api/src/devflow/memory/service.py、apps/api/src/devflow/evaluation/eval_runner.py。
 
 官方参考：
 

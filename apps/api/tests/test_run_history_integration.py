@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 
 import pytest
 import test_persistence_integration as persistence
-from devflow.models import RepositoryRecord, RunRecord
+from devflow.storage.models import RepositoryRecord, RunRecord
 from sqlalchemy.orm import Session
 from test_persistence_integration import create_target
 

@@ -8,10 +8,10 @@ from uuid import UUID
 
 import pytest
 import test_persistence_integration as persistence
-from devflow.config import PROJECT_ROOT
-from devflow.memory import recall_memories
-from devflow.models import MemoryRecord, MessageRecord, ResourceSnapshot, RunRecord
-from devflow.worker import LeaseLost, Worker
+from devflow.core.config import PROJECT_ROOT
+from devflow.memory.service import recall_memories
+from devflow.storage.models import MemoryRecord, MessageRecord, ResourceSnapshot, RunRecord
+from devflow.workflows.worker import LeaseLost, Worker
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
@@ -24,7 +24,7 @@ def create_agent_run(context, **changes):
     settings = context.settings.model_copy(
         update={"analysis_executor": "agent", "simulation_step_seconds": 0}
     )
-    from devflow.config import get_settings
+    from devflow.core.config import get_settings
     from devflow.main import app
 
     app.dependency_overrides[get_settings] = lambda: settings
@@ -257,7 +257,7 @@ def test_missing_snapshot_artifact_on_recovery_fails_without_fresh_capture(conte
     run, worker = create_agent_run(context)
     run_id = UUID(run["id"])
     worker.claim(run_id)
-    from devflow.workflows import run_artifacts
+    from devflow.workflows.service import run_artifacts
 
     with Session(context.engine) as session, session.begin():
         artifacts = run_artifacts(session, run_id)
@@ -273,7 +273,7 @@ def test_revoked_memory_disappears_before_next_model_request(context):
     run = completed(context)
     memory = candidate(context, run)
     mutate(context, memory, "approve")
-    from devflow.fake_model import FixtureModel
+    from devflow.analysis.fake_model import FixtureModel
 
     class RevokingModel(FixtureModel):
         def __init__(self):
@@ -295,7 +295,7 @@ def test_revoked_memory_disappears_before_next_model_request(context):
 
 
 def test_api_and_model_inputs_redact_secrets_but_preserve_original_artifacts(context):
-    from devflow.models import ArtifactRecord
+    from devflow.storage.models import ArtifactRecord
 
     secret = "ghp_" + "a" * 36
     run, worker = create_agent_run(context, question="请审查；不可信资料中包含令牌 " + secret)

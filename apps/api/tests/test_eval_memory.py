@@ -1,9 +1,9 @@
 # 文件用途：验证三组记忆对照的独立标注、答案评分与真实调用开关。
 
 import pytest
-from devflow.config import PROJECT_ROOT, Settings
-from devflow.eval_memory import grade_answer
-from devflow.evaluation import read_json
+from devflow.core.config import PROJECT_ROOT, Settings
+from devflow.evaluation.eval_memory import grade_answer
+from devflow.evaluation.evaluation import read_json
 
 
 def test_memory_corpus_contains_thirty_same_repository_experiences_and_separate_labels():

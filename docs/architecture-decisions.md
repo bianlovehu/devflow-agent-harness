@@ -12,4 +12,6 @@
 | 普通服务不迁移、不下载权重 | 初始化可明确诊断和重跑，避免普通请求触发联网、DDL或竞争；bootstrap用锁串行迁移，固定权重显式准备并校验SHA | `bootstrap.py`、`embeddings.py`、`prepare_rag.py`；`test_release.py` |
 | 预算使用共享账本 | 每次真实请求先原子预留，再依usage结算；不确定的中断调用保留预留，重启不重置总账。隔离评测数据不意味着隔离费用账户 | `budget.py`、`model_gateway.py`、`runtime_policy.py`；`test_budget_integration.py` |
 
+| 每个分析任务独立只读代码 MCP 进程 | worker 用官方 SDK 和 stdio 调用固定工具；共享 HTTP 快照服务、由 Host 原子绑定证据；契约不兼容仍可回放旧结果，避免静默切换实现或版本 | `code/mcp_client.py`、`code/mcp_server.py`、`code/tasks.py`；`test_code_mcp.py`、`test_code_integration.py`，详见[代码证据 MCP](code-evidence-mcp.md) |
+
 上述文件均位于`apps/api/src/devflow`或`apps/api/tests`，准备脚本位于`scripts`。迁移文件位于`apps/api/migrations/versions`。选择带来的限制包括本地向量索引的CPU/内存开销、数据库与制品必须成对保存，以及引用校验无法自动证明语义正确。

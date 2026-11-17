@@ -366,3 +366,25 @@ def test_only_four_actions_and_no_self_scores_are_accepted():
     payload["decisions"][0]["action"] = "approved_correct"
     with pytest.raises(ValueError):
         ReviewDraft.model_validate(payload)
+
+
+def test_mcp_failure_during_review_keeps_original_report():
+    item, tools, value = setup()
+    request = {
+        "tool": "search_code",
+        "arguments": {"repo_id": "registered", "commit": "a" * 40, "query": "caller"},
+        "reason": "核对未修改的调用方。",
+    }
+
+    def offline(*_):
+        raise DomainError(503, "mcp_disconnected", "服务退出")
+
+    tools.code_access = offline
+    runner, model, _ = start(
+        item, tools, value, [final(review(value, {"finding:0": "need_evidence"}, [request]))]
+    )
+    result = runner.run()
+    assert result["report_review"]["status"] == "review_unavailable"
+    assert result["report"]["findings"]
+    assert any("mcp_disconnected" in text for text in result["report"]["unconfirmed"])
+    assert len(model.calls) == 3

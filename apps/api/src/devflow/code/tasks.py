@@ -154,6 +154,8 @@ def bind_file(session, run, sid, path):
 
 def load_evidence(session, evidence, store):
     saved = session.get(ArtifactRecord, evidence.artifact_id)
+    if saved is None:
+        raise DomainError(409, "artifact_missing", "证据的原始制品记录缺失")
     return {
         "id": str(evidence.id),
         "artifact_id": str(saved.id),
@@ -166,7 +168,7 @@ def load_evidence(session, evidence, store):
     }
 
 
-def operation(worker, run_id, token, name, args):
+def operation(worker, run_id, token, name, args, *, mcp_client=None):
     """证据和可见结果一次提交；恢复只回放，不重新搜索网络或分支。"""
     from devflow.analysis.tool_gateway import call_fingerprint
 
@@ -176,32 +178,89 @@ def operation(worker, run_id, token, name, args):
         return worker.guard(run_id, token)
 
     guard()
-    # 读取和搜索阶段不持有任务行锁，取消及心跳不被搜索阻塞。
+    started = time.monotonic()
     with Session(worker.engine) as session:
         run = session.get(RunRecord, run_id)
         sid = bound_snapshot(session, run, args.commit)
         saved = session.get(RunJournal, (run_id, key))
+        failed = session.get(RunJournal, (run_id, key + ":error"))
         result = saved.payload if saved else None
         repo_id = run.repo_id
-        if result is None:
-            if name == "list_code_tree":
-                result = service.tree(session, repo_id, sid, args.path, args.offset, args.limit)
-            elif name == "search_code":
-                result = service.search(
-                    session,
-                    repo_id,
-                    sid,
-                    args.query,
-                    args.limit,
-                    args.mode,
-                    worker.store,
-                    worker.settings,
-                    guard,
-                )
+        use_mcp = run.configuration.get("code_backend") == "mcp-stdio-v1"
+        previous_meta = session.get(RunJournal, (run_id, key + ":mcp"))
+        previous_meta = previous_meta.payload if previous_meta else None
+        failed = failed.payload if failed else None
+    own_client = False
+    if use_mcp and mcp_client is None:
+        from devflow.code.mcp_client import CodeMCPClient
+
+        mcp_client = CodeMCPClient(worker, run_id, token)
+        own_client = True
+    if failed:
+        error = DomainError(failed["status"], failed["code"], failed["message"])
+        if mcp_client:
+            mcp_client.record(name, args, replay=True, error=error, metadata=failed.get("mcp"))
+        raise error
+    if result is None:
+        try:
+            if use_mcp:
+                result = mcp_client.call(name, args.model_dump())
+                with Session(worker.engine) as session:
+                    validate_material(session, worker.store, repo_id, sid, name, args, result)
             else:
-                result = service.read_file(
-                    session, repo_id, sid, args.path, args.start_line, args.limit, worker.store
+                with Session(worker.engine) as session:
+                    if name == "list_code_tree":
+                        result = service.tree(
+                            session, repo_id, sid, args.path, args.offset, args.limit
+                        )
+                    elif name == "search_code":
+                        result = service.search(
+                            session,
+                            repo_id,
+                            sid,
+                            args.query,
+                            args.limit,
+                            args.mode,
+                            worker.store,
+                            worker.settings,
+                            guard,
+                        )
+                    else:
+                        result = service.read_file(
+                            session,
+                            repo_id,
+                            sid,
+                            args.path,
+                            args.start_line,
+                            args.limit,
+                            worker.store,
+                        )
+        except DomainError as error:
+            if use_mcp:
+                if error.code == "mcp_result_invalid":
+                    mcp_client.fail(error)
+                with Session(worker.engine) as session, session.begin():
+                    worker._owned(session, run_id, token)
+                    if session.get(RunJournal, (run_id, key + ":error")) is None:
+                        session.add(
+                            RunJournal(
+                                run_id=run_id,
+                                key=key + ":error",
+                                payload={
+                                    "status": error.status,
+                                    "code": error.code,
+                                    "message": error.message,
+                                    "mcp": dict(mcp_client.info),
+                                },
+                            )
+                        )
+                mcp_client.record(
+                    name, args, error=error, elapsed_ms=round((time.monotonic() - started) * 1000)
                 )
+            raise
+        finally:
+            if own_client:
+                mcp_client.close()
     with Session(worker.engine) as session, session.begin():
         run, _ = worker._owned(session, run_id, token)
         saved = session.get(RunJournal, (run_id, key))
@@ -247,6 +306,10 @@ def operation(worker, run_id, token, name, args):
                 )
             result = redact(result)
             session.add(RunJournal(run_id=run_id, key=key, payload=result))
+            if use_mcp:
+                session.add(
+                    RunJournal(run_id=run_id, key=key + ":mcp", payload=dict(mcp_client.info))
+                )
         fragments = (
             result.get("items", [])
             if name == "search_code"
@@ -265,4 +328,81 @@ def operation(worker, run_id, token, name, args):
                 ):
                     raise DomainError(409, "code_evidence_missing", "保存的代码证据关联已缺失")
                 evidence_items.append(load_evidence(session, evidence, worker.store))
+    if use_mcp:
+        mcp_client.record(
+            name,
+            args,
+            replay=saved is not None,
+            elapsed_ms=round((time.monotonic() - started) * 1000),
+            result_chars=len(json.dumps(result, ensure_ascii=False)),
+            metadata=previous_meta,
+            result=result,
+        )
     return {**result, "_evidence": evidence_items}
+
+
+def validate_material(session, store, repo_id, sid, name, args, result):
+    """Host 再核对证据来源及实际正文；MCP 服务无权创建任务证据。"""
+    from devflow.code.capture import text_lines
+    from devflow.storage.models import CodeFile
+
+    meta = service.snapshot(session, repo_id, sid)
+    if (
+        result.get("repo_id") != repo_id
+        or result.get("commit") != args.commit
+        or result.get("snapshot_id") != str(sid)
+        or result.get("manifest_sha256") != meta.manifest_sha256
+    ):
+        raise DomainError(502, "mcp_result_invalid", "MCP 结果的仓库、提交或快照哈希不匹配")
+    if result["coverage"] != meta.coverage or result["policy_version"] != meta.policy_version:
+        raise DomainError(502, "mcp_result_invalid", "MCP 返回的快照覆盖范围或策略不匹配")
+    if name == "list_code_tree":
+        from devflow.code.schemas import CodeTreeResponse
+
+        expected = CodeTreeResponse.model_validate(
+            service.tree(session, repo_id, sid, args.path, args.offset, args.limit)
+        ).model_dump(mode="json")
+        if result != redact(expected):
+            raise DomainError(502, "mcp_result_invalid", "MCP 目录结果路径不匹配")
+        return
+    fragments = result["items"] if name == "search_code" else [result]
+    if name == "search_code" and (
+        result["query"] != args.query or result["mode"] != args.mode or len(fragments) > args.limit
+    ):
+        raise DomainError(502, "mcp_result_invalid", "MCP 搜索参数或结果数量不匹配")
+    for fragment in fragments:
+        file = session.get(CodeFile, (sid, fragment["path"]))
+        if (
+            file is None
+            or file.skip_reason
+            or file.content_sha256 != fragment["content_sha256"]
+            or file.blob_sha != fragment["blob_sha"]
+            or file.line_count != fragment["line_count"]
+            or file.size_bytes != fragment["size_bytes"]
+        ):
+            raise DomainError(502, "mcp_result_invalid", "MCP 返回了未采集文件或错误的文件哈希")
+        if name == "read_file" and (
+            fragment["path"] != args.path
+            or fragment["start_line"] != args.start_line
+            or len(fragment["lines"]) > args.limit
+        ):
+            raise DomainError(502, "mcp_result_invalid", "MCP 文件读取范围不匹配")
+        if name == "search_code":
+            if args.mode == "paths" and fragment.get("lines") is not None:
+                raise DomainError(502, "mcp_result_invalid", "路径搜索不能返回正文")
+            if args.mode == "snippets" and (
+                not fragment.get("lines")
+                or not fragment["start_line"] <= fragment["match_line"] <= fragment["end_line"]
+            ):
+                raise DomainError(502, "mcp_result_invalid", "搜索命中行不在返回片段中")
+        if fragment.get("lines"):
+            _, _, content = service.raw_file(session, repo_id, sid, fragment["path"], store)
+            lines = text_lines(content.encode())
+            start, end = fragment["start_line"], fragment["end_line"]
+            if not 1 <= start <= end <= len(lines) or end - start + 1 != len(fragment["lines"]):
+                raise DomainError(502, "mcp_result_invalid", "MCP 返回的行范围无效")
+            expected = [
+                {"line": number, "text": lines[number - 1]} for number in range(start, end + 1)
+            ]
+            if redact(expected) != fragment["lines"]:
+                raise DomainError(502, "mcp_result_invalid", "MCP 返回正文与本地固定制品不一致")

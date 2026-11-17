@@ -244,6 +244,9 @@ function Shell({ children }: { children: React.ReactNode }) {
                         : `${runtime.data.model.provider === "aliyun" ? "阿里云" : "DeepSeek"} · ${runtime.data.model.name}`
                       : "模型密钥未配置"}
                 </p>
+                {runtime.data?.code_mcp?.configured && (
+                  <p>代码证据 MCP：任务开始时连接；实际状态见任务时间线。</p>
+                )}
                 <BudgetSummary />
               </div>
             </details>

@@ -44,6 +44,16 @@ def runtime(settings: Annotated[Settings, Depends(get_settings)]) -> dict[str, o
         "repository_adapter_available": True,
         "github_configured": bool(settings.github_token.get_secret_value().strip()),
         "code_search_available": rg_path(settings) is not None,
+        "code_mcp": {
+            "configured": True,
+            "transport": "stdio",
+            "status": "not_connected",
+            "server_name": "devflow-code-evidence",
+            "server_version": "1.0.0",
+            "contract_version": "code-evidence-v1",
+            "startup_timeout_seconds": settings.mcp_startup_timeout_seconds,
+            "tool_timeout_seconds": settings.mcp_tool_timeout_seconds,
+        },
         "model": {
             "provider": settings.model_provider,
             "name": settings.dashscope_model

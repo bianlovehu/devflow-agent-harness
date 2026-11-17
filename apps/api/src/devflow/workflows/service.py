@@ -256,6 +256,11 @@ def create_run(
                 "source_routing": "repository",
                 "application_version": __version__,
                 "memory_strategy": settings.memory_recall_strategy,
+                **(
+                    {"code_backend": "mcp-stdio-v1", "mcp_contract_version": "code-evidence-v1"}
+                    if data.task_type in {"pr_review", "ci_debug"}
+                    else {}
+                ),
                 **model_configuration(settings),
                 "budget": data.budget.model_dump(),
             }

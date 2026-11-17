@@ -22,6 +22,12 @@ class CodeSnapshotResponse(BaseModel):
     error_message: str | None
 
 
+class CodeSnapshotSelection(BaseModel):
+    repo_id: str
+    default_commit: str
+    snapshot: CodeSnapshotResponse | None
+
+
 class CodeEntry(BaseModel):
     path: str
     kind: str

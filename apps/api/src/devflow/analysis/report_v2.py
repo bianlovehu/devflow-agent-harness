@@ -306,6 +306,11 @@ def finalize_report(report, gateway, task_type):
                 f"提交 {item['commit']} 的代码快照受限（{item['status']}）；"
                 "跨文件检查仅覆盖已保存且实际读取的材料。"
             )
+    mcp = gateway.metadata.get("code_mcp", {})
+    if mcp.get("status") == "unavailable":
+        scope.insert(
+            0, "代码证据 MCP 服务不可用，跨文件检查受限；报告仅使用已保存且实际读取的材料。"
+        )
     return ReportV2(
         **{**report.model_dump(), "findings": merged, "scope": _unique(scope)[:30]},
         evidence_facts=evidence_facts(gateway),

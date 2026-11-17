@@ -10,6 +10,13 @@ import { readEvents } from "@/lib/workflows";
 import { QueryState } from "@/components/query-state";
 
 const labels: Record<string, string> = {
+  "mcp.connecting": "正在连接代码证据服务",
+  "mcp.closed": "代码证据服务已关闭",
+  "mcp.connected": "代码证据服务已连接",
+  "mcp.unavailable": "代码证据服务不可用，分析范围受限",
+  "mcp.call_completed": "代码证据补查完成",
+  "mcp.call_failed": "代码证据补查失败",
+  "mcp.replayed": "回放已保存代码证据",
   "run.queued": "任务已入队",
   "run.started": "后台开始执行",
   "run.recovery_queued": "租约过期，已安排自动恢复",
@@ -188,7 +195,29 @@ export function RunProgress({ run }: { run: Run }) {
                 })}
               </time>
               <details>
-                <summary>查看事件记录 #{item.sequence}</summary>
+                <summary>
+                  {item.event_type.startsWith("mcp.")
+                    ? "查看代码工具详情"
+                    : "查看事件记录"}{" "}
+                  #{item.sequence}
+                </summary>
+                {item.event_type.startsWith("mcp.") && (
+                  <p>
+                    {String(
+                      item.payload.server_name ?? "devflow-code-evidence",
+                    )}
+                    {" · 服务版本 "}
+                    {String(item.payload.server_version ?? "未完成协商")}
+                    {" · 协议 "}
+                    {String(item.payload.protocol_version ?? "未完成协商")}
+                    {item.payload.error_message
+                      ? ` · ${String(item.payload.error_message)}`
+                      : ""}
+                    {item.payload.source === "journal"
+                      ? " · 已保存结果回放"
+                      : ""}
+                  </p>
+                )}
                 <pre>{JSON.stringify(item.payload, null, 2)}</pre>
               </details>
             </div>

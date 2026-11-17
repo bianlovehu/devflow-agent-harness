@@ -308,3 +308,15 @@ JSON、版本 pin、锁文件、diff 与日志保持标准原格式，避免破�
 - evals/freezes/development-20261111.json：新留出创建前的开发冻结。
 - evals/devflow-novel-holdout-20261111：冻结后新建的9题及标注/来源记录。
 - evals/reviews/gpt-real-dev-v4-20261111.json、gpt-context-v3-20261111.json、gpt-stability-v3-20261111.json、gpt-novel-holdout-20261111.json：73条冻结版本的GPT逐题复核。
+
+## 代码证据 MCP
+
+| 文件 | 用途 |
+| --- | --- |
+| `apps/api/src/devflow/code/mcp_contract.py` | 固定工具白名单、严格 schema、服务版本与契约指纹 |
+| `apps/api/src/devflow/code/mcp_server.py` | 官方 SDK stdio 服务、只读数据库会话和每次调用授权 |
+| `apps/api/src/devflow/code/mcp_client.py` | 任务级异步生命周期、协议协商、调用超时与进程回收 |
+| `apps/api/tests/test_code_mcp.py` | 真实协议、故障、权限、回放及进程清理验收 |
+| `apps/api/tests/mcp_fault_server.py` | 真实 MCP 子进程中的契约/结果/超时/退出故障注入 |
+| `apps/api/tests/test_mcp_contract.py` | 严格 schema、身份和白名单单元测试 |
+| `docs/code-evidence-mcp.md` | 启动配置、架构、恢复、权限和排障说明 |

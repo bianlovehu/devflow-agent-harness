@@ -43,8 +43,11 @@ def test_policy(path, mode, size, reason):
 
 
 class ArchiveClient:
-    def __init__(self, files, *, corrupt=False, unsafe=False, truncated=False):
+    def __init__(
+        self, files, *, corrupt=False, unsafe=False, truncated=False, archive_newline=None
+    ):
         self.files, self.corrupt, self.unsafe, self.truncated = files, corrupt, unsafe, truncated
+        self.archive_newline = archive_newline
 
     def get(self, path, params=None):
         if "/git/commits/" in path:
@@ -69,6 +72,8 @@ class ArchiveClient:
             for path, raw in self.files.items():
                 info = tarfile.TarInfo("root/" + ("../bad.py" if self.unsafe else path))
                 data = b"x" * len(raw) if self.corrupt else raw
+                if self.archive_newline is not None:
+                    data = data.replace(b"\r\n", b"\n").replace(b"\n", self.archive_newline)
                 info.size = len(data)
                 tar.addfile(info, io.BytesIO(data))
         out.seek(0)
@@ -153,3 +158,35 @@ def test_archive_redirect_auth_boundary(destination, success):
             client.code_archive("a/b", "a" * 40)
         assert error.value.code == "github_archive_redirect"
         assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    "original,archive_newline",
+    [(b"one\ntwo\n", b"\r\n"), (b"one\r\ntwo\r\n", b"\n"), (b"\n" * 262144, b"\r\n")],
+    ids=["lf-to-crlf", "crlf-to-lf", "size-limit"],
+)
+def test_archive_line_endings_recovered_only_with_exact_git_hash(original, archive_newline):
+    client = ArchiveClient({"README.md": original}, archive_newline=archive_newline)
+    rows, contents, coverage = collect(
+        SimpleNamespace(data_source="github", full_name="a/b"),
+        "a" * 40,
+        client,
+        Settings(_env_file=None),
+        lambda: None,
+    )
+    assert contents["README.md"] == original
+    assert rows[0]["blob_sha"] == blob_hash(original)
+    assert coverage["newline_restored_files"] == 1 and coverage["eligible_complete"]
+
+
+def test_archive_mixed_line_endings_not_guessed():
+    client = ArchiveClient({"README.md": b"one\r\ntwo\n"}, archive_newline=b"\r\n")
+    with pytest.raises(DomainError) as error:
+        collect(
+            SimpleNamespace(data_source="github", full_name="a/b"),
+            "a" * 40,
+            client,
+            Settings(_env_file=None),
+            lambda: None,
+        )
+    assert error.value.code == "code_integrity_error" and "README.md" in error.value.message

@@ -129,3 +129,11 @@
   color: #666;
   font-size: 13px;
 }
+
+.code-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+}

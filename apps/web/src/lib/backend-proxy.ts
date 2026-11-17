@@ -57,9 +57,11 @@ function queryKeys(path: string[], method: string): string[] | null {
     if (
       method === "POST" &&
       path.length === 4 &&
-      ["snapshots", "search"].includes(path[3])
+      ["snapshots", "search", "pull"].includes(path[3])
     )
       return [];
+    if (method === "GET" && path.length === 4 && path[3] === "snapshots")
+      return ["commit"];
     if (
       method === "GET" &&
       path.length === 5 &&
@@ -173,22 +175,27 @@ export async function forwardBackend(
     if (
       key === "repo_id"
         ? !/^[a-zA-Z0-9_-]{1,80}$/.test(value)
-        : key === "conversation_id" || key === "snapshot_id"
-          ? !uuid.test(value)
-          : key === "path"
-            ? value.length > 480 ||
-              Array.from(value).some(
-                (character) =>
-                  character === "\\" ||
-                  character.charCodeAt(0) < 32 ||
-                  character.charCodeAt(0) === 127,
-              ) ||
-              value.startsWith("/") ||
-              (value !== "" &&
-                value.split("/").some((part) => ["", ".", ".."].includes(part)))
-            : !/^\d{1,9}$/.test(value) ||
-              (key === "limit" && (Number(value) < 1 || Number(value) > 100)) ||
-              (key === "call" && Number(value) < 1)
+        : key === "commit"
+          ? !/^[0-9a-f]{40}$/.test(value)
+          : key === "conversation_id" || key === "snapshot_id"
+            ? !uuid.test(value)
+            : key === "path"
+              ? value.length > 480 ||
+                Array.from(value).some(
+                  (character) =>
+                    character === "\\" ||
+                    character.charCodeAt(0) < 32 ||
+                    character.charCodeAt(0) === 127,
+                ) ||
+                value.startsWith("/") ||
+                (value !== "" &&
+                  value
+                    .split("/")
+                    .some((part) => ["", ".", ".."].includes(part)))
+              : !/^\d{1,9}$/.test(value) ||
+                (key === "limit" &&
+                  (Number(value) < 1 || Number(value) > 100)) ||
+                (key === "call" && Number(value) < 1)
     )
       return failure(400, "invalid_query", "查询参数格式不正确");
   }

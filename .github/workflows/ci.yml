@@ -48,6 +48,8 @@ jobs:
           node-version-file: .node-version
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
+      - name: 安装代码搜索依赖
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ripgrep && rg --version
       - run: uv sync --locked
       - run: uv run --locked ruff check apps/api scripts
       - run: uv run --locked ruff format --check apps/api scripts

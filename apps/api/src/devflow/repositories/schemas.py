@@ -25,6 +25,17 @@ class ModelInfo(Contract):
     configured: bool
 
 
+class CodeMCPInfo(Contract):
+    configured: bool = True
+    transport: Literal["stdio"] = "stdio"
+    status: Literal["not_connected"] = "not_connected"
+    server_name: str = "devflow-code-evidence"
+    server_version: str = "1.0.0"
+    contract_version: str = "code-evidence-v1"
+    startup_timeout_seconds: float = 10
+    tool_timeout_seconds: float = 5
+
+
 class RuntimeInfo(Contract):
     data_source: DataSource
     fixture_storage: Literal["database", "files"]
@@ -32,6 +43,7 @@ class RuntimeInfo(Contract):
     repository_adapter_available: bool
     github_configured: bool = False
     code_search_available: bool = False
+    code_mcp: CodeMCPInfo = Field(default_factory=CodeMCPInfo)
     model: ModelInfo
 
 

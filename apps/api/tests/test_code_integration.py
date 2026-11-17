@@ -27,7 +27,23 @@ from test_persistence_integration import create_target
 
 @pytest.fixture
 def context(tmp_path):
-    yield from database_context.__wrapped__(tmp_path)
+    for ctx in database_context.__wrapped__(tmp_path):
+        ctx.code_clients = []
+        try:
+            yield ctx
+        finally:
+            for client in ctx.code_clients:
+                client.close()
+
+
+def code_client(context, worker, run_id, token):
+    from devflow.code.mcp_client import CodeMCPClient
+
+    client = CodeMCPClient(worker, run_id, token)
+    context.code_clients.append(client)
+    client.start()
+    assert client.info["status"] == "connected", client.info
+    return client
 
 
 pytestmark = pytest.mark.skipif(
@@ -58,11 +74,14 @@ def active_task(context):
     commit = next(
         item["head_sha"] for item in version["resources"] if item["kind"] == "pull_request"
     )
+    client = code_client(context, worker, run_id, token)
     gateway = ToolGateway(
         "repo-taskboard",
         [],
         {"input_version": version},
-        code_access=lambda name, args: operation(worker, run_id, token, name, args),
+        code_access=lambda name, args: operation(
+            worker, run_id, token, name, args, mcp_client=client
+        ),
     )
     return worker, run_id, token, version, commit, gateway
 
@@ -254,6 +273,15 @@ def test_real_subprocess_code_crash_and_new_worker_resume(context, point):
     assert child.returncode == (73 if point == "before_commit" else 74), child.stderr.decode(
         errors="replace"
     )
+    import time
+
+    from test_code_mcp import process_alive
+
+    server_pid = int(context.store.root.parent.joinpath("crash-mcp-pid.txt").read_text())
+    until = time.monotonic() + 5
+    while process_alive(server_pid) and time.monotonic() < until:
+        time.sleep(0.05)
+    assert not process_alive(server_pid), "崩溃的 Host 不能留下 MCP 服务"
     with Session(context.engine) as session, session.begin():
         count = session.scalar(
             select(func.count())
@@ -298,7 +326,12 @@ def test_real_subprocess_code_crash_and_new_worker_resume(context, point):
             session.scalar(
                 select(func.count())
                 .select_from(RunJournal)
-                .where(RunJournal.run_id == run_id, RunJournal.key.like("code-tool:%"))
+                .where(
+                    RunJournal.run_id == run_id,
+                    RunJournal.key.like("code-tool:%"),
+                    ~RunJournal.key.like("%:mcp"),
+                    ~RunJournal.key.like("%:error"),
+                )
             )
             == 1
         )
@@ -464,11 +497,14 @@ def test_controlled_model_follows_search_read_cite_chain(context, task_type, tar
                 {"role": "assistant", "content": json.dumps(report, ensure_ascii=False)}
             )
 
+    client = code_client(context, worker, run_id, token)
     gateway = ToolGateway(
         "repo-taskboard",
         [],
         {"input_version": version},
-        code_access=lambda name, args: operation(worker, run_id, token, name, args),
+        code_access=lambda name, args: operation(
+            worker, run_id, token, name, args, mcp_client=client
+        ),
     )
     config = {**config, "report_review": {"enabled": False}}
     result = AnalysisRunner(
@@ -506,3 +542,113 @@ def test_search_timeout_is_not_empty_success(context):
     assert result["truncated"] and not result["search_complete"]
     assert result["truncation_reason"] == "timeout"
     assert children and all(child.poll() is not None for child in children)
+
+
+# 默认代码浏览只读数据库；任何远端连接都必须由显式拉取触发。
+def test_cached_browse_without_snapshots_does_not_create_or_download(context):
+    with patch(
+        "devflow.repositories.github_client.GitHubClient.get",
+        side_effect=AssertionError("浏览不能联网"),
+    ):
+        for _ in range(2):
+            reply = context.client.get(BASE + "/snapshots")
+            assert reply.status_code == 200 and reply.json()["snapshot"] is None
+    with Session(context.engine) as session:
+        assert session.scalar(select(func.count()).select_from(CodeSnapshot)) == 0
+
+
+def test_manual_pull_pins_cached_version_and_same_commit_never_downloads_again(context):
+    pulled = context.client.post(BASE + "/pull", json={})
+    assert pulled.status_code == 202, pulled.text
+    first = pulled.json()
+    sid = uuid.UUID(first["snapshot_id"])
+    assert service.prepare(context.engine, context.settings, context.store, sid)
+    original = context.client.get(
+        BASE + "/file", params={"snapshot_id": str(sid), "path": "taskboard/service.py"}
+    ).json()
+    with patch("devflow.code.service.collect", side_effect=AssertionError("同一提交不能重新下载")):
+        for _ in range(2):
+            assert context.client.get(BASE + "/snapshots").json()["snapshot"]["snapshot_id"] == str(
+                sid
+            )
+        assert context.client.post(BASE + "/pull", json={}).status_code == 200
+        assert not service.prepare(context.engine, context.settings, context.store, sid)
+    next_commit = "08e1a7f77ab3481e02b7b1b365a6db52746ccdb0"
+    assert next_commit != first["commit"]
+    with Session(context.engine) as session, session.begin():
+        session.get(RepositoryRecord, "repo-taskboard").default_commit = next_commit
+    # 仓库摘要更新，不改变上次手动拉取并发布的浏览版本。
+    assert context.client.get(BASE + "/snapshots").json()["snapshot"]["snapshot_id"] == str(sid)
+    next_row = context.client.post(BASE + "/pull", json={}).json()
+    assert next_row["commit"] == next_commit
+    assert service.prepare(
+        context.engine, context.settings, context.store, uuid.UUID(next_row["snapshot_id"])
+    )
+    assert (
+        context.client.get(BASE + "/snapshots").json()["snapshot"]["snapshot_id"]
+        == next_row["snapshot_id"]
+    )
+    assert (
+        context.client.get(
+            BASE + "/file", params={"snapshot_id": str(sid), "path": "taskboard/service.py"}
+        ).json()
+        == original
+    )
+
+
+def test_failed_manual_update_keeps_last_published_version(context):
+    row = context.client.post(BASE + "/pull", json={}).json()
+    sid = uuid.UUID(row["snapshot_id"])
+    service.prepare(context.engine, context.settings, context.store, sid)
+    with Session(context.engine) as session, session.begin():
+        session.get(RepositoryRecord, "repo-taskboard").default_commit = "f" * 40
+    failed = context.client.post(BASE + "/pull", json={}).json()
+    service.prepare(
+        context.engine, context.settings, context.store, uuid.UUID(failed["snapshot_id"])
+    )
+    assert (
+        context.client.get(BASE + "/snapshots", params={"commit": "f" * 40}).json()["snapshot"][
+            "status"
+        ]
+        == "failed"
+    )
+    assert context.client.get(BASE + "/snapshots").json()["snapshot"]["snapshot_id"] == str(sid)
+
+
+def test_repository_summary_refresh_preserves_code_workspace_pointer(context):
+    from devflow.repositories.github_source import GitHubRepositorySource
+    from github_samples import FakeGitHub
+
+    fake = FakeGitHub()
+    with Session(context.engine) as session:
+        source = GitHubRepositorySource(session, context.settings, client=fake)
+        repo = source.add_repository("owner/project")
+        row = service.request_snapshot(session, repo.id, repo.default_commit)
+        row.status = "ready"
+        row.manifest_sha256 = "c" * 64
+        service.select_for_browsing(session, row, requested=True)
+        session.commit()
+        saved_id = row.id
+        source.refresh(repo.id)
+        assert service.cached_snapshot(session, repo.id).id == saved_id
+        assert session.get(RepositoryRecord, repo.id).sync_state["code_workspace"][
+            "snapshot_id"
+        ] == str(saved_id)
+
+
+def test_github_pull_resolves_current_default_branch_only_on_manual_request(context):
+    from devflow.repositories.github_source import GitHubRepositorySource
+    from github_samples import FakeGitHub
+
+    fake = FakeGitHub()
+    with Session(context.engine) as session:
+        repo = GitHubRepositorySource(session, context.settings, client=fake).add_repository(
+            "owner/project"
+        )
+        fake.calls.clear()
+        assert service.cached_snapshot(session, repo.id) is None
+        assert fake.calls == []
+        row = service.pull_latest(session, repo.id, context.settings, client_factory=lambda _: fake)
+        assert row.commit_sha == "a" * 40
+        assert fake.calls == ["/repos/owner/project", "/repos/owner/project/commits/main"]
+        session.commit()

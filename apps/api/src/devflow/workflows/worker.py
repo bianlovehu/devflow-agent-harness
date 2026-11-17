@@ -519,7 +519,14 @@ class Worker:
                     session.add(RunJournal(run_id=run_id, key=event_key, payload={"emitted": True}))
                 return found
 
+        from devflow.code.mcp_client import CodeMCPClient
         from devflow.code.tasks import operation
+
+        code_client = (
+            CodeMCPClient(self, run_id, token, deadline=deadline)
+            if configuration.get("code_backend") == "mcp-stdio-v1"
+            else None
+        )
 
         gateway = ToolGateway(
             repo_id,
@@ -534,7 +541,9 @@ class Worker:
             guard=guard,
             emit=emit,
             knowledge_search=knowledge_search,
-            code_access=lambda name, args: operation(self, run_id, token, name, args),
+            code_access=lambda name, args: operation(
+                self, run_id, token, name, args, mcp_client=code_client
+            ),
         )
         runner = AnalysisRunner(
             model,
@@ -556,10 +565,30 @@ class Worker:
             run_id, token, "stage.started", {"stage": "analysis", "label": "模型与工具分析"}
         )
         try:
+            if code_client:
+                gateway.metadata["code_mcp"] = code_client.info
+                if any(
+                    item.get("status") in {"ready", "partial"}
+                    for item in input_version.get("code_access", {}).get("snapshots", [])
+                ):
+                    code_client.start()
+                else:
+                    code_client.fail(
+                        DomainError(
+                            409, "code_snapshot_not_ready", "没有可用于跨文件补查的固定代码快照"
+                        )
+                    )
+                    code_client.emit(
+                        "mcp.unavailable",
+                        {"label": "跨文件补查不可用：没有固定代码快照", **code_client.info},
+                    )
             with postgres_checkpointer(self.engine, fence) as checkpointer:
                 runner.checkpointer = checkpointer
                 result = runner.run()
         finally:
+            if code_client:
+                code_client.close()
+                runner.trace["code_mcp"] = {**code_client.info, "calls": code_client.records}
             # 取消或超时也保留已发生的调用；仍强制校验租约，不允许旧 worker 写入。
             trace = json.dumps(runner.trace, ensure_ascii=False, indent=2)
             key, digest, size = self.store.put_text(trace)

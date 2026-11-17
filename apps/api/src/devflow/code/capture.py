@@ -170,12 +170,30 @@ def collect(repo, commit, client, settings, guard):
             budget += size
             wanted[path] = row
     contents = {}
+    newline_restored = 0
 
     def accept(path, raw):
+        nonlocal newline_restored
         guard()
         row = wanted[path]
-        if len(raw) != row["size_bytes"] or row["blob_sha"] and blob_hash(raw) != row["blob_sha"]:
-            raise DomainError(502, "code_integrity_error", "代码大小或 Git blob 哈希校验失败")
+
+        def matches(value):
+            return len(value) == row["size_bytes"] and (
+                not row["blob_sha"] or blob_hash(value) == row["blob_sha"]
+            )
+
+        if not matches(raw):
+            # 归档可能应用 eol 属性；只接受大小和 Git blob SHA 都匹配的原始 Git 字节。
+            lf = raw.replace(b"\r\n", b"\n")
+            restored = next(
+                (value for value in (lf, lf.replace(b"\n", b"\r\n")) if matches(value)), None
+            )
+            if restored is None:
+                raise DomainError(
+                    502, "code_integrity_error", f"文件 {path} 的大小或 Git blob 哈希校验失败"
+                )
+            raw = restored
+            newline_restored += 1
         try:
             text_lines(raw)
         except UnicodeError:
@@ -220,7 +238,7 @@ def collect(repo, commit, client, settings, guard):
                         path = "/".join(parts[1:])
                         if path not in wanted:
                             continue
-                        if path in seen or not entry.isfile() or entry.size > MAX_FILE_BYTES:
+                        if path in seen or not entry.isfile() or entry.size > MAX_FILE_BYTES * 2:
                             raise DomainError(
                                 422, "code_archive_unsafe", "归档文件类型或重复路径不合法"
                             )
@@ -228,7 +246,7 @@ def collect(repo, commit, client, settings, guard):
                         source = tar.extractfile(entry)
                         if source is None:
                             raise DomainError(502, "code_archive_invalid", "无法读取归档成员")
-                        accept(path, source.read(MAX_FILE_BYTES + 1))
+                        accept(path, source.read(MAX_FILE_BYTES * 2 + 1))
         except (tarfile.TarError, EOFError, OSError) as error:
             raise DomainError(502, "code_archive_invalid", "归档损坏或下载失败") from error
     for path, row in wanted.items():
@@ -248,5 +266,6 @@ def collect(repo, commit, client, settings, guard):
         "excluded": reasons,
         "omitted_count": 0 if complete else None,
         "source": repo.data_source,
+        "newline_restored_files": newline_restored,
     }
     return rows, contents, coverage

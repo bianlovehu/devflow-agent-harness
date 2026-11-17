@@ -1,11 +1,17 @@
 // 文件用途：固定提交代码工作台，目录、字面量搜索与带行号的只读阅读。
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchData, postData } from "@/lib/api-client";
 import { codeLine, codeLocation } from "@/lib/code-location";
-import type { CodeFile, CodeSearch, CodeSnapshot, CodeTree } from "@/lib/code";
+import type {
+  CodeFile,
+  CodeSearch,
+  CodeSnapshot,
+  CodeSnapshotSelection,
+  CodeTree,
+} from "@/lib/code";
 import type { Repository } from "@/lib/repositories";
 import { useWorkspace } from "@/components/workspace-context";
 import { QueryState } from "@/components/query-state";
@@ -119,6 +125,9 @@ function Directory({
 
 export function CodeWorkspace({ repoId }: { repoId: string }) {
   const router = useRouter();
+  const cache = useQueryClient();
+  const actionLock = useRef(false);
+  const [pulling, setPulling] = useState(false);
   const { runtime } = useWorkspace();
   const params = useSearchParams();
   const base = `repositories/${encodeURIComponent(repoId)}/code`;
@@ -139,13 +148,17 @@ export function CodeWorkspace({ repoId }: { repoId: string }) {
         signal,
       }),
   });
-  const prepare = useQuery({
-    queryKey: ["code-prepare", repoId, commit],
-    queryFn: () =>
-      postData<CodeSnapshot>(`${base}/snapshots`, commit ? { commit } : {}),
+  const cached = useQuery({
+    queryKey: ["code-cached", repoId, commit],
+    queryFn: ({ signal }) =>
+      fetchData<CodeSnapshotSelection>(
+        `${base}/snapshots${commit ? `?commit=${encodeURIComponent(commit)}` : ""}`,
+        { signal },
+      ),
     enabled: !sid,
     retry: false,
-    staleTime: Infinity,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
   });
   const snapshot = useQuery({
     queryKey: ["code-snapshot", repoId, sid],
@@ -157,25 +170,18 @@ export function CodeWorkspace({ repoId }: { repoId: string }) {
         ? 1500
         : false,
   });
-  const data = snapshot.data ?? (!sid ? prepare.data : undefined);
+  const data = snapshot.data ?? (!sid ? cached.data?.snapshot : undefined);
   const mismatch = Boolean(data && commit && data.commit !== commit);
   const ready = Boolean(
     data && ["ready", "partial"].includes(data.status) && !mismatch,
   );
   useEffect(() => {
-    if (!sid && prepare.data)
+    if (!sid && data && !pulling && !cached.isFetching)
       router.replace(
-        codeLocation(
-          repoId,
-          prepare.data.commit,
-          path,
-          line,
-          end,
-          prepare.data.snapshot_id,
-        ),
+        codeLocation(repoId, data.commit, path, line, end, data.snapshot_id),
         { scroll: false },
       );
-  }, [sid, prepare.data, router, repoId, path, line, end]);
+  }, [sid, data, pulling, cached.isFetching, router, repoId, path, line, end]);
   const file = useQuery({
     queryKey: ["code-file", repoId, sid, path, line],
     queryFn: ({ signal }) =>
@@ -219,30 +225,64 @@ export function CodeWorkspace({ repoId }: { repoId: string }) {
       setSearching(false);
     }
   }
-  async function retryPrepare() {
+  async function pullCode(latest = false) {
+    if (actionLock.current) return;
+    actionLock.current = true;
+    setPulling(true);
     setError(null);
     try {
-      await postData(`${base}/snapshots`, {
-        commit: data?.commit ?? commit,
-        retry: true,
+      const row = await postData<CodeSnapshot>(
+        latest ? `${base}/pull` : `${base}/snapshots`,
+        latest ? {} : { commit: data?.commit ?? commit, retry: true },
+      );
+      cache.setQueryData(["code-snapshot", repoId, row.snapshot_id], row);
+      setSearch(null);
+      router.push(codeLocation(repoId, row.commit, "", 1, 1, row.snapshot_id), {
+        scroll: false,
       });
-      await snapshot.refetch();
+      await cache.invalidateQueries({ queryKey: ["repository", repoId] });
+      await cache.invalidateQueries({ queryKey: ["code-cached", repoId] });
     } catch (cause) {
-      setError(cause instanceof Error ? cause : new Error("准备失败"));
+      setError(cause instanceof Error ? cause : new Error("拉取失败"));
+    } finally {
+      setPulling(false);
+      actionLock.current = false;
     }
   }
   return (
     <div className="code-workspace">
       <p className="code-intro">
-        按固定提交浏览与搜索；已准备文件不代表模型已经阅读。
+        默认浏览本地已保存的代码，不会在访问时自动拉取；更新仓库后可手动拉取最新代码。已准备文件不代表模型已经阅读。
       </p>
+      <div className="code-actions">
+        <button disabled={pulling} onClick={() => void pullCode(true)}>
+          {pulling
+            ? "正在请求拉取…"
+            : repo.data?.data_source === "fixture"
+              ? "准备样例代码"
+              : "拉取最新代码"}
+        </button>
+        <span>相同提交复用本地快照；历史版本保留。</span>
+      </div>
       <QueryState
         pending={
-          (!sid && prepare.isPending) || (Boolean(sid) && snapshot.isPending)
+          (!sid && cached.isPending) || (Boolean(sid) && snapshot.isPending)
         }
-        error={snapshot.error ?? prepare.error}
-        retry={() => void (sid ? snapshot.refetch() : prepare.refetch())}
+        error={sid ? snapshot.error : cached.error}
+        retry={() => void (sid ? snapshot.refetch() : cached.refetch())}
       />
+      {error && <p role="alert">{error.message}</p>}
+      {!sid && cached.isSuccess && !data && (
+        <section className="code-status">
+          <strong>{commit ? "此提交尚未保存到本地" : "尚未拉取代码"}</strong>
+          <p>点击拉取后会准备并保存代码，后续访问直接复用，不会自动下载。</p>
+          {commit && (
+            <button disabled={pulling} onClick={() => void pullCode()}>
+              拉取此固定提交
+            </button>
+          )}
+        </section>
+      )}
       {mismatch && (
         <p role="alert">
           链接提交与快照不一致，请检查链接；不会切换到其他版本。
@@ -252,7 +292,7 @@ export function CodeWorkspace({ repoId }: { repoId: string }) {
         <section className="code-status" aria-live="polite">
           <strong>{states[data.status]}</strong>
           <p>
-            固定提交 <code>{data.commit}</code> ·{" "}
+            本地固定提交 <code>{data.commit}</code> ·{" "}
             {repo.data?.default_commit === data.commit
               ? "当前默认提交"
               : "历史或任务提交"}
@@ -297,7 +337,16 @@ export function CodeWorkspace({ repoId }: { repoId: string }) {
             </p>
           )}
           {data.status === "failed" && (
-            <button onClick={() => void retryPrepare()}>重新准备此提交</button>
+            <button disabled={pulling} onClick={() => void pullCode()}>
+              重新准备此提交
+            </button>
+          )}
+          {data.status === "failed" && (
+            <button
+              onClick={() => router.push(`/repositories/${repoId}?tab=code`)}
+            >
+              返回代码首页
+            </button>
           )}
           <button
             onClick={() => {
@@ -338,7 +387,6 @@ export function CodeWorkspace({ repoId }: { repoId: string }) {
               {searching ? "搜索中…" : "搜索"}
             </button>
           </form>
-          {error && <p role="alert">{error.message}</p>}
           {search && search.snapshot_id === data.snapshot_id && (
             <section className="code-results">
               <h2>搜索结果（{search.items.length}）</h2>

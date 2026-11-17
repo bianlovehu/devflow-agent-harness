@@ -92,3 +92,7 @@ uv run --locked python scripts/local_smoke.py --directory data/local-verificatio
 | 模型网络错误/费用未知 | 保留trace和未知用量预留，排查后仅继续未执行评测题 |
 
 2026-11-10隔离容器空闲内存观测约API135 MiB、worker95 MiB、前端62 MiB、数据库52 MiB；这是历史容器观测，不是本机开发最低配置。Next编译、ONNX索引和集成测试会额外使用内存。
+
+## 代码证据 MCP
+
+执行 `uv sync --locked` 安装固定 SDK，无需额外启动服务。新 PR/CI 任务在 worker 内自动创建、回收 stdio 子进程；浏览代码页仍使用 HTTP，不建立 MCP 连接。工具状态见任务时间线，“服务与预算”仅说明是否配置了这项能力。详细参数、故障码及恢复说明见 [代码证据 MCP](code-evidence-mcp.md)。

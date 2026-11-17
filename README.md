@@ -333,7 +333,7 @@ uv run --locked python scripts/week05_smoke.py --real
 
 ### 固定提交代码工作台与跨文件补查
 
-仓库页新增「代码」页签。首次打开会排队准备默认提交的代码快照，页面给出实际完整 SHA；浏览、搜索、复制链接都固定在该提交。后续同步不会修改旧快照。PR 分析准备 base/head，CI 分析准备对应 attempt 的 head；准备最多 180 秒并计入原任务总时限，失败会明确降级到已有证据，不触发额外模型请求。
+仓库页新增「代码」页签。打开页面只读取本地已保存快照；首次使用或需要更新时，手动点击「拉取最新代码」。相同提交直接复用，准备成功才更新仓库的代码浏览版本；刷新 GitHub 摘要不自动切换代码。浏览、搜索和复制链接都固定到实际完整 SHA，旧快照保持不变。PR 分析准备 base/head，CI 分析准备对应 attempt 的 head；准备最多 180 秒并计入原任务总时限，失败会明确降级到已有证据，不触发额外模型请求。
 
 - 后台沿用 `python -m devflow.workflows.worker`，新增表需先运行 `uv run --locked alembic upgrade head`。导入或同步仓库不自动下载全部代码，也不把代码和 README 自动写入知识库。
 - 本地需要 ripgrep（支持 13+），可在服务端 `.env` 中设置 `CODE_RG_PATH=C:/tools/rg.exe`，否则从 PATH 查找；`scripts/env.ps1` 会识别现有 rg。镜像固定安装 Debian Bookworm 的 `ripgrep=13.0.0-4+b2`。`/api/v1/runtime` 的 `code_search_available` 表示可执行文件是否可发现；缺失时仍能浏览文件，搜索报明确错误。
@@ -347,3 +347,11 @@ uv run --locked python scripts/week05_smoke.py --real
 接口位于 `/api/v1/repositories/{repo_id}/code`：`POST snapshots`（可选完整 commit、失败快照 retry）、`GET snapshots/{id}`、`GET tree`、`GET file`、`POST search`。tree/file 使用 `snapshot_id`，search 支持 `mode=snippets|paths`。响应包含实际提交、清单哈希、覆盖范围；片段还包含文件哈希与原始行号。失败快照可显式重试，ready/partial 的同一策略快照不会原地重建。
 
 验证：`scripts/check.ps1 -Integration -Build` 包含隔离 PostgreSQL、快照和跨文件补查测试；`test_code_integration.py` 包含真实进程在证据提交前及提交后、checkpoint 前退出的恢复验证。GitHub 冒烟只下载只读材料，不运行付费模型。
+
+## 代码证据 MCP
+
+新建 PR/CI 分析默认由 worker 通过官方 Python SDK `mcp==2.3.0` 启动任务级只读 stdio 服务，提供 `repo_tree`、`repo_search`、`repo_read`。复用固定快照服务及证据 journal；HTTP 代码浏览保持原接口，RAG 和记忆仍走原流程。`uv sync --locked` 后按原方式启动服务，不需要新端口或手工启动 MCP。
+
+任务时间线显示中文连接、补查、回放及失败状态。服务不可用不回退伪造成功；已有证据可继续分析、离线回放，报告注明范围限制。历史任务保留原后端，新任务记录固定契约和服务版本。配置、权限边界、恢复及排障见 [代码证据 MCP](docs/code-evidence-mcp.md)。
+
+代码缓存、手动更新与归档换行校验说明见 [代码工作台缓存](docs/code-workspace-cache.md)。

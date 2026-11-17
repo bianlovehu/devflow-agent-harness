@@ -232,6 +232,7 @@ class GitHubRepositorySource:
             select(RepositoryRecord)
             .where(RepositoryRecord.id == repo_id)
             .execution_options(populate_existing=True)
+            .with_for_update()
         )
         if (
             record
@@ -256,6 +257,8 @@ class GitHubRepositorySource:
             setattr(record, field, getattr(values, field))
         record.source_updated_at = values.updated_at
         record.updated_at = utc_now()
+        if record.sync_state and "code_workspace" in record.sync_state:
+            state["code_workspace"] = record.sync_state["code_workspace"]
         record.sync_state = state
         self.session.commit()
         return self._contract(record)

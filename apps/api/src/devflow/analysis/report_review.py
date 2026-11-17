@@ -340,12 +340,17 @@ class BoundedReportReview:
                 "calls": [call],
             }
             result = self.runner.execute_tools(payload)["messages"][-1]
+            tool_result = json.loads(result["content"])
             state["results"].append(
-                {
-                    "request": request.model_dump(mode="json"),
-                    "result": json.loads(result["content"]),
-                }
+                {"request": request.model_dump(mode="json"), "result": tool_result}
             )
+            if not tool_result.get("ok") and tool_result.get("error", {}).get(
+                "code", ""
+            ).startswith("mcp_"):
+                code = tool_result["error"]["code"]
+                state.update(status="unavailable", reason=code, new_evidence=False)
+                self.save()
+                raise DomainError(503, code, "代码服务补查失败，保留已有报告")
             self.save()
         state["status"] = "completed"
         state["new_evidence"] = observed_signature(self.gateway.observed) != observed_signature(
@@ -583,7 +588,7 @@ class BoundedReportReview:
 
     @staticmethod
     def optional_error(exc):
-        return exc.code.startswith("model_") or exc.code in {
+        return exc.code.startswith(("model_", "mcp_")) or exc.code in {
             "budget_exceeded",
             "cost_budget_exceeded",
             "budget_unavailable",

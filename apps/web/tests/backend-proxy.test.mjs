@@ -25,6 +25,8 @@ for (const path of [
   "repositories/repo-taskboard/ci-runs/201",
   "repositories/repo-taskboard/documents/architecture",
   `repositories/repo-taskboard/code/snapshots/${id}`,
+  "repositories/repo-taskboard/code/snapshots",
+  `repositories/repo-taskboard/code/snapshots?commit=${"a".repeat(40)}`,
   `repositories/repo-taskboard/code/tree?snapshot_id=${id}&path=src&offset=0&limit=20`,
   `repositories/repo-taskboard/code/file?snapshot_id=${id}&path=src%2Ftest.py&start_line=2&limit=60`,
   `runs/${id}`,
@@ -439,7 +441,7 @@ test("记忆检索、重新索引与来源撤销受白名单和来源校验约�
 });
 
 test("代码快照和搜索 POST 只允许登记的服务路径", async () => {
-  for (const action of ["snapshots", "search"]) {
+  for (const action of ["snapshots", "search", "pull"]) {
     const path = `repositories/repo-taskboard/code/${action}`;
     let called = 0;
     const response = await forwardBackend(
@@ -462,4 +464,21 @@ test("代码快照和搜索 POST 只允许登记的服务路径", async () => {
     },
   );
   assert.equal(response.status, 404);
+});
+
+test("本地快照查询拒绝分支名和额外参数", async () => {
+  for (const query of [
+    "commit=main",
+    "commit=../main",
+    `commit=${"a".repeat(39)}`,
+    "latest=true",
+  ]) {
+    const path = "repositories/repo-taskboard/code/snapshots";
+    const result = await forwardBackend(
+      new Request(address + path + "?" + query),
+      path.split("/"),
+      never,
+    );
+    assert.equal(result.status, 400);
+  }
 });

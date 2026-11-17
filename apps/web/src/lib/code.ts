@@ -4,3 +4,5 @@ export type CodeSnapshot = components["schemas"]["CodeSnapshotResponse"];
 export type CodeTree = components["schemas"]["CodeTreeResponse"];
 export type CodeFile = components["schemas"]["CodeFileResponse"];
 export type CodeSearch = components["schemas"]["CodeSearchResponse"];
+export type CodeSnapshotSelection =
+  components["schemas"]["CodeSnapshotSelection"];

@@ -68,6 +68,72 @@ def request_snapshot(session, repo_id, commit=None, *, retry=False):
     return row
 
 
+def cached_snapshot(session, repo_id, commit=None):
+    """只查本地清单；浏览页面不发准备请求，也不访问 GitHub。"""
+    repo = repository(session, repo_id)
+    query = select(CodeSnapshot).where(
+        CodeSnapshot.repo_id == repo_id, CodeSnapshot.policy_version == POLICY
+    )
+    if commit:
+        return session.scalar(query.where(CodeSnapshot.commit_sha == commit))
+    pinned = (repo.sync_state or {}).get("code_workspace", {}).get("snapshot_id")
+    if pinned:
+        row = session.get(CodeSnapshot, uuid.UUID(pinned))
+        if row and row.repo_id == repo_id and row.status in {"ready", "partial"}:
+            return row
+    row = session.scalar(
+        query.where(CodeSnapshot.status.in_(["ready", "partial"]))
+        .order_by(
+            (CodeSnapshot.commit_sha == repo.default_commit).desc(),
+            CodeSnapshot.updated_at.desc(),
+            CodeSnapshot.id.desc(),
+        )
+        .limit(1)
+    )
+    return row or session.scalar(
+        query.order_by(CodeSnapshot.created_at.desc(), CodeSnapshot.id.desc()).limit(1)
+    )
+
+
+def select_for_browsing(session, row, *, requested=False):
+    repo = session.scalar(
+        select(RepositoryRecord)
+        .where(RepositoryRecord.id == row.repo_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    state = dict(repo.sync_state or {})
+    workspace = dict(state.get("code_workspace", {}))
+    if requested:
+        workspace["requested_snapshot_id"] = str(row.id)
+    if workspace.get("requested_snapshot_id") == str(row.id) and row.status in {"ready", "partial"}:
+        workspace["snapshot_id"] = str(row.id)
+    if workspace:
+        repo.sync_state = {**state, "code_workspace": workspace}
+
+
+def pull_latest(session, repo_id, settings, *, client_factory=GitHubClient):
+    """显式拉取才解析远端默认分支；相同 SHA 复用已发布快照。"""
+    from devflow.repositories.github_client import ref_path, repo_path
+
+    repo = repository(session, repo_id)
+    commit, branch = repo.default_commit, repo.default_branch
+    if repo.data_source == "github":
+        client = client_factory(settings)
+        root = repo_path(repo.full_name)
+        metadata = client.get(root)
+        branch = metadata.get("default_branch")
+        if not isinstance(branch, str) or not branch:
+            raise DomainError(502, "github_invalid_response", "GitHub 未返回默认分支")
+        commit = client.get(root + "/commits/" + ref_path(branch)).get("sha")
+        if not isinstance(commit, str) or not re.fullmatch(r"[0-9a-f]{40}", commit):
+            raise DomainError(502, "github_invalid_response", "GitHub 未返回完整提交 SHA")
+    row = request_snapshot(session, repo_id, commit, retry=True)
+    select_for_browsing(session, row, requested=True)
+    repo.default_commit, repo.default_branch = commit, branch
+    return row
+
+
 def snapshot(session, repo_id, snapshot_id, *, ready=True):
     repository(session, repo_id)
     row = session.get(CodeSnapshot, snapshot_id)
@@ -215,6 +281,7 @@ def prepare(
             live.status = "ready" if coverage["eligible_complete"] else "partial"
             live.lease_token = live.lease_expires_at = None
             live.updated_at = now
+            select_for_browsing(session, live)
         logger.info(
             "code_snapshot ready=%s files=%s bytes=%s duration_ms=%s",
             sid,
@@ -243,6 +310,7 @@ def prepare(
                     else "代码准备失败，请重试并检查服务日志"
                 )
                 live.lease_token = live.lease_expires_at = None
+                live.updated_at = session.scalar(select(func.clock_timestamp()))
         if type(error).__name__ in {"LeaseLost", "RunCancelled", "RunTimedOut"} or not isinstance(
             error, Exception
         ):
@@ -308,6 +376,8 @@ def raw_file(session, repo_id, sid, path, store):
     if row.skip_reason:
         raise DomainError(409, "code_file_skipped", "文件未纳入读取范围：" + row.skip_reason)
     saved = session.get(ArtifactRecord, row.artifact_id)
+    if saved is None:
+        raise DomainError(409, "artifact_missing", "文件的原始制品记录缺失")
     # read_text 校验的是原始字节，显示及搜索统一去除 BOM 并按原始行划分。
     content = store.read_text(saved.storage_key, saved.sha256).removeprefix("\ufeff")
     return meta, row, content
@@ -338,7 +408,21 @@ def read_file(session, repo_id, sid, path, start, limit, store):
     }
 
 
-def search(session, repo_id, sid, query, limit, mode, store, settings, guard=lambda: None):
+def search(
+    session,
+    repo_id,
+    sid,
+    query,
+    limit,
+    mode,
+    store,
+    settings,
+    guard=lambda: None,
+    timeout_seconds=None,
+):
+    search_seconds = (
+        SEARCH_SECONDS if timeout_seconds is None else min(SEARCH_SECONDS, timeout_seconds)
+    )
     meta = snapshot(session, repo_id, sid)
     if not 1 <= len(query) <= 500 or any(c in query for c in "\r\n\0"):
         raise DomainError(422, "invalid_code_query", "查询必须是 1～500 字符的单行字面量")
@@ -355,7 +439,7 @@ def search(session, repo_id, sid, query, limit, mode, store, settings, guard=lam
         mapping = {}
         for index, row in enumerate(files):
             guard()
-            if time.monotonic() - started >= SEARCH_SECONDS:
+            if time.monotonic() - started >= search_seconds:
                 raise DomainError(504, "code_search_timeout", "搜索投影准备超时，未执行完整搜索")
             _, _, content = raw_file(session, repo_id, sid, row.path, store)
             name = f"f{index:06d}"
@@ -412,7 +496,7 @@ def search(session, repo_id, sid, query, limit, mode, store, settings, guard=lam
         try:
             while True:
                 guard()
-                remaining = SEARCH_SECONDS - (time.monotonic() - started)
+                remaining = search_seconds - (time.monotonic() - started)
                 if remaining <= 0:
                     reason = "timeout"
                     break

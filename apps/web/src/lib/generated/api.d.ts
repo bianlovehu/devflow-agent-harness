@@ -445,6 +445,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/repositories/{repo_id}/code/pull": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Pull */
+    post: operations["pull_api_v1_repositories__repo_id__code_pull_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/repositories/{repo_id}/code/search": {
     parameters: {
       query?: never;
@@ -469,7 +486,8 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get?: never;
+    /** Cached */
+    get: operations["cached_api_v1_repositories__repo_id__code_snapshots_get"];
     put?: never;
     /** Prepare */
     post: operations["prepare_api_v1_repositories__repo_id__code_snapshots_post"];
@@ -1218,6 +1236,51 @@ export interface components {
       /** Text */
       text: string;
     };
+    /** CodeMCPInfo */
+    CodeMCPInfo: {
+      /**
+       * Configured
+       * @default true
+       */
+      configured: boolean;
+      /**
+       * Contract Version
+       * @default code-evidence-v1
+       */
+      contract_version: string;
+      /**
+       * Server Name
+       * @default devflow-code-evidence
+       */
+      server_name: string;
+      /**
+       * Server Version
+       * @default 1.0.0
+       */
+      server_version: string;
+      /**
+       * Startup Timeout Seconds
+       * @default 10
+       */
+      startup_timeout_seconds: number;
+      /**
+       * Status
+       * @default not_connected
+       * @constant
+       */
+      status: "not_connected";
+      /**
+       * Tool Timeout Seconds
+       * @default 5
+       */
+      tool_timeout_seconds: number;
+      /**
+       * Transport
+       * @default stdio
+       * @constant
+       */
+      transport: "stdio";
+    };
     /** CodeSearchHit */
     CodeSearchHit: {
       /** Blob Sha */
@@ -1344,6 +1407,14 @@ export interface components {
        * @enum {string}
        */
       status: "queued" | "preparing" | "ready" | "partial" | "failed";
+    };
+    /** CodeSnapshotSelection */
+    CodeSnapshotSelection: {
+      /** Default Commit */
+      default_commit: string;
+      /** Repo Id */
+      repo_id: string;
+      snapshot: components["schemas"]["CodeSnapshotResponse"] | null;
     };
     /** CodeTreeResponse */
     CodeTreeResponse: {
@@ -2636,6 +2707,7 @@ export interface components {
     };
     /** RuntimeInfo */
     RuntimeInfo: {
+      code_mcp?: components["schemas"]["CodeMCPInfo"];
       /**
        * Code Search Available
        * @default false
@@ -3627,6 +3699,37 @@ export interface operations {
       };
     };
   };
+  pull_api_v1_repositories__repo_id__code_pull_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        repo_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CodeSnapshotResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   search_api_v1_repositories__repo_id__code_search_post: {
     parameters: {
       query?: never;
@@ -3649,6 +3752,39 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["CodeSearchResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  cached_api_v1_repositories__repo_id__code_snapshots_get: {
+    parameters: {
+      query?: {
+        commit?: string | null;
+      };
+      header?: never;
+      path: {
+        repo_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CodeSnapshotSelection"];
         };
       };
       /** @description Validation Error */

@@ -7,6 +7,7 @@ from uuid import UUID
 
 from devflow.analysis.tool_gateway import FileArgs
 from devflow.code import tasks
+from devflow.code.mcp_client import CodeMCPClient
 from devflow.core.config import get_settings
 from devflow.storage.artifact_store import ArtifactStore
 from devflow.storage.database import create_database_engine
@@ -32,7 +33,11 @@ def main():
             }
         )
     )
-    tasks.operation(worker, UUID(run_id), UUID(token), "read_file", args)
+    client = CodeMCPClient(worker, UUID(run_id), UUID(token))
+    client.start()
+    assert client.info["status"] == "connected", client.info
+    Path(root).parent.joinpath("crash-mcp-pid.txt").write_bytes(str(client.info["pid"]).encode())
+    tasks.operation(worker, UUID(run_id), UUID(token), "read_file", args, mcp_client=client)
     # 已提交工具结果，但尚未返回给模型图或保存 checkpoint。
     os._exit(74)
 

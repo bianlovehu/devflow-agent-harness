@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchData, postData } from "@/lib/api-client";
 import { codeLine, codeLocation } from "@/lib/code-location";
+import { loadRootReadme } from "@/lib/code-readme";
 import type {
   CodeFile,
   CodeSearch,
@@ -127,6 +128,7 @@ export function CodeWorkspace({ repoId }: { repoId: string }) {
   const router = useRouter();
   const cache = useQueryClient();
   const actionLock = useRef(false);
+  const autoReadmeTarget = useRef<string | false | null>(null);
   const [pulling, setPulling] = useState(false);
   const { runtime } = useWorkspace();
   const params = useSearchParams();
@@ -182,6 +184,44 @@ export function CodeWorkspace({ repoId }: { repoId: string }) {
         { scroll: false },
       );
   }, [sid, data, pulling, cached.isFetching, router, repoId, path, line, end]);
+  const readme = useQuery({
+    queryKey: ["code-readme", repoId, sid],
+    queryFn: ({ signal }) =>
+      loadRootReadme(async (offset) => {
+        signal.throwIfAborted();
+        const key = ["code-tree", base, sid, "", offset];
+        const saved = cache.getQueryData<CodeTree>(key);
+        if (saved) return saved;
+        // 复用已完成的目录页；独立请求避免目录卸载时取消 README 定位。
+        const page = await fetchData<CodeTree>(
+          `${base}/tree?${new URLSearchParams({ snapshot_id: sid, path: "", offset: String(offset) })}`,
+          { signal },
+        );
+        cache.setQueryData(key, page);
+        return page;
+      }),
+    enabled: ready && Boolean(sid) && !path && !pulling,
+    retry: false,
+    staleTime: Infinity,
+  });
+  useEffect(() => {
+    // 手动选择文件优先；拉取期间不让旧快照的异步结果覆盖新地址。
+    const target = autoReadmeTarget.current;
+    if (
+      ready &&
+      !path &&
+      !pulling &&
+      sid &&
+      data?.snapshot_id === sid &&
+      readme.data &&
+      target !== false &&
+      (target === null || target === sid)
+    )
+      router.replace(
+        codeLocation(repoId, data.commit, readme.data, 1, 1, sid),
+        { scroll: false },
+      );
+  }, [ready, path, pulling, sid, data, readme.data, router, repoId]);
   const file = useQuery({
     queryKey: ["code-file", repoId, sid, path, line],
     queryFn: ({ signal }) =>
@@ -192,6 +232,7 @@ export function CodeWorkspace({ repoId }: { repoId: string }) {
     enabled: ready && Boolean(sid && path),
   });
   function choose(nextPath: string, start = 1, finish = start) {
+    autoReadmeTarget.current = false;
     if (data)
       router.push(
         codeLocation(
@@ -228,6 +269,7 @@ export function CodeWorkspace({ repoId }: { repoId: string }) {
   async function pullCode(latest = false) {
     if (actionLock.current) return;
     actionLock.current = true;
+    autoReadmeTarget.current = false;
     setPulling(true);
     setError(null);
     try {
@@ -235,6 +277,7 @@ export function CodeWorkspace({ repoId }: { repoId: string }) {
         latest ? `${base}/pull` : `${base}/snapshots`,
         latest ? {} : { commit: data?.commit ?? commit, retry: true },
       );
+      autoReadmeTarget.current = row.snapshot_id;
       cache.setQueryData(["code-snapshot", repoId, row.snapshot_id], row);
       setSearch(null);
       router.push(codeLocation(repoId, row.commit, "", 1, 1, row.snapshot_id), {
@@ -433,7 +476,20 @@ export function CodeWorkspace({ repoId }: { repoId: string }) {
             </aside>
             <section aria-label="代码阅读器">
               <h2>{path || "选择一个文件"}</h2>
-              {!path && <p>从目录或搜索结果打开文件。</p>}
+              {!path && (
+                <>
+                  <QueryState
+                    pending={Boolean(sid) && readme.isPending}
+                    error={readme.error}
+                    retry={() => void readme.refetch()}
+                  />
+                  {readme.isSuccess && !readme.data && (
+                    <p>
+                      根目录暂无可预览的 README，可从目录或搜索结果打开文件。
+                    </p>
+                  )}
+                </>
+              )}
               {path && (
                 <QueryState
                   pending={file.isPending}

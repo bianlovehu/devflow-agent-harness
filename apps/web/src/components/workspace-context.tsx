@@ -20,6 +20,7 @@ import {
   type RuntimeInfo,
 } from "@/lib/repositories";
 import type { Run } from "@/lib/workflows";
+import { repositorySwitchLocation } from "@/lib/repository-navigation";
 
 const storageKey = "devflow.repository";
 function subscribe(listener: () => void) {
@@ -96,16 +97,7 @@ function useWorkspaceState() {
   }
   function chooseRepository(id: string) {
     remember(id);
-    const path = pathname.startsWith("/knowledge")
-      ? "/knowledge"
-      : pathname.startsWith("/memories")
-        ? "/memories"
-        : "/runs";
-    router.push(
-      pathname.startsWith("/repositories")
-        ? `/repositories/${encodeURIComponent(id)}`
-        : `${path}?repo=${encodeURIComponent(id)}`,
-    );
+    router.push(repositorySwitchLocation(pathname, id, search.get("tab")));
   }
   return {
     repoId,

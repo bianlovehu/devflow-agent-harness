@@ -2342,6 +2342,48 @@ svg {
   border-color: #e5e5e5;
   font-size: 12px;
 }
+.health-summary {
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid #e5e5e5;
+}
+.health-summary-heading,
+.health-service-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.health-summary-heading .text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.health-service-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+}
+.health-service-list li {
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.health-service-list li:last-child {
+  border-bottom: 0;
+}
+.health-service-list p {
+  margin: 5px 0 0;
+}
+.health-service-list code {
+  display: block;
+  margin-top: 4px;
+  color: #777;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.health-check-time {
+  font-variant-numeric: tabular-nums;
+}
 .close-mobile,
 .mobile-menu,
 .sidebar-backdrop,
@@ -2459,6 +2501,7 @@ svg {
   font-size: 12px;
 }
 .repository-table-scroll {
+  position: relative;
   overflow-x: auto;
 }
 .repository-table {

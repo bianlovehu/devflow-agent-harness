@@ -11,6 +11,7 @@ import { GitHubRepositoryForm } from "@/components/github-repository-form";
 import { GitHubJobLogs } from "@/components/github-job-logs";
 import { SourceNotices, FetchInfo } from "@/components/source-notices";
 import { ciStatus } from "@/lib/ci-status";
+import { repositoryLocation } from "@/lib/repository-navigation";
 import { QueryState as QueryMessage } from "@/components/query-state";
 import { AnalysisForm } from "@/components/analysis-form";
 import { useQuery } from "@tanstack/react-query";
@@ -41,8 +42,8 @@ export function RepositoryList() {
     <div className="management-page repository-library">
       <div className="page-heading">
         <div>
-          <h1>我的仓库</h1>
-          <p className="intro">浏览 PR、CI 运行和项目资料</p>
+          <h1>仓库概览</h1>
+          <p className="intro">选择仓库，浏览代码、PR、CI 运行与项目资料</p>
         </div>
         <button
           className="icon-button"
@@ -106,7 +107,7 @@ export function RepositoryList() {
                     <td>
                       <Link
                         className="repository-name"
-                        href={`/repositories/${encodeURIComponent(repo.id)}`}
+                        href={repositoryLocation(repo.id)}
                       >
                         <Icon name="repo" size={24} />
                         <span>
@@ -132,7 +133,7 @@ export function RepositoryList() {
                     <td>
                       <Link
                         className="secondary-link"
-                        href={`/repositories/${encodeURIComponent(repo.id)}`}
+                        href={repositoryLocation(repo.id)}
                       >
                         打开仓库 <Icon name="arrow" size={16} />
                       </Link>
@@ -371,7 +372,7 @@ export function RepositoryWorkspace(props: {
   if (!repo.data)
     return (
       <div className="management-page">
-        <Link className="back-link" href="/repositories">
+        <Link className="back-link" href="/">
           ← 所有仓库
         </Link>
         <QueryMessage
@@ -385,9 +386,13 @@ export function RepositoryWorkspace(props: {
     <div className="management-page repository-workspace">
       <RepositoryHeader repo={repo.data} tab={props.tab} />
       {props.tab === "code" ? (
-        <CodeWorkspace repoId={props.repoId} />
+        <CodeWorkspace key={props.repoId} repoId={props.repoId} />
       ) : (
-        <ResourceWorkspace {...props} tab={props.tab} />
+        <ResourceWorkspace
+          key={`${props.repoId}:${props.tab}`}
+          {...props}
+          tab={props.tab}
+        />
       )}
     </div>
   );
@@ -452,7 +457,7 @@ function ResourceWorkspace({
   if (repo.isPending || repo.error)
     return (
       <div className="management-page">
-        <Link className="back-link" href="/repositories">
+        <Link className="back-link" href="/">
           ← 返回仓库列表
         </Link>
         <QueryMessage

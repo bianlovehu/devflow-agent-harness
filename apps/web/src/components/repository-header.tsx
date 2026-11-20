@@ -16,7 +16,7 @@ export function RepositoryHeader({
   const repoId = repo.id;
   return (
     <>
-      <Link className="back-link" href="/repositories">
+      <Link className="back-link" href="/">
         ← 所有仓库
       </Link>
       <div className="page-heading">

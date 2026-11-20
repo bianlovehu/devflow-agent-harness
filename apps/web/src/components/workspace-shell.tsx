@@ -7,6 +7,8 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { fetchData } from "@/lib/api-client";
 import type { Conversation, Page } from "@/lib/workflows";
 import { BudgetSummary } from "@/components/budget-summary";
+import { HealthSummary } from "@/components/health-summary";
+import { repositoryLocation } from "@/lib/repository-navigation";
 import {
   WorkspaceProvider,
   useWorkspace,
@@ -27,6 +29,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   } = useWorkspace();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const conversations = useInfiniteQuery({
     queryKey: ["conversations", repoId],
     queryFn: ({ pageParam, signal }) =>
@@ -59,7 +62,7 @@ function Shell({ children }: { children: React.ReactNode }) {
     ? active.data && active.data.repo_id === repoId
       ? active.data.title
       : "新建会话"
-    : (page?.label ?? "工程概览");
+    : (page?.label ?? "仓库概览");
   return (
     <div
       className={`workspace ${collapsed ? "sidebar-collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}
@@ -132,7 +135,13 @@ function Shell({ children }: { children: React.ReactNode }) {
             <Link
               key={item.path}
               className={page?.path === item.path ? "nav-active" : ""}
-              href={item.path === "/repositories" ? item.path : href(item.path)}
+              href={
+                item.path === "/repositories"
+                  ? repoId
+                    ? repositoryLocation(repoId)
+                    : "/"
+                  : href(item.path)
+              }
               aria-current={page?.path === item.path ? "page" : undefined}
               title={item.label}
               onClick={() => setMobileOpen(false)}
@@ -193,8 +202,9 @@ function Shell({ children }: { children: React.ReactNode }) {
           <Link
             href="/"
             className="icon-button"
-            aria-label="工程概览"
-            title="工程概览"
+            aria-label="仓库概览"
+            title="仓库概览"
+            aria-current={pathname === "/" ? "page" : undefined}
           >
             <Icon name="home" size={18} />
           </Link>
@@ -223,12 +233,16 @@ function Shell({ children }: { children: React.ReactNode }) {
             {runtime.data?.data_source === "fixture" && (
               <span className="source-badge">样例数据</span>
             )}
-            <details className="workspace-info">
+            <details
+              className="workspace-info"
+              onToggle={(event) => setInfoOpen(event.currentTarget.open)}
+            >
               <summary aria-label="服务状态与项目预算">
                 <Icon name="settings" size={18} />
                 <span>服务与预算</span>
               </summary>
               <div className="workspace-info-popover">
+                <HealthSummary enabled={infoOpen} />
                 <strong>运行环境</strong>
                 <p>
                   {runtime.data?.data_source === "fixture"

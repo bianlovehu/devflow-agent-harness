@@ -74,12 +74,12 @@ JSON、版本 pin、锁文件、diff 与日志保持标准原格式，避免破�
 | [apps/web/src/app/api/health/route.ts](../apps/web/src/app/api/health/route.ts) | 代理后端健康检查，并返回明确的不可用状态。 |
 | [apps/web/src/app/globals.css](../apps/web/src/app/globals.css) | 定义工作台布局、资源浏览和响应式页面样式。 |
 | [apps/web/src/app/layout.tsx](../apps/web/src/app/layout.tsx) | 设置页面元数据，并挂载共享导航和查询状态。 |
-| [apps/web/src/app/page.tsx](../apps/web/src/app/page.tsx) | 显示工程健康状态、仓库入口和开发进度。 |
+| [apps/web/src/app/page.tsx](../apps/web/src/app/page.tsx) | 展示仓库概览，提供添加、筛选和进入仓库的入口。 |
 | [apps/web/src/app/repositories/[repoId]/page.tsx](../apps/web/src/app/repositories/[repoId]/page.tsx) | 解析仓库及资源 URL 参数，并展示仓库工作区。 |
-| [apps/web/src/app/repositories/page.tsx](../apps/web/src/app/repositories/page.tsx) | 显示仓库列表页面。 |
+| [apps/web/src/app/repositories/page.tsx](../apps/web/src/app/repositories/page.tsx) | 兼容原仓库列表地址，统一返回仓库概览首页。 |
 | [apps/web/src/components/providers.tsx](../apps/web/src/components/providers.tsx) | 提供可在页面间复用的 TanStack Query 客户端。 |
 | [apps/web/src/components/repository-browser.tsx](../apps/web/src/components/repository-browser.tsx) | 浏览仓库、PR diff、CI 日志和项目资料原文。 |
-| [apps/web/src/components/workspace-shell.tsx](../apps/web/src/components/workspace-shell.tsx) | 显示共享导航、数据来源及模型配置状态。 |
+| [apps/web/src/components/workspace-shell.tsx](../apps/web/src/components/workspace-shell.tsx) | 显示当前仓库直达导航，并收纳服务健康、模型配置和预算状态。 |
 | [apps/web/src/lib/health.ts](../apps/web/src/lib/health.ts) | 定义前端使用的健康检查响应类型。 |
 | [apps/web/src/lib/repositories.ts](../apps/web/src/lib/repositories.ts) | 导出由 OpenAPI 生成的仓库资源类型与统一请求函数。 |
 | [apps/web/tsconfig.json](../apps/web/tsconfig.json) | 配置 TypeScript 类型检查和模块解析规则。 |
@@ -320,3 +320,13 @@ JSON、版本 pin、锁文件、diff 与日志保持标准原格式，避免破�
 | `apps/api/tests/mcp_fault_server.py` | 真实 MCP 子进程中的契约/结果/超时/退出故障注入 |
 | `apps/api/tests/test_mcp_contract.py` | 严格 schema、身份和白名单单元测试 |
 | `docs/code-evidence-mcp.md` | 启动配置、架构、恢复、权限和排障说明 |
+
+## 仓库概览与默认代码阅读
+
+| 文件 | 用途 |
+| --- | --- |
+| `apps/web/src/components/health-summary.tsx` | 在服务与预算中显示依赖健康状态、检测时间和手动刷新。 |
+| `apps/web/src/lib/repository-navigation.ts` | 统一默认代码入口、显式资源标签和跨仓库参数隔离。 |
+| `apps/web/src/lib/code-readme.ts` | 分页检查根目录，优先选择可读取的 README。 |
+| `apps/web/tests/repository-navigation.test.mjs` | 验证仓库入口及跨仓库切换不携带旧资源参数。 |
+| `apps/web/tests/code-readme.test.mjs` | 验证 README 优先级、不可读文件过滤及完整分页。 |
